@@ -1,0 +1,159 @@
+
+@extends('dashboard.layout.dasboardMaster')
+@section('title', 'Job Applicants List')
+
+@section('content')
+    <section class="datatables">
+        <!-- basic table -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between">
+                        <h5> @yield('title') </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <div class="table-scroll">
+                                <table id="zero_config" class="table border table-striped table-bordered">
+                                    <thead>
+                                        <!-- start row -->
+                                        <tr>
+                                            <th>SL</th>
+                                            <th>Category</th>
+                                            <th>Title</th>
+                                            <th>Applicant</th>
+                                            <th>Status</th>
+                                            @can('active-job')
+                                                <th>Action</th>
+                                            @endcan
+                                        </tr>
+                                        <!-- end row -->
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($applications as $item)
+                                            <tr>
+                                            <td>{{ $loop->iteration }}</td>
+                                            <td>{{ $item->job?->job_category?->name }}</td>
+                                            <td>{{ $item->job?->title }}</td>
+                                            <td>{{ $item->user?->name }}</td>
+                                            @php
+                                        $statuses = [
+                                            ['id' => 1, 'name' => 'File Under Process of Decision Making', 'progress' => 0],
+                                            ['id' => 2, 'name' => 'File Under Process of Assessment', 'progress' => 20],
+                                            ['id' => 3, 'name' => 'File Under Process of Acceptance', 'progress' => 30],
+                                            ['id' => 4, 'name' => 'File Under Process of Approval', 'progress' => 40],
+                                            ['id' => 5, 'name' => 'Agreement on Board', 'progress' => 50],
+                                            ['id' => 6, 'name' => 'Police/Criminal Clearance Certificate Received', 'progress' => 55],
+                                            ['id' => 7, 'name' => 'Medical Test Report Received', 'progress' => 60],
+                                            ['id' => 8, 'name' => 'COS Letter Processed', 'progress' => 70],
+                                            ['id' => 9, 'name' => 'VFS Appointment Date Approved', 'progress' => 75],
+                                            ['id' => 10, 'name' => 'Visa Processing Complete', 'progress' => 100],
+                                            ['id' => 11, 'name' => 'Rejected / Terminated', 'progress' => 0],
+                                        ];
+
+                                        // Find the matching status
+                                        $status = array_filter($statuses, function ($status) use ($item) {
+                                        
+                                        return $status['id'] == (int)$item->status;
+                                        });
+
+                                        // Get the first matching status or null if none found
+                                        $status = reset($status) ?: null;
+                                        @endphp
+
+                                        <td>
+                                            @if ($status)
+                                            {{ $status['name'] }} - {{ $status['progress'] }}%
+                                            @else
+                                            Unknown Status
+                                            @endif
+                                        </td>
+                                            @can('active-job')<!---->
+                                                <td>
+                                                    <div class="d-inline-flex">
+                                                        <button class="btn btn-primary" data-toggle="modal" data-target="#setCodeModal" data-id="{{ $item->id }}">
+                                                            Update Status
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            @endcan
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    {{-- Modal for Job status update --}}
+    <div class="modal fade" id="setCodeModal" tabindex="-1" role="dialog" aria-labelledby="setCodeModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <form id="setCodeForm" method="POST" action="{{ route('jobapplication.update_status') }}">
+                    @csrf
+                    @method('PATCH')
+                    
+                    <div class="modal-body">
+                        <input type="hidden" name="application_id" id="applicationId">
+                        @php $stats = getJobApplicationStatuses(); @endphp
+                        <div class="form-group">
+                            <label for="code">Status</label>
+                            <select name="status" id="status" class="form-control">
+                                @foreach($stats as $stat)
+                                    <option value="{{$stat['id']}}">{{$stat['name']}}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+@endsection
+@push('script')
+    <script>
+        $('.delete-btn').on('click', function() {
+            let id = $(this).attr('data-id')
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "You won't be able to revert this!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, delete it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $('#delete_form_' + id).submit()
+                }
+            })
+        })
+    </script>
+
+<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Bootstrap JS -->
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+<script>
+    // JavaScript to handle modal and form population
+    $('#setCodeModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget); // Button that triggered the modal
+        var id = button.data('id'); // Extract info from data-* attributes
+
+        var modal = $(this);
+        modal.find('#applicationId').val(id);
+    });
+</script>
+@endpush

@@ -1,0 +1,46 @@
+.env
+.env.*
+!.env.example
+/vendor/
+/node_modules/
+/storage/
+/public/storage/
+/public/uploads/
+/public/documents/
+/public/passports/
+/public/cv/
+/public/cvs/
+/public/resumes/
+/public/files/
+/public/attachments/
+/public/media/
+/public/images/
+/public/build/
+/public/hot
+*.sql
+*.sqlite
+*.zip
+*.log
+*.bak
+*.pem
+*.key
+id_rsa*
+JoinGallagher-GitHub-Setup.*
+
+# Runtime logs and generated files
+error_log
+**/error_log
+/bootstrap/cache/*
+!/bootstrap/cache/.gitignore
+*.tmp
+
+# Sensitive or unknown data files
+/database/db.text
+*.txt
+*.csv
+*.jsonl
+
+# Old backup files
+*.blade.php_old
+*.bak
+*.backup

@@ -1,0 +1,214 @@
+@extends('frontend.layout.frontMaster')
+@section('title', 'Job Portal')
+@section('content')
+
+    <section id="home" class="hero-area">
+        <div class="container">
+            <div class="row space-100 justify-content-center">
+                <div class="col-lg-10 col-md-12 col-xs-12">
+                    <div class="contents">
+                        <h2 class="head-title">{{ __('messages.FindJob') }}</h2>
+                        <div class="job-search-form">
+                            <form action="{{ route('search-jobs') }}" method="GET">
+                                @csrf
+                                <div class="row">
+                                    <div class="col-lg-5 col-md-6 col-xs-12">
+                                        <div class="form-group">
+                                            <input class="form-control" type="text" name="title"
+                                                placeholder="{{ __('messages.JobName') }}">
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3 col-md-6 col-xs-12">
+                                        <div class="form-group">
+                                            <div class="search-category-container">
+                                                <label class="styled-select">
+                                                    <select name="country_id">
+                                                        <option value="">{{ __('messages.Locations') }}</option>
+                                                        @foreach ($locations as $location)
+                                                            <option value="{{ $location->id }}">{{ $location->name }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                </label>
+                                            </div>
+                                            <i class="lni-map-marker"></i>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3 col-md-6 col-xs-12">
+                                        <div class="form-group">
+                                            <div class="search-category-container">
+                                                <label class="styled-select">
+                                                    <select name="category_id">
+                                                        <option value="">{{ __('messages.AllCategories') }}</option>
+                                                        @foreach ($job_categories as $category)
+                                                            <option value="{{ $category->id }}">{{ $category->name }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                </label>
+                                            </div>
+                                            <i class="lni-layers"></i>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-1 col-md-6 col-xs-12">
+                                        <button type="submit" class="button"><i class="lni-search"></i></button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="category section bg-gray">
+        <div class="container">
+            <div id="map"></div>
+        </div>
+    </section>
+
+    <!-- Category Section Start -->
+    <section class="category section bg-gray">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">{{ __('messages.BrowseCategories') }}</h2>
+                <p>{{ __('messages.Mostpopularity') }}</p>
+            </div>
+            <div class="row">
+                @foreach ($categoriesWithCount as $category)
+                    <div class="col-lg-3 col-md-6 col-xs-12 f-category">
+                        <a href="{{ route('search-jobs', ['category_id' => $category->id]) }}">
+                            <h3>{{ $category->name }}</h3>
+                            <p>({{ $category->jobs_count }} {{ __('messages.Jobs') }})</p>
+                        </a>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    </section>
+    <!-- Category Section End -->
+
+
+
+    @if (!empty($arr->horizontal_ads))
+        <div class="bg-gray">
+            <div class="container">
+                <div class="row px-3">
+                    <div class="card bg-dark" style="width: 100%; height: 120px;">
+                        <div class="card-body">
+                            {!! $arr->horizontal_ads !!}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- Google map start here -->
+    {{-- 
+<div class="section">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="map-box" id="map">
+                </div>
+            </div>
+        </div>
+    </div>
+</div> --}}
+
+
+    <!-- Latest Section Start -->
+    <section id="latest-jobs" class="section bg-gray">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">{{ __('messages.LatestJobs') }}</h2>
+            </div>
+            <div class="row">
+                @foreach ($latestJobs as $job)
+                    <div class="col-lg-6 col-md-12 col-xs-12">
+                        <div class="jobs-latest">
+                            <div class="img-thumb">
+                                @if (isset($job->company->photo))
+                                    <img src="{{ asset('assets/images/profilephoto/' . $job->company->photo) }}"
+                                        alt="">
+                                @else
+                                    <img src="{{ asset('frontend/assets/img/features/img-1.jpg') }}" alt="">
+                                @endif
+                            </div>
+                            <div class="content">
+                                <h3><a href="{{ route('job-details', $job->id) }}">{{ $job->title }}</a></h3>
+                                <p class="brand">{{ $job?->company?->company_name }}</p>
+                                <div class="tags">
+                                    <span><i class="lni-map-marker"></i>{{ $job->country->name ?? 'N/A' }}</span>
+                                    <span><i class="lni-user"></i>{{ $job->vacancies }} </span>
+                                </div>
+                                <div class="tag"><i class="lni-tag"></i>
+                                    @php
+                                        $skill = json_decode($job->skills);
+                                    @endphp
+                                    @foreach ($skill as $key => $value)
+                                        <span>#{{ getSkillName($value) }}</span>
+                                    @endforeach
+                                </div>
+
+                                @php
+                                    $type = $job->employment_status;
+                                    if ($type) {
+                                        $emp_type = json_decode($job->employment_status);
+                                    } else {
+                                        $emp_type = [];
+                                    }
+                                @endphp
+                                <div class="tag">
+                                    @forelse ($emp_type as $key => $value)
+                                        <span><i class="lni-alarm-clock"></i> {{ $value }} @if (!$loop->last)
+                                                ,
+                                            @endif </span>
+                                    @empty
+                                        <span><i class="lni-alarm-clock"></i> {{ __('messages.NA') }}</span>
+                                    @endforelse
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    </section>
+    <!-- Latest Section End -->
+
+
+    <!-- download Section Start -->
+    <section id="download" class="section bg-gray">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-6 col-md-8 col-xs-12">
+                    <div class="download-wrapper">
+                        <div>
+                            <div class="download-text">
+                                <h4>{{ __('messages.DownloadApps') }}</h4>
+                                <p>Discover our top-rated apps! Elevate your experience with our curated selection. Download
+                                    now for unrivaled functionality and convenience. Don't miss out—get them today!</p>
+                            </div>
+                            <div class="app-button">
+                                <a href="{{ credential('ios_app') }}" class="btn btn-border"><i
+                                        class="lni-apple"></i>{{ __('messages.Download') }} <br>
+                                    <span>{{ __('messages.AppStore') }}</span></a>
+                                <a href="{{ credential('android_app') }}" class="btn btn-common btn-effect"><i class="lni-android"></i>
+                                    {{ __('messages.Download') }} <br> <span>{{ __('messages.AppStore') }}</span></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6 col-md-4 col-xs-12">
+                    <div class="download-thumb">
+                        <img class="img-fluid" src="{{ asset('frontend/assets/img/app.png') }}" alt="">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+@endsection

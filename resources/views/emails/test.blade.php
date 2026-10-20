@@ -1,0 +1,1 @@
+<h3>This is test email. Your email configuration is ok. </h3>
