@@ -94,7 +94,7 @@ class JobseekerImportController extends Controller
 
     public function cvDelete($id){
         try {
-            $result = UploadedCv::where('id', $id)->delete();
+            $result = UploadedCv::where('id', $id)->where('user_id', auth()->id())->delete();
             if($result) {
                 return redirect()->route('job-seeker-profile')->withSuccess('Record deleted successfully');
             } else {
@@ -107,7 +107,7 @@ class JobseekerImportController extends Controller
     
     public function certificateDelete($id){
         try {
-            $result = JobseekerCertificate::where('id', $id)->delete();
+            $result = JobseekerCertificate::where('id', $id)->where('user_id', auth()->id())->delete();
             if($result) {
                 return redirect()->route('job-seeker-profile')->withSuccess('Record deleted successfully');
             } else {
@@ -120,7 +120,7 @@ class JobseekerImportController extends Controller
     
     public function docsDelete($id){
         try {
-            $result = JobseekerUploads::where('id', $id)->delete();
+            $result = JobseekerUploads::where('id', $id)->where('user_id', auth()->id())->delete();
             if($result) {
                 return redirect()->route('job-seeker-profile')->withSuccess('Record deleted successfully');
             } else {
