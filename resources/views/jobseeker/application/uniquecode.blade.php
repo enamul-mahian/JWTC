@@ -28,7 +28,10 @@
                             <div class="card-body">
                                 <div>
                                     @if ($canCreate > 0)
-                                        <a href="{{route('request-code')}}" class="btn btn-primary" onclick="return confirm('Are you sure you want to send request?');">Request New Code</a>
+                                        <form method="POST" action="{{ route('request-code') }}" onsubmit="return confirm('Are you sure you want to send request?');">
+                                            @csrf
+                                            <button type="submit" class="btn btn-primary">Request New Code</button>
+                                        </form>
                                     @endif
                                 </div>
                                 <div class="row mt-3"> 
