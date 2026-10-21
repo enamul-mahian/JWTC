@@ -828,7 +828,7 @@ Route::prefix('job_seeker')->middleware('auth')->group(function () {
     Route::post('store-jobseeer-certificate', [JobseekerImportController::class, 'storeCertificate'])
         ->name('store-jobseeer-certificate');
 
-    Route::get('delete-jobseeer-certificate/{id}', [JobseekerImportController::class, 'certificateDelete'])
+    Route::delete('delete-jobseeer-certificate/{id}', [JobseekerImportController::class, 'certificateDelete'])
         ->name('delete-jobseeer-certificate');
 
 
@@ -844,13 +844,13 @@ Route::prefix('job_seeker')->middleware('auth')->group(function () {
     Route::post('jobseeker-upload-document', [JobseekerImportController::class, 'jobseekerDocUpload'])
         ->name('jobseeker-upload-document');
 
-    Route::get('delete-upload-document/{id}', [JobseekerImportController::class, 'docsDelete'])
+    Route::delete('delete-upload-document/{id}', [JobseekerImportController::class, 'docsDelete'])
         ->name('delete-upload-document');
 
     Route::get('get-degree-name/{id}', [JobSeekerEducationController::class, 'getGegreeName'])
         ->name('get-degree-name');
 
-    Route::get('uploaded-cv-delete/{id}', [JobseekerImportController::class, 'cvDelete'])
+    Route::delete('uploaded-cv-delete/{id}', [JobseekerImportController::class, 'cvDelete'])
         ->name('uploaded-cv-delete');
 
 
