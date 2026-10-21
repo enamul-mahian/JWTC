@@ -23,6 +23,8 @@ jobs:
           php-version: '8.2'
           extensions: mbstring, dom, fileinfo, pdo_sqlite, sqlite3, gd, zip
           coverage: none
+      - name: Prepare Laravel writable directories
+        run: mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs
       - name: Validate Composer metadata
         run: composer validate --no-check-publish
       - name: Install PHP dependencies
