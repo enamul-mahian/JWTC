@@ -863,7 +863,7 @@ Route::prefix('job_seeker')->middleware('auth')->group(function () {
     Route::get('unique_codes', [UniqueCodeController::class, 'index'])
         ->name('unique_codes');
 
-    Route::get('request-code', [UniqueCodeController::class, 'create'])
+    Route::post('request-code', [UniqueCodeController::class, 'create'])
         ->name('request-code');
 
 });
