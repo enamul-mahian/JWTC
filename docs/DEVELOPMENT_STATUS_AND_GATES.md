@@ -37,3 +37,11 @@ Updated: 2026-10-22. Source reference: main at 28a1a58. This report is based on 
 - PR #1 introduced safe web session lifecycle handling.
 - PR #2 branch now includes web session handling and atomic application/code submission.
 - The patches are **unmerged**, **untested at runtime**, and do not make the requested product complete.
+
+## Verified after CI was introduced (2026-10-22)
+- GitHub Actions run 39679567203 passed Composer installation, lint, 2 PHPUnit tests (14 assertions), and Vite build at commit 30453ff.
+- The initial Composer failure was due to missing writable bootstrap/cache, then an eager database query in AppServiceProvider during Artisan bootstrap. Both have fixes on this branch.
+- Expanded CI revealed that `php artisan route:list` currently fails because `App\\Http\\Controllers\\API\\AuthController` is absent from the repository. Other classes under `app/Http/Controllers/API` are also missing from the tracked source, while routes/api.php references them. API code must be restored from a verified trusted source or reimplemented against exact contracts before release.
+- Protection against document deletion by other applicants and unsafe destructive GET routes is now implemented in the branch; associated regression tests were added afterward.
+- Database export no longer uses concatenated shell commands containing plaintext command-line password arguments; it still requires real MySQL/export permissions and private operational backup controls on staging.
+- Full historical DB/uploads/SEO/analytics checks, server runtime verification, API restoration, responsive UI redesign, OTP, chat, ticketing, refunds, interview features, and production deployment require independent completion and verification. Do not call this branch production-ready.
