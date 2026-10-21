@@ -20,7 +20,7 @@ class SettingController extends Controller
 {
     public function __construct()
     {
-        $this->middleware(['permission:application-setting'])->only('index');
+        $this->middleware(['permission:application-setting'])->only('index', 'databaseBackup');
         $this->middleware(['permission:email-setting'])->only('email_setting');
     }
 
@@ -128,28 +128,55 @@ class SettingController extends Controller
      */
     public function databaseBackup()
     {
-        $databaseName = config('database.connections.mysql.database');
+        // Database exports contain sensitive applicant information. Never put
+        // credentials on the command line or generate backups in public/.
+        abort_unless(config('database.default') === 'mysql', 422, 'MySQL backup is not configured.');
 
-        $backupFileName =
-            "backup-{$databaseName}-" . date('Y-m-d-His') . '.sql';
+        $config = config('database.connections.mysql');
+        $database = (string) ($config['database'] ?? '');
+        abort_if($database === '', 422, 'Database name is not configured.');
 
-        $backupFilePath =
-            storage_path("app/{$backupFileName}");
+        $directory = storage_path('app/private/backups');
+        File::ensureDirectoryExists($directory, 0700);
 
-        $command =
-            "mysqldump --user=" . env('DB_USERNAME') .
-            " --password=" . env('DB_PASSWORD') .
-            " --host=" . env('DB_HOST') .
-            " $databaseName > $backupFilePath";
+        $filename = 'database-' . gmdate('YmdHis') . '-' . bin2hex(random_bytes(8)) . '.sql';
+        $filepath = $directory . DIRECTORY_SEPARATOR . $filename;
 
-        exec($command);
+        $process = new \Symfony\Component\Process\Process([
+            'mysqldump',
+            '--single-transaction',
+            '--quick',
+            '--skip-lock-tables',
+            '--host=' . (string) ($config['host'] ?? '127.0.0.1'),
+            '--port=' . (string) ($config['port'] ?? 3306),
+            '--user=' . (string) ($config['username'] ?? ''),
+            '--result-file=' . $filepath,
+            $database,
+        ]);
+        $process->setEnv(['MYSQL_PWD' => (string) ($config['password'] ?? '')]);
+        $process->setTimeout(300);
 
-        $headers = [
-            'Content-Type' => 'application/octet-stream',
-            'Content-Disposition' => "attachment; filename={$backupFileName}",
-        ];
+        try {
+            $process->mustRun();
 
-        return response()->file($backupFilePath, $headers);
+            if (!is_file($filepath) || filesize($filepath) === 0) {
+                throw new \RuntimeException('Database export is empty.');
+            }
+
+            @chmod($filepath, 0600);
+
+            return response()->download($filepath, $filename, [
+                'Content-Type' => 'application/octet-stream',
+                'Cache-Control' => 'private, no-store',
+            ])->deleteFileAfterSend(true);
+        } catch (\Throwable $e) {
+            if (is_file($filepath)) {
+                @unlink($filepath);
+            }
+
+            report($e);
+            return back()->withError('Database export failed. Check server configuration and logs.');
+        }
     }
 
     /**
