@@ -24,24 +24,33 @@ class UniqueCodeController extends Controller
      */
     public function create()
     {
-        $canCreate = checkAvailability();
-        if ($canCreate == 0) {
-            return redirect()->route('unique_codes')->withErrors('Operation Failed!');
+        $created = \Illuminate\Support\Facades\DB::transaction(function () {
+            // Serialize submissions from the same applicant.
+            \App\Models\User::whereKey(auth()->id())->lockForUpdate()->firstOrFail();
+
+            if (!checkAvailability()) {
+                return false;
+            }
+
+            UniqueCode::create([
+                'user_id' => auth()->id(),
+                'code' => null,
+                'date' => now()->toDateString(),
+                'is_used' => 0,
+            ]);
+
+            return true;
+        }, 3);
+
+        if (!$created) {
+            return redirect()->route('unique_codes')
+                ->withErrors('You already have a pending or unused approved code.');
         }
 
-        //Send code request
-        UniqueCode::create([
-            'user_id' => auth()->user()->id,
-            'code' => null,
-            'date' => date('Y-m-d'),
-            'is_used' => 0,
-        ]);
-
-        // Redirect with a success message
         return redirect()->route('unique_codes')->withSuccess('Request Sent!');
     }
 
-    /**
+        /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
