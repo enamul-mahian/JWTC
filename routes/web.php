@@ -624,7 +624,7 @@ Route::prefix('job_seeker')->middleware('auth')->group(function () {
     Route::get('job-seeker-profile', [JobSeekerProfileController::class, 'profile'])
         ->name('job-seeker-profile');
 
-    Route::get('/delete-account', [JobSeekerProfileController::class, 'delete'])
+    Route::delete('/delete-account', [JobSeekerProfileController::class, 'delete'])
         ->name('delete.account');
 
     Route::get('my-library', [JobSeekerProfileController::class, 'library'])
