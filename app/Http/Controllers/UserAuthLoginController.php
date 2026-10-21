@@ -24,6 +24,8 @@ class UserAuthLoginController extends Controller
         $credentials = $request->only('email', 'password');
 
         if (Auth::attempt($credentials)) {
+            $request->session()->regenerate();
+
             // Authentication passed
             $user = Auth::user();
 
@@ -57,9 +59,12 @@ class UserAuthLoginController extends Controller
         return view('frontend.pages.login', compact('title'));
     }
 
-    public function logout()
+    public function logout(Request $request)
     {
         Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
         return redirect()->route('home');
     }
 }
