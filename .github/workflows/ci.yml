@@ -1,0 +1,42 @@
+name: JWTC Pre-merge Validation
+
+on:
+  push:
+    branches:
+      - 'fix/**'
+      - 'feature/**'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  laravel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, dom, fileinfo, pdo_sqlite, sqlite3, gd, zip
+          coverage: none
+      - name: Validate Composer metadata
+        run: composer validate --no-check-publish
+      - name: Install PHP dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Lint tracked application PHP files
+        run: find app routes config database tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: PHPUnit regression suite
+        run: vendor/bin/phpunit --colors=never
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Install frontend dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Build frontend assets
+        run: npm run build
