@@ -27,6 +27,12 @@ class AppServiceProvider extends ServiceProvider
     {
         Paginator::useBootstrapFive();
 
+        // Artisan, Composer and migration commands must bootstrap without an
+        // existing database connection or an initialized application schema.
+        if ($this->app->runningInConsole()) {
+            return;
+        }
+
         if (Schema::hasTable('application_settings')) {
             $user = Auth::user();
             $pages = FrontPage::all();
