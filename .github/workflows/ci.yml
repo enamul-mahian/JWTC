@@ -44,5 +44,12 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Build frontend assets
         run: npm run build
+      - name: Save built Vite assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: jwtc-vite-assets
+          path: public/build/
+          if-no-files-found: error
+          retention-days: 7
       - name: Inspect web and API route registration
         run: php artisan route:list --except-vendor
