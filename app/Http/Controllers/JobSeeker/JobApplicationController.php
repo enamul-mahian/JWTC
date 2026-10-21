@@ -66,48 +66,74 @@ class JobApplicationController extends Controller
 
     public function savePost(Request $request)
     {
-        $canApply = CheckApplyEligibility();
-
-        if ($canApply == 0) {
-            return redirect()->route('find-jobs')->withError('Please apply for unique code.');
-        }
-
-        $request->validate([
-            'job_id' => 'required',
-            'employer_id' => 'required',
-            'expected_salary' => 'required',
+        $validated = $request->validate([
+            'job_id' => 'required|integer|exists:jobs,id',
+            'employer_id' => 'required|integer|exists:companies,id',
+            'expected_salary' => 'required|numeric|min:0',
         ]);
 
+        $userId = auth()->id();
+
         try {
-            $userId = auth()->user()->id;
-            $jobId = $request->job_id;
+            // Locking the applicant serializes concurrent submissions from this account.
+            // The code is consumed in the same transaction as the application insert.
+            $application = \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $userId) {
+                \App\Models\User::whereKey($userId)->lockForUpdate()->firstOrFail();
 
-            // Check if the user has already applied to this job
-            $existingApplication = Application::where('user_id', $userId)->where('job_id', $jobId)->exists();
-            if ($existingApplication) {
-                return redirect()->route('find-jobs')->withError('You have already applied to this job.');
-            }
+                if (CheckApplyEligibility() == 0) {
+                    throw new \DomainException('Please apply for a unique code.');
+                }
 
-            $inputs = $request->all();
-            $inputs['user_id'] = $userId;
-            $inputs['date_applied'] = now();
-            $inputs['status'] = Status::APPLIED;
-            $app = Application::create($inputs);
-            $company = Company::find($app->employer_id);
-            
-            sendNotification($company->user_id, $title='test', $url='/', $action='click', $outro=auth()->user()->name.' '.'applied jobs');
-            
-            $uniqueCode = UniqueCode::where('user_id', auth()->user()->id)->where('is_used', 0)->where('code', '!=', null)->first();
-            $uniqueCode->is_used = 1;
-            $uniqueCode->save();
+                if (Application::where('user_id', $userId)
+                    ->where('job_id', $validated['job_id'])->exists()) {
+                    throw new \DomainException('You have already applied to this job.');
+                }
 
-            return redirect()->route('find-jobs')->withSuccess('Successfully applied');
-        } catch (\Exception $e) {
+                $uniqueCode = UniqueCode::where('user_id', $userId)
+                    ->where('is_used', 0)
+                    ->whereNotNull('code')
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$uniqueCode) {
+                    throw new \DomainException('Please apply for a unique code.');
+                }
+
+                $application = Application::create([
+                    'user_id' => $userId,
+                    'job_id' => $validated['job_id'],
+                    'employer_id' => $validated['employer_id'],
+                    'expected_salary' => $validated['expected_salary'],
+                    'date_applied' => now(),
+                    'status' => Status::APPLIED,
+                ]);
+
+                $uniqueCode->is_used = 1;
+                $uniqueCode->save();
+
+                return $application;
+            }, 3);
+        } catch (\DomainException $e) {
             return redirect()->route('find-jobs')->withError($e->getMessage());
+        } catch (\Throwable $e) {
+            report($e);
+            return redirect()->route('find-jobs')->withError('Application could not be submitted. Please try again.');
         }
+
+        // Delivery failures must not undo a successfully committed application.
+        try {
+            $company = Company::find($application->employer_id);
+            if ($company && $company->user_id) {
+                sendNotification($company->user_id, 'New job application', '/', 'click', auth()->user()->name . ' applied for a job');
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return redirect()->route('find-jobs')->withSuccess('Successfully applied');
     }
 
-    public function appliedJob()
+        public function appliedJob()
     {
         return view('jobseeker.application.applied_jobs');
     }
