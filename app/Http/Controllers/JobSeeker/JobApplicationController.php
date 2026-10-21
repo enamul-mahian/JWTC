@@ -68,7 +68,7 @@ class JobApplicationController extends Controller
     {
         $validated = $request->validate([
             'job_id' => 'required|integer|exists:jobs,id',
-            'employer_id' => 'required|integer|exists:companies,id',
+            'employer_id' => 'sometimes|integer|exists:companies,id',
             'expected_salary' => 'required|numeric|min:0',
         ]);
 
@@ -99,10 +99,15 @@ class JobApplicationController extends Controller
                     throw new \DomainException('Please apply for a unique code.');
                 }
 
+                $job = Job::findOrFail($validated['job_id']);
+                if (isset($validated['employer_id']) && (int) $validated['employer_id'] !== (int) $job->company_id) {
+                    throw new \DomainException('The selected employer does not match the job.');
+                }
+
                 $application = Application::create([
                     'user_id' => $userId,
                     'job_id' => $validated['job_id'],
-                    'employer_id' => $validated['employer_id'],
+                    'employer_id' => $job->company_id,
                     'expected_salary' => $validated['expected_salary'],
                     'date_applied' => now(),
                     'status' => Status::APPLIED,
@@ -133,7 +138,7 @@ class JobApplicationController extends Controller
         return redirect()->route('find-jobs')->withSuccess('Successfully applied');
     }
 
-        public function appliedJob()
+    public function appliedJob()
     {
         return view('jobseeker.application.applied_jobs');
     }
