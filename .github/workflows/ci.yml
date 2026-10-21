@@ -31,6 +31,10 @@ jobs:
         run: composer install --prefer-dist --no-interaction --no-progress
       - name: Lint tracked application PHP files
         run: find app routes config database tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Inspect web and API route registration
+        run: php artisan route:list --except-vendor
+      - name: Compile Blade views
+        run: php artisan view:cache
       - name: PHPUnit regression suite
         run: vendor/bin/phpunit --colors=never
       - name: Set up Node.js
