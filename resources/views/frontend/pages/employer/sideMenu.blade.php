@@ -36,6 +36,15 @@
             </li>
         @endcan
 
+        @can('post-job')
+            <li>
+                <a href="{{ route('interviews.manage.index') }}"
+                   class="{{ Route::is('interviews.manage.*') ? 'active' : '' }}">
+                    Online Interviews
+                </a>
+            </li>
+        @endcan
+
         {{-- TODO Something to add --}}
 
         <li>
