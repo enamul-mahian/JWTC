@@ -169,4 +169,34 @@ class JWTCDesignRegressionTest extends TestCase
             ->assertDontSee('AIzaSyBxJIqIIz', false);
     }
 
+    public function test_redesigned_admin_dashboard_renders_without_vendor_demo_metrics(): void
+    {
+        config()->set('jwtc_design.enabled', true);
+        (require database_path('migrations/2023_12_21_130613_create_permission_tables.php'))->up();
+
+        DB::table('users')->insert([
+            'id' => 19,
+            'user_type' => 'admin',
+            'name' => 'Design QA',
+            'email' => 'qa@example.invalid',
+        ]);
+
+        $this->actingAs(\App\Models\User::findOrFail(19));
+        \Illuminate\Support\Facades\View::share([
+            'setting' => (object) ['logo' => null, 'favicon' => null],
+            'pages' => [],
+        ]);
+
+        $view = app(AdminDashboardController::class)->dashboard(
+            Request::create('/admin/dashboard')
+        );
+        $html = $view->render();
+        $this->assertStringContainsString('Join Gallagher Dashboard', $html);
+        $this->assertStringContainsString('Registered Applicants', $html);
+        $this->assertStringContainsString('jw-admin-content', $html);
+        $this->assertStringNotContainsString('Roman Joined the Team!', $html);
+        $this->assertStringNotContainsString('$63,489.50', $html);
+        $this->assertStringNotContainsString('Yearly Breakup', $html);
+    }
+
 }
