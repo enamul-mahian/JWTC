@@ -66,7 +66,7 @@ class SupportCenterController extends Controller
             'staff' => $center->canManage($actor)
                 ? \App\Models\User::whereIn('user_type', [
                     UserType::ADMIN, UserType::SUPER_ADMIN,
-                ])->get(['id','name'])->filter(fn ($u) => $center->canManage($u))
+                ])->get(['id','name','user_type'])->filter(fn ($u) => $center->canManage($u))
                     ->values()
                 : collect(),
             'canReview' => $center->canReview($actor),
