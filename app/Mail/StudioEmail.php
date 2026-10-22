@@ -14,7 +14,10 @@ class StudioEmail extends Mailable
         public string $footerText,
         public array $images = [],
         public ?string $pdfBytes = null,
-        public ?string $pdfFilename = null
+        public ?string $pdfFilename = null,
+        public array $visualPages = [],
+        public ?string $senderAddress = null,
+        public ?string $senderName = null
     ) {
     }
 
@@ -33,11 +36,28 @@ class StudioEmail extends Mailable
             }
         }
 
+        $cidPages = [];
+        foreach ($this->visualPages as $page) {
+            if (!isset($page['private_path'], $page['page_number'])) continue;
+            $path = $page['private_path'];
+            if (is_string($path) && preg_match(
+                '#^private/email-studio/[0-9]+/pdf-visual/[a-f0-9-]+\.(png|jpg)$#i', $path)
+                && Storage::disk('local')->exists($path)) {
+                $cidPages[] = [
+                    'page_number' => (int) $page['page_number'],
+                    'absolute_path' => Storage::disk('local')->path($path),
+                ];
+            }
+        }
+
         $this->from(
-            (string) config('email_studio.from_address'),
-            (string) config('email_studio.from_name')
+            $this->senderAddress ?: (string) config('email_studio.from_address'),
+            $this->senderName ?: (string) config('email_studio.from_name')
         )->subject($this->subjectLine)
-            ->view('emails.studio_html', ['inlineImages' => $inline])
+            ->view('emails.studio_html', [
+                'inlineImages' => $inline,
+                'inlineVisualPages' => $cidPages,
+            ])
             ->text('emails.studio_text');
 
         if ($this->pdfBytes !== null) {
