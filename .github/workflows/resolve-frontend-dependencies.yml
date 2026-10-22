@@ -23,6 +23,7 @@ jobs:
           python3 - <<'PYTHON'
           from pathlib import Path
           Path('resources/css/app.css').write_text('@import "tailwindcss";\n@config "../../tailwind.config.cjs";\n')
+          Path('tailwind.config.cjs').write_text("module.exports = { content: ['./resources/**/*.blade.php', './resources/**/*.js'], theme: { extend: {} }, plugins: [require('@tailwindcss/forms')] };\n")
           Path('postcss.config.cjs').write_text("module.exports = { plugins: { '@tailwindcss/postcss': {}, autoprefixer: {} } };\n")
           PYTHON
           npm update --package-lock-only --ignore-scripts --no-audit --no-fund
@@ -33,6 +34,6 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add package.json package-lock.json resources/css/app.css postcss.config.cjs
+          git add package.json package-lock.json resources/css/app.css postcss.config.cjs tailwind.config.cjs
           git commit -m 'Upgrade Vite build and frontend lock for Node 24'
           git push origin HEAD:refs/heads/fix/security-dependencies-20261022
