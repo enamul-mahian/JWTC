@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import io
+import os
 import pathlib
 import sys
 import tarfile
@@ -55,7 +56,7 @@ class BackupReadOnlyTests(unittest.TestCase):
             db.write_bytes(b"CREATE TABLE sample (id INTEGER);\n" + b"-" * 1000)
             uploads = base / "files.tar.gz"
             with tarfile.open(uploads, "w:gz") as archive:
-                data = b"test-only file contents"
+                data = os.urandom(4096)
                 info = tarfile.TarInfo("private/documents/synthetic.pdf")
                 info.size = len(data)
                 archive.addfile(info, io.BytesIO(data))
