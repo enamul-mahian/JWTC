@@ -215,16 +215,19 @@
     function slotImage(slot) {
         const input = document.querySelector('[data-image-slot="' + slot + '"]');
         const preview = document.querySelector('[data-preview="' + slot + '"]');
-        const existing = input?.closest('.card')?.querySelector('img:not(.slot-preview)');
+        const existing = preview?.closest('.card')?.querySelector('img:not(.slot-preview)');
         const width = document.querySelector('[data-slot-width="' + slot + '"]');
         if (localImages[slot]) {
-            return {url:localImages[slot], width:Number(width?.value || 250)};
+            return {url:localImages[slot], width:Number(width?.value || 250),
+                align:document.querySelector('[data-slot-align="' + slot + '"]')?.value || 'center'};
         }
-        if (existing && !input?.closest('.card')?.querySelector('input[type="checkbox"]')?.checked) {
-            return {url:existing.src, width:Number(width?.value || 250)};
+        if (existing && !preview?.closest('.card')?.querySelector('input[type="checkbox"]')?.checked) {
+            return {url:existing.src, width:Number(width?.value || 250),
+                align:document.querySelector('[data-slot-align="' + slot + '"]')?.value || 'center'};
         }
         if (preview && preview.style.display !== 'none' && preview.src) {
-            return {url:preview.src, width:Number(width?.value || 250)};
+            return {url:preview.src, width:Number(width?.value || 250),
+                align:document.querySelector('[data-slot-align="' + slot + '"]')?.value || 'center'};
         }
         return null;
     }
@@ -237,22 +240,34 @@
             ? img.url : '';
         if (!url) return '';
         const px = Math.min(slot === 'top' ? 600 : 270, Math.max(80, img.width));
+        const align = ['left','center','right'].includes(img.align) ? img.align : 'center';
+        const margin = align === 'left' ? '0 auto 0 0' : align === 'right' ? '0 0 0 auto' : '0 auto';
         return '<img alt="Branded email image" src="' + escapeText(url) +
             '" width="' + px +
             '" style="display:block;width:100%;max-width:' + px +
-            'px;height:auto;border:0;margin:auto">';
+            'px;height:auto;border:0;margin:' + margin + '">';
     }
 
     function drawPreview() {
         normalizeFormatting();
         hiddenBody.value = editor.innerHTML;
-        const main = editor.innerHTML;
+        const main = importSafeMarkup(editor.innerHTML).innerHTML;
         const foot = escapeText(footer?.value || '').replaceAll('\n', '<br>');
         const top = imageHtml('top');
         const lower1 = imageHtml('bottom_left');
         const lower2 = imageHtml('bottom_right');
 
+        const visualPages = Array.from(document.querySelectorAll('[data-visual-page]'))
+            .map((img) => {
+                const src = img.src || '';
+                const safeSrc = new URL(src, location.href).origin === location.origin ? src : '';
+                return safeSrc ? '<tr><td style="padding:0 12px 12px;text-align:center">' +
+                    '<img src="' + escapeText(safeSrc) +
+                    '" width="576" style="width:100%;max-width:576px;height:auto;border:0"></td></tr>' : '';
+            }).join('');
+
         iframe.srcdoc = '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+            '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; img-src \'self\' blob: data:; base-uri \'none\'; form-action \'none\';">' +
             '<style>body{margin:0;padding:0;background:#f2f5f9;font-family:Arial,sans-serif;word-break:break-word}table{border-collapse:collapse}img{max-width:100%;height:auto}</style></head>' +
             '<body><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" style="padding:16px 8px">' +
             '<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#fff;">' +
@@ -262,6 +277,7 @@
                 '<td width="50%" align="center">' + lower1 + '</td>' +
                 '<td width="50%" align="center">' + lower2 + '</td>' +
                 '</tr></table></td></tr>' : '') +
+            visualPages +
             (foot ? '<tr><td style="border-top:1px solid #ddd;color:#687689;text-align:center;font-size:12px;padding:16px 28px">' +
                 foot + '</td></tr>' : '') +
             '</table></td></tr></table></body></html>';
@@ -317,6 +333,120 @@
         iframe.style.maxWidth = '360px';
     });
     document.getElementById('preview-refresh')?.addEventListener('click', drawPreview);
+
+
+    // One-page NZ workflow: saved template switching, rich editing and SMTP.
+    document.getElementById('studio-saved-template')?.addEventListener('change', (event) => {
+        const destination = event.target.value;
+        if (destination && new URL(destination, location.href).origin === location.origin) {
+            location.assign(destination);
+        }
+    });
+
+    document.getElementById('paragraph-format')?.addEventListener('change', (e) =>
+        execute('formatBlock', e.target.value));
+    document.getElementById('studio-spacing')?.addEventListener('change', (e) => {
+        editor.style.lineHeight = e.target.value;
+        editor.querySelectorAll('p,div,li,h1,h2,h3,blockquote').forEach((node) => {
+            node.style.lineHeight = e.target.value;
+        });
+        drawPreview();
+    });
+    document.getElementById('studio-insert-link')?.addEventListener('click', () => {
+        const url = prompt('Paste a full HTTPS link:');
+        if (!url) return;
+        try {
+            const parsed = new URL(url);
+            if (parsed.protocol !== 'https:') throw new Error();
+            execute('createLink', parsed.href);
+        } catch {
+            alert('Only valid HTTPS links can be added.');
+        }
+    });
+    document.getElementById('studio-insert-table')?.addEventListener('click', () => {
+        execute('insertHTML',
+            '<table width="100%" cellpadding="8" cellspacing="0" border="0" ' +
+            'style="border-collapse:collapse;width:100%"><tr>' +
+            '<td style="padding:8px">Cell 1</td>' +
+            '<td style="padding:8px">Cell 2</td></tr></table><p></p>');
+    });
+    document.getElementById('studio-insert-image')?.addEventListener('click', () => {
+        document.getElementById('image-top')?.click();
+    });
+    document.getElementById('studio-import-button')?.addEventListener('click', () => {
+        htmlFile?.click();
+    });
+
+    document.querySelectorAll('[data-slot-align]').forEach((field) => {
+        field.addEventListener('change', drawPreview);
+    });
+    document.querySelectorAll('[data-confirm]').forEach((form) => {
+        form.addEventListener('submit', (e) => {
+            if (!confirm(form.dataset.confirm || 'Confirm this action?')) e.preventDefault();
+        });
+    });
+
+    const sendTemplateSelect = document.getElementById('email-send-template');
+    sendTemplateSelect?.addEventListener('change', () => {
+        const newRoute = sendTemplateSelect.selectedOptions[0]?.dataset.sendUrl;
+        if (newRoute && new URL(newRoute, location.href).origin === location.origin) {
+            sendTemplateSelect.closest('form').action = newRoute;
+        }
+    });
+
+    const smtpSelect = document.getElementById('smtp-manager-select');
+    const smtpForm = document.getElementById('studio-smtp-form');
+    function setProfile(id) {
+        if (!smtpForm || !smtpSelect) return;
+        const option = Array.from(smtpSelect.options).find((o) => o.value === String(id));
+        if (!option) return;
+        smtpSelect.value = option.value;
+        const fields = {
+            'smtp-name': 'name', 'smtp-host': 'host', 'smtp-port': 'port',
+            'smtp-encryption': 'encryption', 'smtp-username': 'username',
+            'smtp-from-address': 'fromAddress', 'smtp-from-name': 'fromName',
+        };
+        Object.entries(fields).forEach(([elementId, property]) => {
+            const field = document.getElementById(elementId);
+            if (!field) return;
+            field.value = option.value ? (option.dataset[property] || '') :
+                (elementId === 'smtp-from-name' ? 'Join Gallagher' :
+                elementId === 'smtp-port' ? '587' :
+                elementId === 'smtp-encryption' ? 'tls' : '');
+        });
+        const pass = document.getElementById('smtp-password');
+        if (pass) {
+            pass.value = '';
+            pass.required = !option.value;
+        }
+        const method = document.getElementById('studio-smtp-method');
+        if (method) method.value = option.value ? 'PATCH' : 'POST';
+        if (option.value) {
+            smtpForm.action = option.dataset.editUrl;
+        } else {
+            smtpForm.action = smtpForm.dataset.storeAction || smtpForm.action;
+        }
+    }
+    if (smtpForm) smtpForm.dataset.storeAction = smtpForm.action;
+    smtpSelect?.addEventListener('change', () => setProfile(smtpSelect.value));
+    document.getElementById('smtp-new-profile')?.addEventListener('click', () => setProfile(''));
+    document.querySelectorAll('.studio-smtp-edit').forEach((button) => {
+        button.addEventListener('click', () => {
+            setProfile(button.dataset.id);
+            smtpForm?.scrollIntoView({behavior:'smooth', block:'center'});
+        });
+    });
+    const chosenProfile = new URLSearchParams(location.search).get('smtp_profile');
+    if (chosenProfile) setProfile(chosenProfile);
+
+    const portField = document.getElementById('smtp-port');
+    const encryptionField = document.getElementById('smtp-encryption');
+    portField?.addEventListener('change', () => {
+        if (encryptionField) encryptionField.value = portField.value === '465' ? 'ssl' : 'tls';
+    });
+    encryptionField?.addEventListener('change', () => {
+        if (portField) portField.value = encryptionField.value === 'ssl' ? '465' : '587';
+    });
 
     hiddenBody.value = editor.innerHTML;
     drawPreview();
