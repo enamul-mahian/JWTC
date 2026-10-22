@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\FrontPageController;
 use App\Http\Controllers\Admin\HistoryController;
 use App\Http\Controllers\Admin\IndustryTypeController;
 use App\Http\Controllers\Admin\JobCategoryController;
+use App\Http\Controllers\Admin\ApplicationStatusDefinitionController;
 use App\Http\Controllers\Admin\JobSeekerController;
 use App\Http\Controllers\Admin\JobTypeController;
 use App\Http\Controllers\Admin\LocationController;
@@ -43,6 +44,7 @@ use App\Http\Controllers\Frontend\HomeController;
 
 use App\Http\Controllers\JobSeeker\EmailResumeController;
 use App\Http\Controllers\JobSeeker\JobApplicationController;
+use App\Http\Controllers\JobSeeker\ApplicationTimelineController;
 use App\Http\Controllers\JobSeeker\JobSeekerCoverletterController;
 use App\Http\Controllers\JobSeeker\JobSeekerDashboardController;
 use App\Http\Controllers\JobSeeker\JobSeekerEducationController;
@@ -300,6 +302,13 @@ Route::middleware(['auth', 'admin_user'])->group(function () {
 
         Route::patch('jobapplication-status-update', [JobController::class, 'jobApplicationStatusUpdate'])
             ->name('jobapplication.update_status');
+
+        Route::get('application-statuses', [ApplicationStatusDefinitionController::class, 'index'])
+            ->name('admin.application-statuses.index');
+        Route::post('application-statuses', [ApplicationStatusDefinitionController::class, 'store'])
+            ->name('admin.application-statuses.store');
+        Route::patch('application-statuses/{id}', [ApplicationStatusDefinitionController::class, 'update'])
+            ->name('admin.application-statuses.update');
 
         Route::post('job-status-update-by-admin', [JobController::class, 'jobStatusUpdate'])
             ->name('job-status-update-by-admin');
@@ -580,6 +589,9 @@ Route::group(['middleware' => 'auth'], function () {
 */
 
 Route::prefix('job_seeker')->middleware('auth')->group(function () {
+
+    Route::get('applications/{application}/timeline', [ApplicationTimelineController::class, 'show'])
+        ->name('jobseeker.application.timeline');
 
     Route::get('view-jobseeker-profile', [JobSeekerProfileShowController::class, 'show'])
         ->name('view-jobseeker-profile');
