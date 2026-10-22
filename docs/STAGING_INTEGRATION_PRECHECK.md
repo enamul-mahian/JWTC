@@ -33,6 +33,10 @@ Requirements:
 - If responsive redesign is enabled, staging public/theme/jwtc.css and public/build/manifest.json must be present.
 - The command returns nonzero on any check failure and emits no SQL values or credentials.
 
+### Additional CI schema compatibility checks
+
+GitHub Actions includes an independent `mysql-schema` job using **temporary GitHub-hosted MySQL 8**, synthetic credentials and an empty `jwtc_ci_only` schema. It runs the complete migrations twice (second invocation verifies idempotence) and confirms essential tables. The job **cannot access production/staging database or files** and never loads customer uploads. A passing job confirms a clean MySQL install is feasible; it does **not** prove that the existing live schema can be safely migrated in place, or that a backup was restored. 
+
 **Limitations:** Correct names supplied as arguments do not guarantee independence if the operator misidentifies production. The command checks a live connection with SELECT DATABASE() but does not validate full table structures, contents, upstream DNS, shared storage outside listed paths, actual user authentication, keys from a real backup or recoverability. It never runs migrations or changes production.
 
 ## Mandatory backup and restore steps (separately)
