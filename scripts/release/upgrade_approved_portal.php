@@ -58,7 +58,11 @@ try {
         $process = new Symfony\Component\Process\Process($args, $cwd, $environment);
         $process->setTimeout($timeout);
         $process->run();
-        if (!$process->isSuccessful()) throw new RuntimeException('Candidate command failed');
+        if (!$process->isSuccessful()) {
+            echo 'COMMAND_EXIT '.(int)$process->getExitCode()."\n";
+            if ($args[0] === '/usr/bin/python3' && preg_match('/GUARD_ERROR [A-Za-z]+ [A-Za-z0-9]+/', $process->getErrorOutput(), $match)) echo $match[0]."\n";
+            throw new RuntimeException('Candidate command failed');
+        }
         return $process->getOutput();
     };
     $phase = 'candidate-hashes';
@@ -68,11 +72,17 @@ try {
         || !hash_equals($manifest['sha256'], hash_file('sha256', $input.'/'.$manifest['package']))) throw new RuntimeException('Candidate hash mismatch');
     $guard = base64_decode(trim(stream_get_contents(STDIN)), true);
     if (!$guard) throw new RuntimeException('Extractor unavailable');
+    $guard = str_replace('except Exception:', 'except Exception as error:', $guard);
+    $guard = str_replace("print('Restore guard failed; private details suppressed', file=sys.stderr)", "print('GUARD_ERROR ' + type(error).__name__ + ' ' + str(getattr(error, 'errno', None)), file=sys.stderr)", $guard);
     $unpacked = $base.'/candidate-unpacked-approved';
+    if (is_dir($unpacked) && !is_link($unpacked) && !is_file($unpacked.'/.extraction-complete')) {
+        if (!rename($unpacked, $unpacked.'-incomplete-'.gmdate('YmdHis'))) throw new RuntimeException('Cannot retain incomplete extraction');
+    }
     if (is_link($unpacked)) throw new RuntimeException('Candidate destination exists');
     if (!is_dir($unpacked)) {
         if (!mkdir($unpacked, 0700)) throw new RuntimeException('Candidate destination exists');
         $run(['/usr/bin/python3', '-c', $guard, 'extract', $input.'/'.$manifest['package'], $unpacked, '536870912']);
+        file_put_contents($unpacked.'/.extraction-complete', 'verified extraction');
     }
     $expected = [];
     foreach ($manifest['files'] as $record) {
@@ -90,6 +100,7 @@ try {
     }
     $actualFiles = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($unpacked, FilesystemIterator::SKIP_DOTS));
     foreach ($actualFiles as $file) {
+        if ($file->getFilename() === '.extraction-complete') continue;
         if ($file->isLink() || !$file->isFile() || !isset($expected[substr($file->getPathname(), strlen($unpacked) + 1)])) throw new RuntimeException('Unmanifested candidate file');
     }
     // Verify all restored files that are not approved candidate code remain
