@@ -113,14 +113,20 @@ class ApplicationChat
             ->findOrFail($thread->application_id);
     }
 
-    public function messages(object $thread, ?int $after = null): Collection
+    public function messages(object $thread, ?int $after = null, ?int $before = null): Collection
     {
         $this->requireReady();
         $query = DB::table('application_chat_messages')
             ->join('users', 'users.id', '=', 'application_chat_messages.sender_id')
             ->where('application_chat_messages.thread_id', $thread->id);
 
-        if ($after !== null) {
+        if ($before !== null) {
+            $rows = $query->where('application_chat_messages.id', '<', $before)
+                ->orderByDesc('application_chat_messages.id')->limit(40)
+                ->get(['application_chat_messages.id', 'sender_id',
+                    'users.name as sender_name', 'body_encrypted',
+                    'application_chat_messages.created_at'])->reverse()->values();
+        } elseif ($after !== null) {
             $rows = $query->where('application_chat_messages.id', '>', $after)
                 ->orderBy('application_chat_messages.id')->limit(40)
                 ->get(['application_chat_messages.id', 'sender_id',
