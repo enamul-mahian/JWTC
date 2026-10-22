@@ -12,7 +12,13 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 MIGRATIONS = ROOT / "database" / "migrations"
-NEW_MODULE_PATTERN = "2026_10_22_*.php"
+MINIMUM_NEW_MIGRATION_DATE = "2026_10_22"
+DATED_MIGRATION_NAME = re.compile(r"^(\d{4}_\d{2}_\d{2})_.*\.php$")
+
+
+def guarded_migration(path: pathlib.Path) -> bool:
+    date_prefix = DATED_MIGRATION_NAME.match(path.name)
+    return bool(date_prefix and date_prefix.group(1) >= MINIMUM_NEW_MIGRATION_DATE)
 
 UNSAFE_PATTERNS = {
     "table drop": r"Schema\s*::\s*drop(?:IfExists)?\s*\(",
@@ -51,7 +57,8 @@ def violations(contents: str) -> list[str]:
 
 
 def run() -> int:
-    files = sorted(MIGRATIONS.glob(NEW_MODULE_PATTERN))
+    files = sorted(file for file in MIGRATIONS.glob("*.php")
+                   if guarded_migration(file))
     if not files:
         print("FAIL: New module migrations absent; guard cannot validate.")
         return 1
