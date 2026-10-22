@@ -91,6 +91,45 @@ body.jwtc-redesign .jw-home-footer{border-top:1px solid var(--jw-border);margin-
 body.jwtc-redesign .jw-home-footer a{color:#165b7c}
 body.jwtc-redesign .jw-empty{background:#fff;border:1px dashed #b7d1df;
     border-radius:12px;padding:25px;color:var(--jw-muted)}
+/* Progressive applicant/employer dashboard refresh */
+body.jwtc-redesign .jw-workspace-intro {
+    margin-top:28px;margin-bottom:18px;
+    padding:29px 33px;border:1px solid #c7dce8;border-radius:17px;
+    background:linear-gradient(110deg,#123651 0%,#1c6580 100%);
+    color:#fff;box-shadow:var(--jw-shadow)
+}
+body.jwtc-redesign .jw-workspace-intro h1 {
+    color:#fff;line-height:1.25;font-size:clamp(24px,3vw,36px);
+    font-weight:800;margin:6px 0 10px
+}
+body.jwtc-redesign .jw-workspace-intro p:not(.jw-eyebrow) {
+    color:#deeff6;font-size:14px;margin:0 0 18px
+}
+body.jwtc-redesign .jw-workspace-actions {
+    display:flex;gap:9px;flex-wrap:wrap
+}
+body.jwtc-redesign .jw-workspace-actions a {
+    display:inline-flex;align-items:center;min-height:42px;
+    border:1px solid rgba(255,255,255,.5);background:rgba(255,255,255,.13);
+    color:#fff;text-decoration:none;font-weight:700;
+    font-size:13px;padding:10px 14px;border-radius:8px
+}
+body.jwtc-redesign .jw-workspace-actions a:hover {
+    background:#fff;color:#143a58
+}
+body.jwtc-redesign .page-header {background:transparent;box-shadow:none}
+body.jwtc-redesign .page-header .inner-header h3 {
+    color:#163650;font-weight:750
+}
+body.jwtc-redesign .job-alerts-item {border-radius:15px}
+body.jwtc-redesign .job-alerts-item .card .card-body{
+    padding:24px
+}
+body.jwtc-redesign .right-sideabr h4{font-size:18px;color:#193c59;font-weight:750}
+@media(max-width:600px) {
+    body.jwtc-redesign .jw-workspace-intro {padding:22px;margin-top:18px}
+    body.jwtc-redesign .jw-workspace-actions a{width:100%;justify-content:center}
+}
 /* Existing admin dashboard. Keep underlying template JS/Bootstrap behavior. */
 body.jwtc-redesign .body-wrapper {background:#f4f8fb;min-height:100vh}
 body.jwtc-redesign .left-sidebar{background:#122b46!important}
