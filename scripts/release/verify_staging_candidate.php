@@ -72,7 +72,7 @@ try {
             || str_starts_with($path, 'public/images/') || str_starts_with($path, 'public/uploads/')
             || !is_file($unpacked.'/'.$path) || is_link($unpacked.'/'.$path)
             || !hash_equals($record['sha256'], hash_file('sha256', $unpacked.'/'.$path))) {
-                if (preg_match('#^(vendor|app|config|public|resources|routes|database)/[A-Za-z0-9_./@+-]+$#D', $path)) echo 'CANDIDATE_CODE_PATH '.$path."\n";
+                echo 'CANDIDATE_CODE_PATH '.json_encode($path)."\n";
                 echo 'CANDIDATE_CHECKS '.json_encode(['path_rule' => (bool) preg_match('#^(app/|config/|database/|resources/|routes/|public/|vendor/|artisan$|composer\.json$|composer\.lock$|bootstrap/app\.php$)#D', $path), 'file' => is_file($unpacked.'/'.$path), 'hash' => is_file($unpacked.'/'.$path) ? hash_equals($record['sha256'], hash_file('sha256', $unpacked.'/'.$path)) : false])."\n";
                 throw new RuntimeException('Candidate file mismatch');
             }
