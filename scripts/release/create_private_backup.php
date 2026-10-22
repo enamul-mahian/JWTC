@@ -253,6 +253,14 @@ try {
         $remaining = (float) $limit - (float) $quota['bytes_used'];
     }
     $unlimited = is_string($limit) && in_array(strtolower($limit), ['unlimited', 'unlim'], true);
+    // Observed cPanel unlimited representation: zero limit/remaining while
+    // reporting existing usage and both quota-status flags as within limit.
+    if (is_numeric($limit) && (float) $limit === 0.0
+        && (float) ($quota['megabytes_used'] ?? 0) > 0
+        && (string) ($quota['under_megabyte_limit'] ?? '') === '1'
+        && (string) ($quota['under_quota_overall'] ?? '') === '1') {
+        $unlimited = true;
+    }
     if (!$unlimited && (!is_numeric($remaining) || (float) $remaining < max(1073741824, $bytes * 4))) {
         echo "STOP: account quota is insufficient or cannot be verified; no snapshot created\n";
         echo 'QUOTA_FIELD_NAMES '.implode(',', array_keys($quota))."\n";
