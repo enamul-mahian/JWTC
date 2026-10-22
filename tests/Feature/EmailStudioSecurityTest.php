@@ -382,4 +382,52 @@ class EmailStudioSecurityTest extends TestCase
         $this->assertDatabaseCount('email_studio_visual_pages', 0);
     }
 
+    public function test_environment_smtp_can_be_tested_without_exposing_credentials(): void
+    {
+        $this->actingAs(User::findOrFail(1))
+            ->post(route('email-studio.smtp.test-environment'))
+            ->assertRedirect();
+
+        Mail::assertSent(\App\Mail\StudioSmtpTestMail::class, function ($mail) {
+            return $mail->hasTo('admin@example.invalid');
+        });
+        $this->assertDatabaseHas('email_studio_send_logs', [
+            'template_id' => null, 'actor_id' => 1,
+            'recipient' => 'admin@example.invalid',
+            'result' => 'accepted', 'pdf_attached' => 0,
+        ]);
+    }
+
+    public function test_custom_smtp_mailer_overrides_studio_sender_without_editing_global_mailer(): void
+    {
+        $id = $this->template();
+        $encrypted = \Illuminate\Support\Facades\Crypt::encryptString('private-smtp-app-pass');
+        $smtpId = DB::table('email_studio_smtp_profiles')->insertGetId([
+            'name' => 'Office Profile', 'host' => 'smtp.gmail.com', 'port' => 587,
+            'encryption' => 'tls', 'username' => 'accounts@example.org',
+            'password_encrypted' => $encrypted, 'from_address' => 'accounts@example.org',
+            'from_name' => 'Office Recruitment', 'is_default' => false,
+            'updated_by' => 1, 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $beforeDefaultMailer = config('mail.default');
+
+        $this->actingAs(User::findOrFail(1))
+            ->post(route('email-studio.send', $id), [
+                'recipient' => 'client@example.invalid',
+                'pdf_mode' => 'none',
+                'smtp_profile_id' => $smtpId,
+            ])->assertRedirect();
+
+        Mail::assertSent(StudioEmail::class, function (StudioEmail $mail) {
+            return $mail->senderAddress === 'accounts@example.org'
+                && $mail->senderName === 'Office Recruitment'
+                && $mail->hasTo('client@example.invalid');
+        });
+        $this->assertSame($beforeDefaultMailer, config('mail.default'));
+        $this->assertSame('private-smtp-app-pass',
+            \Illuminate\Support\Facades\Crypt::decryptString(
+                DB::table('email_studio_smtp_profiles')->value('password_encrypted')
+            ));
+    }
+
 }
