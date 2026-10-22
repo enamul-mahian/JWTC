@@ -49,6 +49,18 @@ Requirements:
    Output is only file sizes/digests and basic format/readability. Integrity of an archive is not proof of restored data.
 4. Restore to an **isolated staging MySQL schema**, independently created/tested with appropriate database grants. Restore file archives into an isolated **staging** filesystem, preserving relative paths and privacy. Never extract archives into the live site or a shared production storage disk.
 5. Independently verify record counts and **stable IDs** for users, applications, jobs, uploaded_cvs, jobseeker_uploads, jobseeker_certificates, documents/versions, payment credentials, subscriptions, chat and support records. Compare spot-checked row data and uploaded-file SHA-256 digests. Revalidate decryptability without exposing personal data.
+   
+   Once both source and staged restores exist as separately permissioned directories, compare exact upload bytes **read-only** (run only under an authorized account; do not expose private source files to public staging):
+   
+       python3 scripts/release/compare_upload_trees.py \
+         --source-root '/ABSOLUTE/LIVE/APP/ROOT' \
+         --restored-root '/ABSOLUTE/STAGING/ROOT' \
+         --path storage/app \
+         --path public/images \
+         --path public/uploads
+   
+   Repeat for ALL relevant actual paths. Missing or modified files cause failure; extra new files are reported separately. This full-content hashing may involve substantial storage I/O and should be performed under an approved maintenance/snapshot procedure. The tool refuses symlinks and paths outside its selected roots rather than following them.
+
 6. Only after restore evidence exists: review pending migrations on staging, run additive migrations on staging (not production), re-run this read-only preflight, then complete web/API end-to-end workflows across real staging browsers and permissions.
 7. Inspect application error logs, worker memory, upload inodes and email/provider configuration. Use test credentials and non-deliverable recipients for integration testing, not applicant email lists.
 8. Verify rollback of application code while preserving new tables, files and writes. New migration down() methods are **not** an appropriate production rollback once data exists.
