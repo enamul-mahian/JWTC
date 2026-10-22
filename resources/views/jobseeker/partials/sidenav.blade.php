@@ -44,6 +44,11 @@
             href="{{ route('interviews.applicant.index') }}">My online interviews</a></li>
     @endif
 
+    @if(config('application_chat.enabled') && auth()->user()?->user_type === \App\Enum\UserType::JOB_SEEKER)
+        <li><a class="{{ Route::is('application-chat.*') ? 'active' : '' }}"
+            href="{{ route('application-chat.index') }}">Private Messages</a></li>
+    @endif
+
     {{-- TODO Something to put --}}
 
     <li>
