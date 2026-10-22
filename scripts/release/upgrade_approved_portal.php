@@ -2,7 +2,7 @@
 // A private staging-only upgrade rehearsal. Never connect using live credentials.
 ini_set('display_errors', '0');
 ini_set('log_errors', '0');
-set_error_handler(static function () { throw new RuntimeException('Operation failed'); });
+set_error_handler(static function ($severity, $message, $file, $line) { echo 'SAFE_WARNING_LINE '.(int)$line.' TYPE '.(int)$severity."\n"; throw new RuntimeException('Operation failed'); });
 $phase = 'identity';
 try {
     $liveRoot = realpath('.');
@@ -72,6 +72,7 @@ try {
         || !hash_equals($manifest['sha256'], hash_file('sha256', $input.'/'.$manifest['package']))) throw new RuntimeException('Candidate hash mismatch');
     $guard = base64_decode(trim(stream_get_contents(STDIN)), true);
     if (!$guard) throw new RuntimeException('Extractor unavailable');
+    $phase = 'extractor-prepare';
     $guard = str_replace('except Exception:', 'except Exception as error:', $guard);
     $guard = str_replace("print('Restore guard failed; private details suppressed', file=sys.stderr)", "print('GUARD_ERROR ' + type(error).__name__ + ' ' + str(getattr(error, 'errno', None)), file=sys.stderr)", $guard);
     $unpacked = $base.'/candidate-unpacked-approved';
@@ -81,9 +82,11 @@ try {
     if (is_link($unpacked)) throw new RuntimeException('Candidate destination exists');
     if (!is_dir($unpacked)) {
         if (!mkdir($unpacked, 0700)) throw new RuntimeException('Candidate destination exists');
+        $phase = 'extractor-run';
         $run(['/usr/bin/python3', '-c', $guard, 'extract', $input.'/'.$manifest['package'], $unpacked, '536870912']);
         file_put_contents($unpacked.'/.extraction-complete', 'verified extraction');
     }
+    $phase = 'extracted-hashes';
     $expected = [];
     foreach ($manifest['files'] as $record) {
         $path = $record['path'];
@@ -179,6 +182,7 @@ try {
     echo 'PRESERVED_FILE_COUNT '.count($assets)."\n";
     echo "INFO: browser flows and real SMTP delivery remain unverified; live application unchanged\n";
 } catch (Throwable $error) {
+    echo 'SAFE_ERROR_CLASS '.get_class($error)."\n";
     if (in_array($error->getMessage(), ['Candidate hash mismatch', 'Candidate file mismatch', 'Unmanifested candidate file', 'Candidate destination exists', 'Candidate command failed'], true)) fwrite(STDERR, 'REASON: '.$error->getMessage()."\n");
     fwrite(STDERR, 'FAIL: private staging candidate stopped at '.$phase."; private details suppressed; preserve staging for investigation\n");
     exit(1);
