@@ -54,8 +54,10 @@ class SupportCenter
     public function canSee(User $actor, object $ticket): bool
     {
         return (int) $ticket->requester_id === (int) $actor->id
-            || $this->canManage($actor) || $this->canReview($actor)
-            || $this->canSettle($actor);
+            || $this->canManage($actor)
+            || (($this->canReview($actor) || $this->canSettle($actor))
+                && DB::table('support_refund_requests')
+                    ->where('ticket_id', $ticket->id)->exists());
     }
 
     public function ticket(User $actor, int $id): object
@@ -71,8 +73,12 @@ class SupportCenter
         $this->requireReady();
         $q = DB::table('support_tickets')->orderByDesc('updated_at')
             ->orderByDesc('id');
-        if (!$this->canManage($actor) && !$this->canReview($actor)
-            && !$this->canSettle($actor)) {
+        if ($this->canManage($actor)) {
+            // Full authorized support queue.
+        } elseif ($this->canReview($actor) || $this->canSettle($actor)) {
+            // Finance-only staff cannot browse unrelated account complaints.
+            $q->whereIn('id', DB::table('support_refund_requests')->select('ticket_id'));
+        } else {
             $q->where('requester_id', $actor->id);
         }
         if ($status && in_array($status,
@@ -127,8 +133,8 @@ class SupportCenter
         $q = DB::table('support_ticket_replies')
             ->join('users', 'users.id', '=', 'support_ticket_replies.author_id')
             ->where('ticket_id', $ticket->id);
-        if (!$this->canManage($actor) && !$this->canReview($actor)
-            && !$this->canSettle($actor)) {
+        if (!$this->canManage($actor)) {
+            // Internal customer-service notes are NOT shared with finance reviewers.
             $q->where('internal_only', false);
         }
         $rows = $q->orderBy('support_ticket_replies.id')
