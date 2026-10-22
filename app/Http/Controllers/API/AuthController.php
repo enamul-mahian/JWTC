@@ -23,6 +23,11 @@ class AuthController extends Controller
             'phone' => ['required', 'string', 'max:20', 'unique:users,phone'],
             'job_categories_id' => ['required', 'integer', 'exists:job_categories,id'],
             'password' => ['required', 'confirmed', Password::min(8)],
+            'h-captcha-response' => [
+                \Illuminate\Validation\Rule::requiredIf((bool) config('services.hcaptcha.enabled')),
+                'nullable', 'string', 'max:8192',
+                new \App\Rules\ValidHcaptcha(),
+            ],
         ]);
 
         $role = Role::where('name', 'Employer')->where('guard_name', 'web')->first();
@@ -58,6 +63,11 @@ class AuthController extends Controller
         $data = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
+            'h-captcha-response' => [
+                \Illuminate\Validation\Rule::requiredIf((bool) config('services.hcaptcha.enabled')),
+                'nullable', 'string', 'max:8192',
+                new \App\Rules\ValidHcaptcha(),
+            ],
         ]);
 
         $user = User::where('email', $data['email'])->first();
