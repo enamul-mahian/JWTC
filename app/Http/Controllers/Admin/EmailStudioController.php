@@ -94,7 +94,7 @@ class EmailStudioController extends Controller
             $rules['image_' . $slot] = ['nullable', 'image', 'mimes:jpeg,jpg,png,webp',
                 'max:' . config('email_studio.max_image_kb', 2048)];
             $rules['width_' . $slot] = ['required', 'integer', 'between:80,600'];
-            $rules['align_' . $slot] = ['required', Rule::in(['left','center','right'])];
+            $rules['align_' . $slot] = ['sometimes', 'nullable', Rule::in(['left','center','right'])];
             $rules['delete_' . $slot] = ['nullable', 'boolean'];
         }
 
@@ -132,7 +132,7 @@ class EmailStudioController extends Controller
         $oldPaths = [];
         foreach (self::SLOTS as $slot) {
             $width = (int) $data['width_' . $slot];
-            $align = $data['align_' . $slot];
+            $align = $data['align_' . $slot] ?? ($images[$slot]['align'] ?? 'center');
             $previous = $images[$slot]['path'] ?? null;
 
             if ($request->boolean('delete_' . $slot)) {
