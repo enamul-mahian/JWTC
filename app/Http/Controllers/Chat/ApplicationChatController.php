@@ -41,6 +41,10 @@ class ApplicationChatController extends Controller
         $applicationIds = $applications->getCollection()->pluck('id')->all();
         $threads = DB::table('application_chat_threads')
             ->whereIn('application_id', $applicationIds)->get()->keyBy('application_id');
+        $available = $chat->visibleApplications($actor)
+            ->whereNotIn('id', DB::table('application_chat_threads')->select('application_id'))
+            ->with(['job', 'user:id,name'])->orderByDesc('id')
+            ->paginate(10, ['*'], 'available_page');
         $unread = [];
         foreach ($threads as $thread) {
             $unread[$thread->id] = $chat->unread($actor, $thread);
@@ -60,10 +64,14 @@ class ApplicationChatController extends Controller
                 })->values(),
                 'current_page' => $applications->currentPage(),
                 'last_page' => $applications->lastPage(),
+                'available_applications' => $available->getCollection()->map(fn ($record) => [
+                    'id' => $record->id,
+                    'job_title' => $record->job?->title,
+                ])->values(),
             ]);
         }
 
-        return view('chat.index', compact('applications', 'threads', 'unread'));
+        return view('chat.index', compact('applications', 'threads', 'unread', 'available'));
     }
 
     public function open(Request $request, int $application, ApplicationChat $chat)
