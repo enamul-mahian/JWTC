@@ -13,7 +13,7 @@
 - Disallowed transitions are rejected. Historical actions and notes are recorded as separate, append-only audit events in the same database transaction as status/time changes.
 - Application interviews are independent of existing 1–11 application progress stages. Interview activities do not invent or overwrite application status.
 - Browser pages use authenticated sessions and CSRF-protected forms, without third-party JavaScript; API routes use Sanctum.
-- This is scheduling and meeting-link management. **No native video transport, call recording, invitation email, automatic reminders, or calendar synchronization** is represented as implemented.
+- This is scheduling and meeting-link management. **No native video transport, call recording, automatic reminders, or calendar synchronization** is represented as implemented.
 
 ## Files and routes
 
@@ -37,7 +37,9 @@ API: `/api/interviews/my` and `/api/interviews/manage`.
 6. Test a real HTTPS meeting URL supplied by an authorized organizer; no video room is automatically provisioned.
 7. Test cross-account applicant/organizer ID requests, authorized admin access, cancellation and change requests, and audit invariants.
 8. Test responsive browser forms and Sanctum API clients.
-9. Provide reliable email notifications, applicant privacy/retention policy, reminder delivery and official calendar integration **before treating this as a complete interview platform**.
+9. Verify SMTP delivery and retry policy, applicant privacy/retention, reminder delivery and official calendar integration **before treating this as a complete interview platform**.
 10. Keep PR Draft and do not release until reviewed staging QA and full JWTC Master Plan sign-off.
 
 **No production credentials, applicant personal documents, or real meeting tokens have been copied to GitHub.**
+
+- SMTP email update delivery is best-effort, must be tested in staging, and currently has no retry queue.
