@@ -181,7 +181,7 @@ jobs:
           coverage: none
       - name: Install dependencies and prepare runtime directories
         run: |
-          mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs
+          mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs storage/app
           composer install --prefer-dist --no-interaction --no-progress
       - name: Verify fixture contains structural SQL only
         run: |
