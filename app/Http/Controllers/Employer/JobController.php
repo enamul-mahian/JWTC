@@ -3,13 +3,12 @@
 namespace App\Http\Controllers\Employer;
 
 use App\Enum\JobStatus;
-use App\Enum\RoleType;
+use App\Enum\UserType;
 use App\Enum\StatusType;
 use App\Enum\SubscriptionType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreJobRequest;
 use App\Http\Requests\UpdateJobRequest;
-use App\Mail\JobNotificationMail;
 use App\Models\Application;
 use App\Models\Country;
 use App\Models\Dashboard\Company;
@@ -18,26 +17,37 @@ use App\Models\Dashboard\JobCategory;
 use App\Models\Job;
 use App\Models\JobType;
 use App\Models\Skill;
-use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Laravelcm\Subscriptions\Models\Subscription;
 
 class JobController extends Controller
 {
+    private function employerCompany(): Company
+    {
+        $user = Auth::user();
+        abort_unless($user && $user->user_type === UserType::EMPLOYER
+            && $user->can('post-job'), 403);
+
+        return Company::where('user_id', $user->id)->firstOrFail();
+    }
+
+    private function requireOwnedJob(Job $job): void
+    {
+        $company = $this->employerCompany();
+        abort_unless((int) $job->user_id === (int) Auth::id()
+            && (int) $job->company_id === (int) $company->id, 404);
+    }
+
     /**
      * Show the form for creating a new resource.
      */
     public function create(Request $request)
     {
-        if (!auth()->user()->can('post-job')) {
-            return redirect()->route('home');
-        }
+        $company = $this->employerCompany();
 
         // $subscription = Subscription::with('plan')->where('subscriber_id', Auth::user()->id)->first();
 
@@ -58,9 +68,9 @@ class JobController extends Controller
         // }
 
         $job = new Job();
-        $oldValue = Cache::get('key');
+        // Laravel's per-session old input replaces the unsafe global cache key.
+        $oldValue = old('title') !== null ? old() : null;
         $title = __('Create job');
-        $company = Company::where('user_id', Auth::user()->id)->first();
         $jobCategory = JobCategory::where('status', StatusType::ACTIVE)->select('id', 'name')->get();
         $degreeLevel = DegreeLavel::where('status', StatusType::ACTIVE)->select('id', 'name')->get();
         $locations = Country::where('status', StatusType::ACTIVE)->select('id', 'name')->get();
@@ -74,13 +84,13 @@ class JobController extends Controller
      */
     public function store(StoreJobRequest $request)
     {
-        if (!auth()->user()->can('post-job')) {
-            return redirect()->route('home');
-        }
+        $company = $this->employerCompany();
 
-        $jobs = $request->all();
+        // Only validated fields can be accepted; ownership and moderation
+        // flags are always set on the server, never from request payloads.
+        $jobs = $request->validated();
 
-        $jobs['slug'] = Str::slug(strtolower(str_replace(' ', '-', $request->title))) . '-' . Carbon::parse(time())->format('ymdHis');
+        $jobs['slug'] = Str::slug($request->title) . '-' . Str::lower(Str::random(10));
         $jobs['employment_status'] = json_encode($request->employment_status);
         $jobs['job_level'] = json_encode($request->job_level);
         $jobs['work_place'] = json_encode($request->work_place);
@@ -88,20 +98,11 @@ class JobController extends Controller
         $jobs['skills'] = json_encode($request->skills);
         $jobs['gender'] = json_encode($request->gender);
         $jobs['job_status'] = JobStatus::PENDING;
-        $jobs['user_id'] = Auth::user()->id;
+        $jobs['user_id'] = Auth::id();
+        $jobs['company_id'] = $company->id;
+        $jobs['is_publish'] = 0; // Admin must explicitly approve a new job.
 
-        $job = Job::create($jobs);
-
-        $users = User::where('job_category_id', $job->job_category_id)->where('user_type', RoleType::JOB_SEEKER)->where('auto_receive_email', 1)->get();
-
-        if ($job->is_publish != 0) {
-            foreach ($users as $user) {
-
-                Mail::to($user->email)->send(new JobNotificationMail($job, $user));
-            }
-        }
-
-        Cache::forget('key');
+        Job::create($jobs);
 
         return redirect()->route('employer.dashboard')->with([
             'success' => 'job post success',
@@ -113,11 +114,14 @@ class JobController extends Controller
      */
     public function show($slug)
     {
-        if (!auth()->user()->can('post-job')) {
-            return redirect()->route('home');
-        }
+        $jobDetails = Job::with('company', 'degree_level', 'degree_name', 'country')
+            ->withTrashed()->where('slug', $slug)->firstOrFail();
 
-        $jobDetails = Job::with('company', 'degree_level', 'degree_name', 'country')->withTrashed()->where('slug', $slug)->first();
+        // Live, approved jobs may be read by authenticated job seekers;
+        // drafts and archived jobs may only be previewed by their employer.
+        if ($jobDetails->trashed() || (int) $jobDetails->is_publish !== 1) {
+            $this->requireOwnedJob($jobDetails);
+        }
         $other_benefits = json_decode($jobDetails?->other_benefits);
         $workPlaces = json_decode($jobDetails?->work_place);
         $employment_status = JobType::whereIn('id', json_decode($jobDetails->employment_status ?? '[]'))->select('name')->get();
@@ -138,9 +142,7 @@ class JobController extends Controller
 
     public function edit(Job $job)
     {
-        if (!auth()->user()->can('post-job')) {
-            return redirect()->route('home');
-        }
+        $this->requireOwnedJob($job);
 
         $title = __('Update job');
         $company = Company::where('id', $job->company_id)->first();
@@ -166,11 +168,9 @@ class JobController extends Controller
      */
     public function update(UpdateJobRequest $request, Job $job)
     {
-        if (!auth()->user()->can('post-job')) {
-            return redirect()->route('home');
-        }
-        $jobs = $request->all();
-        $jobs['slug'] = Str::slug(strtolower(str_replace(' ', '-', $request->title))) . '-' . Carbon::parse(time())->format('ymdHis');
+        $this->requireOwnedJob($job);
+        $jobs = $request->validated();
+        // Preserve the original slug for historic links and SEO.
         $jobs['employment_status'] = json_encode($request->employment_status);
         $jobs['job_level'] = json_encode($request->job_level);
         $jobs['work_place'] = json_encode($request->work_place);
@@ -178,7 +178,8 @@ class JobController extends Controller
         $jobs['skills'] = json_encode($request->skills);
         $jobs['gender'] = json_encode($request->gender);
         $jobs['job_status'] = JobStatus::PENDING;
-        $jobs['user_id'] = Auth::user()->id;
+        $jobs['is_publish'] = 0; // Edited content goes back to moderation.
+        unset($jobs['company_id'], $jobs['user_id'], $jobs['slug']);
 
         $job->update($jobs);
 
@@ -190,6 +191,7 @@ class JobController extends Controller
      */
     public function destroy(Job $job)
     {
+        $this->requireOwnedJob($job);
         $job->delete();
 
         return redirect()->back()->withWarning('Job archive success');
@@ -197,16 +199,19 @@ class JobController extends Controller
 
     public function archiveJob()
     {
+        $company = $this->employerCompany();
         $title = __('Archive Jobs');
 
-        $jobs = Job::with('company', 'degree_level', 'degree_name')->onlyTrashed()->where('user_id', Auth::user()->id)->latest()->paginate(3);
+        $jobs = Job::with('company', 'degree_level', 'degree_name')->onlyTrashed()->where('user_id', Auth::id())->where('company_id', $company->id)->latest()->paginate(3);
 
         return view('frontend.pages.job.list', compact('jobs', 'title'));
     }
 
     public function restoreJob($id)
     {
-        $job = Job::onlyTrashed()->findOrFail($id);
+        $company = $this->employerCompany();
+        $job = Job::onlyTrashed()->where('user_id', Auth::id())
+            ->where('company_id', $company->id)->findOrFail($id);
         $job->restore();
 
         return redirect()->route('employer.dashboard')->withSuccess('job restore success');
@@ -222,13 +227,15 @@ class JobController extends Controller
 
     public function jobStatusUpdate(Request $request)
     {
-        if ($request->mode == StatusType::ACTIVE) {
-            DB::table('jobs')->where('id', $request->id)->update(['is_publish' => StatusType::ACTIVE]);
-        } else {
-            DB::table('jobs')->where('id', $request->id)->update(['is_publish' => StatusType::INACTIVE]);
-        }
+        abort_unless($request->user()?->can('active-job'), 403);
+        $data = $request->validate([
+            'id' => ['required', 'integer', 'exists:jobs,id'],
+            'mode' => ['required', 'integer', 'in:0,1'],
+        ]);
+        DB::table('jobs')->where('id', $data['id'])
+            ->update(['is_publish' => (int) $data['mode']]);
 
-        return response()->json(['is_publish' => $request->mode]);
+        return response()->json(['is_publish' => (int) $data['mode']]);
     }
 
 
