@@ -3,6 +3,9 @@
 @section('title', 'Job Portal')
 
 @section('content')
+@if(config('jwtc_design.enabled'))
+    @include('frontend.home_redesign')
+@else
 
 <style>
     /* =========================
@@ -77,4 +80,5 @@
     <div class="mobile-panel mobile-right"></div>
 </div>
 
+@endif
 @endsection
