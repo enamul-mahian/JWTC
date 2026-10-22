@@ -84,7 +84,7 @@
             if (safe && ['TABLE', 'TD', 'TH'].includes(node.tagName)) {
                 const width = node.getAttribute('width') || '';
                 const align = node.getAttribute('align') || '';
-                if (/^(?:[1-9][0-9]{0,2}px?|100%|[1-9][0-9]?%)$/.test(width)) clone.setAttribute('width', width);
+                if (/^(?:[1-9][0-9]{0,2}(?:px)?|100%|[1-9][0-9]?%)$/.test(width)) clone.setAttribute('width', width);
                 if (/^(left|center|right)$/i.test(align)) clone.setAttribute('align', align.toLowerCase());
                 if (node.tagName === 'TABLE') {
                     ['cellpadding', 'cellspacing'].forEach((key) => {
