@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Constants\Status;
 use App\Enum\UserType;
 use App\Models\Application;
 use App\Models\Job;
@@ -53,7 +52,7 @@ class ApplicationSubmissionService
                 'job_id' => $currentJob->getKey(),
                 'expected_salary' => $expectedSalary,
                 'date_applied' => now()->toDateString(),
-                'status' => Status::APPLIED,
+                'status' => 1, // First status in the existing 1-11 applicant workflow.
             ]);
 
             $code->is_used = 1;
