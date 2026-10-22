@@ -20,7 +20,7 @@
                         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;width:100%;">
                             <tr>
                                 @foreach(['bottom_left', 'bottom_right'] as $slot)
-                                    <td align="center" valign="top" width="50%" style="width:50%;padding:4px;">
+                                    <td align="{{ $inlineImages[$slot]['align'] ?? 'center' }}" valign="top" width="50%" style="width:50%;padding:4px;">
                                         @if(isset($inlineImages[$slot]))
                                             <img src="{{ $message->embed($inlineImages[$slot]['absolute_path']) }}"
                                                  alt="Supporting image" width="{{ min(270, $inlineImages[$slot]['width']) }}"
