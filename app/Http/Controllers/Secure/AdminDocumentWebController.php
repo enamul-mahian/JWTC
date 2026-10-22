@@ -16,7 +16,7 @@ class AdminDocumentWebController extends Controller
         $user = $request->user();
         abort_unless($user && in_array($user->user_type, [
             UserType::ADMIN, UserType::SUPER_ADMIN
-        ], true) && $user->can('active-job'), 403);
+        ], true) && $user->can('review-private-documents'), 403);
         abort_unless(Schema::hasTable('applicant_private_documents'), 503);
     }
 
