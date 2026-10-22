@@ -307,6 +307,10 @@
 
             <h3>Available Profiles</h3>
             <div class="studio-help">Environment SMTP from protected server settings is always available when configured.</div>
+            <form method="POST" action="{{ route('email-studio.smtp.test-environment') }}">
+                @csrf
+                <button type="submit" class="secondary">Test Existing SMTP</button>
+            </form>
             @foreach($profiles as $p)
                 <div class="studio-between" style="border-bottom:1px solid #e4ebf4;padding:8px 0">
                     <div>
