@@ -43,4 +43,11 @@ return [
         'redirect' => 'http://localhost:8000/auth/linkedin/callback',
     ],
 
+
+    'hcaptcha' => [
+        'enabled' => env('HCAPTCHA_ENABLED', false),
+        'sitekey' => env('HCAPTCHA_SITEKEY'),
+        'secret' => env('HCAPTCHA_SECRET'),
+    ],
+
 ];
