@@ -11,7 +11,7 @@
 - One top banner and two bottom image slots, with width controls and drag/drop file selection. Uploaded images are validated, private, and embedded as **CID inline email attachments** when the SMTP message is sent.
 - Table-based (600 px responsive) inline-style HTML plus a plain-text alternative for Gmail and other mail clients.
 - Safe variables: `{{client_name}}`, `{{reference}}`, `{{status}}`, `{{message}}`, `{{date}}` in body/subject.
-- Send a **single transactional email** through Laravel's explicit SMTP transport. Send forms accept an existing PDF attachment (maximum 8 MB), or generate an A4 PDF from the sanitized template with DomPDF.
+- Send a **single transactional email** through Laravel's dedicated `studio_smtp` SMTP transport. Send forms accept an existing PDF attachment (maximum 8 MB), or generate an A4 PDF from the sanitized template with DomPDF.
 - Logs record sender admin ID, recipient, subject, SMTP accepted/failed result and PDF presence. They never include SMTP password, attached PDF bytes or pasted applicant documents.
 - Server endpoint allows only `5 sends/min` and `25 sends/hour`, with Laravel CSRF protections. The module is disabled by default.
 - No third-party scripts in the visual editor. HTTP responses are no-store, no-referrer and deny framing.
@@ -22,17 +22,16 @@ Do **not** commit credentials, publish the .env file, or store SMTP passwords in
 
 ```dotenv
 EMAIL_STUDIO_ENABLED=true
-MAIL_MAILER=smtp
-MAIL_HOST=<your authorised SMTP server>
-MAIL_PORT=587
-MAIL_ENCRYPTION=tls
-MAIL_USERNAME=<approved account mailbox>
-MAIL_PASSWORD=<private credential managed on the server>
-MAIL_FROM_ADDRESS=<authenticated domain address>
-MAIL_FROM_NAME="Join Gallagher"
+EMAIL_STUDIO_SMTP_HOST=<your authorised SMTP server>
+EMAIL_STUDIO_SMTP_PORT=587
+EMAIL_STUDIO_SMTP_ENCRYPTION=tls
+EMAIL_STUDIO_SMTP_USERNAME=<approved SMTP mailbox>
+EMAIL_STUDIO_SMTP_PASSWORD=<private password or SMTP app password>
+EMAIL_STUDIO_FROM_ADDRESS=<authenticated domain address>
+EMAIL_STUDIO_FROM_NAME="Join Gallagher"
 ```
 
-The built-in legacy general Email Settings page is separate. Before launch, audit any legacy code that writes plaintext mail credentials to database or directly rewrites `.env`; do not expose credentials via dashboards or application logs.
+The Studio uses the dedicated `studio_smtp` Laravel mailer and its `EMAIL_STUDIO_SMTP_*` environment variables. When those variables are absent, the transport falls back to your existing `MAIL_*` settings for backwards compatibility, without changing them. Dedicated Studio sender name/address are separate. The built-in legacy general Email Settings page is separate. Before launch, audit any legacy code that writes plaintext mail credentials to database or directly rewrites `.env`; do not expose credentials via dashboards or application logs.
 
 After staging-only schema migration and SMTP credentials, grant `manage-email-studio` to explicitly approved admin accounts through authorized RBAC. **Do not grant send rights to every admin by default.**
 
