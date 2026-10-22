@@ -23,8 +23,11 @@ class PrivateDocumentController extends Controller
 
     private function document(User $user, int $id): object
     {
-        return DB::table('applicant_private_documents')
-            ->where('id', $id)->where('user_id', $user->id)->firstOrFail();
+        $document = DB::table('applicant_private_documents')
+            ->where('id', $id)->where('user_id', $user->id)->first();
+        abort_unless($document, 404);
+
+        return $document;
     }
 
     private function attachmentRules(): array
