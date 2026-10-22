@@ -62,9 +62,34 @@ jobs:
           test -f artisan && test -f composer.json && test -f .env
           command -v php >/dev/null
           php -r 'if (PHP_VERSION_ID < 80200) {fwrite(STDERR,"FAIL: PHP 8.2+ CLI required\n");exit(1);} echo "PASS: PHP ".PHP_VERSION."\n"; foreach (["mbstring","dom","fileinfo","pdo_mysql","gd","zip","openssl"] as $extension) { if (!extension_loaded($extension)) {fwrite(STDERR,"FAIL: missing PHP extension ".$extension."\n"); exit(1);} } echo "PASS: required PHP extensions\n";'
-          for tool in composer rsync tar gzip; do
-            command -v "$tool" >/dev/null || { echo "FAIL: missing $tool"; exit 1; }
+          # Non-interactive cPanel SSH often omits the Composer installation
+          # from PATH. Inspect standard locations without installing anything
+          # or executing an unverified home-directory PHAR.
+          missing=0
+          composer_path="$(command -v composer || true)"
+          if [[ -z "$composer_path" ]]; then
+            for candidate in /opt/cpanel/composer/bin/composer /usr/local/bin/composer /usr/bin/composer "$HOME/composer.phar" "$HOME/bin/composer" "$HOME/.local/bin/composer"; do
+              if [[ -f "$candidate" && -r "$candidate" ]]; then
+                composer_path="$candidate"
+                break
+              fi
+            done
+          fi
+          if [[ -n "$composer_path" ]]; then
+            echo "PASS: Composer file located (execution/version not yet verified)"
+          else
+            echo "FAIL: Composer not found in PATH or standard cPanel/home locations"
+            missing=1
+          fi
+          for tool in rsync tar gzip; do
+            if command -v "$tool" >/dev/null; then
+              echo "PASS: $tool available"
+            else
+              echo "FAIL: missing $tool"
+              missing=1
+            fi
           done
+          (( missing == 0 ))
           test -d storage && test -d bootstrap/cache
           test -w storage && test -w bootstrap/cache
           echo 'PASS: Laravel root, environment file, storage permissions and deployment tools'
