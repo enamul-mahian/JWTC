@@ -125,7 +125,7 @@ class RegistrationOtpService
                 'phone' => $data['phone'],
                 'user_type' => $data['user_type'],
                 'job_category_id' => $data['job_category_id'] ?? null,
-                'status' => StatusType::ACTIVE,
+                'status' => $data['user_type'] === UserType::EMPLOYER ? StatusType::INACTIVE : StatusType::ACTIVE,
                 'password' => $data['password_hash'],
             ]);
             $user->forceFill(['email_verified_at' => now()])->save();

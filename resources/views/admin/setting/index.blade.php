@@ -9,6 +9,11 @@
     <form action="{{ route('setting-update') }}" method="POST" enctype="multipart/form-data">
 
         @csrf
+        <div class="card"><div class="card-body p-4"><h2 class="h5">Public job contact privacy</h2>
+        <input type="hidden" name="show_poster_email" value="0">
+        <label><input type="checkbox" name="show_poster_email" value="1" @checked(old('show_poster_email', $general->show_poster_email ?? false))> Show job-poster email on public job pages and API responses</label>
+        <p class="text-muted">Off hides the structured company contact email. Review free-text job descriptions separately before publishing.</p>
+        <a href="{{ route('admin.company-approvals.index') }}">Review company account approvals</a></div></div>
 
         <div class="row">
 

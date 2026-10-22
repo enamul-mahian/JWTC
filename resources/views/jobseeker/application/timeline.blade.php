@@ -1,81 +1,23 @@
 @extends('frontend.layout.frontMaster')
-@section('title', 'Application Progress')
-
+@section('title', 'Application Progress | JoinGallagher.uk')
 @section('content')
-<section class="container py-5" style="max-width: 1100px;">
-    <a href="{{ route('applied-jobs') }}" class="text-primary">&larr; My applications</a>
-    <header class="my-4">
-        <h1 class="h3">Application progress</h1>
-        <p class="text-muted mb-1">{{ $application->job?->title ?? 'Job application' }}</p>
-        <p class="small text-muted">Applied: {{ $application->created_at?->format('d M Y, H:i') ?? $application->date_applied }}</p>
-    </header>
-    @php
-        $percent = $current['progress'] ?? 0;
-        $terminal = $current['is_terminal'] ?? false;
-        $isRejected = (int) $application->status === 11;
-        $steps = collect($statuses)->filter(fn ($s) => !$s['is_terminal'] && $s['is_active'])->values();
-        $currentOrder = $current['sort_order'] ?? 0;
-    @endphp
-
-    <div class="card p-4 mb-4">
-        <div class="d-flex justify-content-between align-items-center flex-wrap">
-            <div>
-                <p class="text-muted small mb-1">Current status</p>
-                <h2 class="h5 mb-0">{{ $current['name'] ?? 'Status under review' }}</h2>
-            </div>
-            <strong>{{ $percent }}% complete</strong>
-        </div>
-        <div class="progress mt-3" style="height:12px">
-            <div class="progress-bar {{ $isRejected ? 'bg-danger' : '' }}" role="progressbar"
-                style="width:{{ $percent }}%" aria-valuenow="{{ $percent }}"
-                aria-valuemin="0" aria-valuemax="100"
-                aria-label="Application completion: {{ $percent }} percent"></div>
-        </div>
-        @if ($terminal)
-            <p class="mt-3 mb-0 {{ $isRejected ? 'text-danger' : 'text-success' }}">
-                {{ $isRejected ? 'Your application is no longer in progress.' : 'This workflow has reached a final stage.' }}
-            </p>
-        @endif
-    </div>
-
-    <h2 class="h5 mb-3">Process stages</h2>
-    <div class="border rounded bg-white p-3 mb-4" style="overflow-x:auto">
-        <ol class="list-unstyled d-flex mb-0" style="gap:16px;min-width:max-content">
-            @foreach ($steps as $step)
-                @php $done = !$isRejected && $step['sort_order'] <= $currentOrder; @endphp
-                <li style="width:156px" aria-current="{{ $step['id'] === (int) $application->status ? 'step' : 'false' }}">
-                    <span class="rounded-circle d-inline-flex justify-content-center align-items-center {{ $done ? 'bg-primary text-white' : 'bg-light text-muted' }}"
-                          style="width:32px;height:32px;" aria-hidden="true">{{ $loop->iteration }}</span>
-                    <div class="small mt-2">{{ $step['name'] }}</div>
-                    <div class="small text-muted">{{ $step['progress'] }}%</div>
-                </li>
-            @endforeach
-        </ol>
-    </div>
-
-    <h2 class="h5 mb-3">Status history</h2>
-    <div class="card p-4">
-        <ol class="list-unstyled mb-0" style="border-left:3px solid #dce6ef;padding-left:20px;">
-            <li class="mb-4">
-                <strong>Application submitted</strong>
-                <div class="small text-muted">{{ $application->created_at?->format('d M Y, H:i') ?? $application->date_applied }}</div>
-            </li>
-            @forelse ($events as $event)
-                <li class="mb-4">
-                    <strong>{{ $event->status_name }}</strong>
-                    <div class="small text-muted">
-                        {{ \Illuminate\Support\Carbon::parse($event->created_at)->format('d M Y, H:i') }}
-                        &middot; {{ $event->progress }}%
-                    </div>
-                    @if ($event->note)
-                        <p class="mt-2 mb-0">{{ $event->note }}</p>
-                    @endif
-                </li>
-            @empty
-                <li class="text-muted">No subsequent status changes have been recorded.</li>
-            @endforelse
-        </ol>
-    </div>
-    <p class="small text-muted mt-3">Historical updates logged before this timeline was introduced may not be available.</p>
-</section>
+@php
+$percent = max(0, min(100, (int)($current['progress'] ?? 0)));
+$currentId = (int)$application->status;
+$recorded = collect($events)->groupBy('to_status_id');
+$steps = collect($statuses)->filter(fn($step) => $step['is_active'] && (!$step['is_terminal'] || $step['id'] === $currentId || (int)$step['progress'] === 100))->values();
+$lastEvent = collect($events)->last();
+$completedCount = $steps->filter(fn($step) => isset($recorded[$step['id']]) && (int)$step['id'] !== $currentId)->count();
+@endphp
+<div class="jg-tracker"><a href="{{ route('applied-jobs') }}" class="jg-text-link">← My applications</a>
+<section class="jg-track-top" aria-label="Application progress summary"><div class="jg-application-head"><div class="jg-company-monogram" aria-hidden="true">{{ mb_substr($application->job?->company?->company_name ?? 'J',0,1) }}</div><div class="jg-application-title"><h1>{{ $application->job?->title ?? 'Job application' }}</h1><p>{{ $application->job?->company?->company_name ?? 'Recruitment application' }}</p><div class="jg-job-meta"><span>⌖ {{ $application->job?->country?->name ?? 'See job details' }}</span>@if($application->job?->minimum_salary)<span>◉ {{ $application->job->minimum_salary }} – {{ $application->job->maximum_salary }} {{ $application->job->salary_type ? '('.ucfirst($application->job->salary_type).')' : '' }}</span>@endif</div></div><div class="jg-application-id"><span>Application ID</span><strong>#APP-{{ $application->id }}</strong><span>Applied {{ $application->created_at?->format('d M Y, H:i') ?? $application->date_applied }}</span></div><div class="jg-current-badge"><small>Current status</small><strong>{{ $current['name'] ?? 'Awaiting update' }}</strong></div></div>
+<div class="jg-progress-layout"><div class="jg-step-scroll"><ol class="jg-steps">
+@foreach($steps as $step)
+@php $isCurrent = (int)$step['id'] === $currentId; $last = $recorded->get($step['id'])?->last(); @endphp
+<li class="jg-step {{ $isCurrent ? 'current' : ($last ? 'done' : '') }}" @if($isCurrent) aria-current="step" @endif><span class="jg-step-mark" aria-hidden="true">{{ $isCurrent ? '◉' : ($last ? '✓' : $loop->iteration) }}</span><strong>{{ $step['name'] }}</strong><small>{{ $last ? \Illuminate\Support\Carbon::parse($last->created_at)->format('d M Y, H:i') : ($isCurrent ? 'Current step' : 'Pending') }}</small></li>
+@endforeach
+</ol></div><div class="jg-progress-summary"><div class="jg-progress-circle" style="--progress:{{ $percent }}" role="progressbar" aria-label="Application completion" aria-valuenow="{{ $percent }}" aria-valuemin="0" aria-valuemax="100"><strong>{{ $percent }}%</strong></div><div class="jg-progress-caption">{{ $percent }}% Complete</div></div></div></section>
+<div class="jg-track-grid"><section class="jg-track-panel"><div class="jg-track-panel-heading"><h2>☷ &nbsp; Application Timeline</h2><small>Custom status names<br>managed by the recruitment team</small></div><ol class="jg-timeline"><li class="done"><span class="jg-timeline-dot" aria-hidden="true">✓</span><div><h3>Application submitted</h3><time>{{ $application->created_at?->format('d M Y, H:i') ?? $application->date_applied }}</time></div><div class="jg-event-note">Your application has been submitted. Recorded updates will appear here.</div></li>
+@forelse($events as $event)<li class="{{ $loop->last ? 'current' : 'done' }}"><span class="jg-timeline-dot" aria-hidden="true">{{ $loop->last ? '' : '✓' }}</span><div><h3>{{ $event->status_name }}</h3><time>{{ \Illuminate\Support\Carbon::parse($event->created_at)->format('d M Y, H:i') }}</time><small>{{ $event->progress }}% complete</small></div><div class="jg-event-note">{{ $event->note ?: 'The recruitment team recorded this status update.' }}</div></li>@empty<li><span class="jg-timeline-dot" aria-hidden="true"></span><div><h3>Awaiting next update</h3><small>No subsequent status events recorded</small></div><div class="jg-event-note">Older status changes made before this timeline was introduced may not be available.</div></li>@endforelse
+</ol></section><aside class="jg-track-aside"><section class="jg-track-panel"><h2>⌕ &nbsp; Current Status</h2><h3>{{ $current['name'] ?? 'Awaiting update' }}</h3>@if($lastEvent)<p>{{ \Illuminate\Support\Carbon::parse($lastEvent->created_at)->format('d M Y, H:i') }}</p>@endif<div class="jg-info-box">{{ $lastEvent?->note ?: 'Check this page for the latest update from the recruitment team.' }}</div></section><section class="jg-track-panel"><h2>◉ &nbsp; Application Progress</h2><strong>{{ $percent }}% Complete</strong><div class="jg-linear-progress" aria-hidden="true"><span style="width:{{ $percent }}%"></span></div><p>{{ $completedCount }} stages with a recorded completed update.</p></section><section class="jg-track-panel"><h2>Need to make changes?</h2><p>Contact the recruitment team if you need to correct your application or provide more information.</p><a class="jg-text-link" href="{{ route('contact') }}">Contact Recruitment Team ↗</a></section></aside></div></div>
 @endsection

@@ -206,6 +206,7 @@ class SettingController extends Controller
     {
         $validator = Validator::make($request->all(), [
 
+            'show_poster_email' => ['sometimes', 'boolean'],
             'business_name' => 'required',
             'business_address' => 'required',
             'business_number' => 'required',
@@ -300,6 +301,7 @@ class SettingController extends Controller
             $general->job_seeker_referral_code =
                 trim($request->job_seeker_referral_code);
 
+            $general->show_poster_email = $request->boolean('show_poster_email');
             $general->save();
 
             DB::commit();

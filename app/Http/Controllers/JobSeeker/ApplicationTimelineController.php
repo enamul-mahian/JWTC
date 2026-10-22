@@ -17,7 +17,7 @@ class ApplicationTimelineController extends Controller
         abort_unless($request->user()?->user_type === UserType::JOB_SEEKER, 403);
 
         // Never retrieve by ID alone; ownership must apply before loading events.
-        $record = Application::with(['job.company'])
+        $record = Application::with(['job.company', 'job.country'])
             ->where('user_id', $request->user()->id)
             ->findOrFail($application);
 

@@ -97,7 +97,7 @@ Route::get('/', HomeController::class)->name('home');
 |
 */
 
-Route::get('registration/form', [EmployeerController::class, 'register'])
+Route::get('registration/form', [RegisteredUserController::class, 'create'])
     ->name('registration.form');
 
 Route::post('employer-register', [EmployeerController::class, 'registerStore'])
@@ -1157,3 +1157,22 @@ Route::middleware(['auth', 'application.chat.headers'])
         Route::post('/tickets/{id}/refund-review', [SupportCenterController::class, 'reviewRefund'])
             ->whereNumber('id')->middleware('throttle:6,1')->name('support.refund.review');
     });
+
+Route::get('company/approval', function (\Illuminate\Http\Request $request) {
+    abort_unless(strtolower((string)$request->user()?->user_type) === \App\Enum\UserType::EMPLOYER, 403);
+    return view('frontend.auth.pending');
+})->middleware('auth')->name('company.approval');
+Route::middleware(['auth', 'admin_user'])->prefix('admin/company-approvals')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Admin\CompanyApprovalController::class, 'index'])->name('admin.company-approvals.index');
+    Route::post('/{user}', [\App\Http\Controllers\Admin\CompanyApprovalController::class, 'decide'])->whereNumber('user')->middleware('throttle:20,1')->name('admin.company-approvals.decide');
+});
+
+Route::get('jobseeker/login', [UserAuthLoginController::class, 'login'])->defaults('audience', \App\Enum\UserType::JOB_SEEKER)->name('jobseeker.login');
+Route::post('jobseeker/login', [UserAuthLoginController::class, 'userLogin'])->defaults('audience', \App\Enum\UserType::JOB_SEEKER)->middleware('throttle:10,1')->name('jobseeker.login.submit');
+Route::get('company/login', [UserAuthLoginController::class, 'login'])->defaults('audience', \App\Enum\UserType::EMPLOYER)->name('company.login');
+Route::post('company/login', [UserAuthLoginController::class, 'userLogin'])->defaults('audience', \App\Enum\UserType::EMPLOYER)->middleware('throttle:10,1')->name('company.login.submit');
+Route::get('company/register', [EmployeerController::class, 'register'])->name('company.register');
+Route::get('admin/login', [UserAuthLoginController::class, 'login'])->defaults('audience', 'admin')->name('admin.login');
+Route::post('admin/login', [UserAuthLoginController::class, 'userLogin'])->defaults('audience', 'admin')->middleware('throttle:10,1')->name('admin.login.submit');
+
+Route::get('vacancies/{job}', [HomeController::class, 'publicJob'])->whereNumber('job')->name('public.job');
