@@ -22,7 +22,7 @@
                 <div>
                     <label for="subject">Email subject</label>
                     <input type="text" id="subject" name="subject" maxlength="250" required
-                        value="{{ old('subject', $template->subject ?? '') }}" placeholder="Update for {{client_name}}">
+                        value="{{ old('subject', $template->subject ?? '') }}" placeholder="Update for @{{client_name}}">
                 </div>
             </div>
             <p class="small muted">Personalization fields: <code>@{{client_name}}</code>, <code>@{{reference}}</code>, <code>@{{status}}</code>,
