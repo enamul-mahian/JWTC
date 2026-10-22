@@ -62,6 +62,7 @@ use App\Http\Controllers\LangController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StripePaymentController;
 use App\Http\Controllers\UserAuthLoginController;
+use App\Http\Controllers\Security\PasswordOtpController;
 use App\Http\Controllers\WordController;
 
 use Illuminate\Support\Facades\Route;
@@ -129,6 +130,10 @@ Route::post('user/login', [UserAuthLoginController::class, 'userLogin'])
 
 Route::post('logout', [UserAuthLoginController::class, 'logout'])
     ->name('logout');
+
+Route::post('account/password/verify-otp', [PasswordOtpController::class, 'confirm'])
+    ->middleware(['auth', 'throttle:5,1'])
+    ->name('account.password.verify_otp');
 
 
 /*
