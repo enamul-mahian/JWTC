@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Mail\InterviewUpdateMail;
 use App\Models\Application;
 use App\Models\User;
 use App\Services\InterviewManager;
@@ -285,6 +286,11 @@ class InterviewManagementTest extends TestCase
         );
 
         Mail::assertSentCount(1);
+        Mail::assertSent(InterviewUpdateMail::class, static function ($mail) {
+            return $mail->hasTo('applicant@example.invalid')
+                && str_contains($mail->messageBody, '/job_seeker/interviews/99')
+                && !str_contains($mail->messageBody, 'private-room');
+        });
     }
 
 }
