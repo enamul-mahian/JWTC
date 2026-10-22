@@ -47,6 +47,18 @@ The read-only `scripts/release/audit_legacy_sql.py --sql /PRIVATE/PATH/dropoqux_
 - Actual site-wide accessibility, browser messaging, payment/refund settlement or GDPR/data retention acceptance.
 - That data will be preserved without independently checked offsite backups, isolated full restore, row/file reconciliation and write-freeze or controlled synchronization.
 
+## Additional historical ZIP inventory (read-only)
+
+Two earlier private website/source archives were inventoried **without extracting or deploying them**, and without opening credential values or applicant content:
+
+- The approximately 271 MB historical \`joingallagher.uk.zip\` contains website source and public assets, including a substantial set of public images, plus **older** job portal SQL exports (including a 46-table export from 2024-era naming).
+- The approximately 36 MB \`JoinGallagher-Source-Code.zip\` also contains that older 46-table SQL export. These are **not the same identified database export** as \`dropoqux_jobs.sql\`, and must not be substituted for the latest production DB.
+- A historical \`.env\` file is present in the full website archive. **Treat the archive as secret-bearing**, do not commit it, republish it or expose it in a public web folder. Its APP_KEY/passwords must not be assumed current; preserve the actual running deployment's APP_KEY via authorized vault.
+- No \`public/storage\` directory and no \`storage/app/private\` directory was found in those ZIP central-directory inventories. \`storage/app\` had very few files. This **does not prove no such user uploads exist on the server**; it means these archives cannot be presumed complete backups of existing applicant documents.
+- A Git source checkout plus these archives is not proof of file completeness. Independently back up all real current upload locations and symlink targets; verify SHA-256 hashes and authorized private downloads before releasing.
+
+Only archive member counts, categories and SQL DDL metadata were examined; no private row/secret values or personal filenames were copied into the repository.
+
 ## Mandatory next acceptance gates
 
 1. Obtain and preserve a **current** read-only snapshot of production MySQL and all public/private uploads, with independent encrypted off-host backups and APP_KEY escrow.
