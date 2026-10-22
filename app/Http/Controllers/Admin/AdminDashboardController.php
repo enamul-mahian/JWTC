@@ -19,7 +19,28 @@ class AdminDashboardController extends Controller
 
     public function dashboard(Request $request)
     {
-        return view('admin.dashboard.index');
+        if (!config('jwtc_design.enabled')) {
+            return view('admin.dashboard.index');
+        }
+
+        // Real database metrics only. Avoid the vendor theme's example
+        // revenue and sample records, and stay resilient before migrations.
+        $metrics = [
+            'job_seekers' => \Illuminate\Support\Facades\Schema::hasTable('users')
+                ? User::where('user_type', 'job_seeker')->count() : 0,
+            'employers' => \Illuminate\Support\Facades\Schema::hasTable('users')
+                ? User::where('user_type', 'employer')->count() : 0,
+            'published_jobs' => \Illuminate\Support\Facades\Schema::hasTable('jobs')
+                ? Job::where('is_publish', 1)->count() : 0,
+            'applications' => \Illuminate\Support\Facades\Schema::hasTable('applications')
+                ? Application::count() : 0,
+        ];
+        $recentJobs = \Illuminate\Support\Facades\Schema::hasTable('jobs')
+            ? Job::query()->latest('id')->limit(5)
+                ->get(['id', 'title', 'is_publish', 'created_at'])
+            : collect();
+
+        return view('admin.dashboard.redesign', compact('metrics', 'recentJobs'));
     }
 
     public function getDashboardData(Request $request)
