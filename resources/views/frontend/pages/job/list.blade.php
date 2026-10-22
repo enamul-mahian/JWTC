@@ -6,6 +6,24 @@
         crossorigin="anonymous" referrerpolicy="no-referrer" />
 @endpush
 @section('content')
+    @if(config('jwtc_design.enabled') && Route::is('employer.dashboard'))
+        <section class="jw-workspace-intro container" aria-labelledby="jw-employer-title">
+            <p class="jw-eyebrow">Employer workspace</p>
+            <h1 id="jw-employer-title">Manage your opportunities</h1>
+            <p>Your current job listings are securely tied to your employer account.</p>
+            <nav class="jw-workspace-actions" aria-label="Employer actions">
+                @can('post-job')<a href="{{ route('jobs.create') }}">Post a Job</a>@endcan
+                @can('job-manage')<a href="{{ route('manage.job') }}">Manage Jobs</a>@endcan
+                @can('post-job')<a href="{{ route('interviews.manage.index') }}">Interviews</a>@endcan
+                @if(config('application_chat.enabled') && auth()->user()->can('post-job'))
+                    <a href="{{ route('application-chat.index') }}">Applicant Messages</a>
+                @endif
+                @if(config('support_center.enabled'))
+                    <a href="{{ route('support.index') }}">Support</a>
+                @endif
+            </nav>
+        </section>
+    @endif
     <section id="latest-jobs" class="section bg-gray mt-4">
         <div class="page-header">
             <div class="container">
