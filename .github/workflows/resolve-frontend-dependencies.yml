@@ -1,0 +1,33 @@
+name: Resolve Node 24 Frontend
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/resolve-frontend-dependencies.yml']
+permissions:
+  contents: write
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/security-dependencies-20261022
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Resolve frontend packages for supported Node
+        run: |
+          npm pkg set 'devDependencies.vite=^7.0' 'devDependencies.laravel-vite-plugin=^2.0' 'devDependencies.axios=^1.13' 'engines.node=>=24 <25'
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm ci --no-audit --no-fund
+          npm audit --audit-level=high
+          npm run build
+      - name: Commit reproducible frontend lock
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package.json package-lock.json
+          git commit -m 'Upgrade Vite build and frontend lock for Node 24'
+          git push origin HEAD:refs/heads/fix/security-dependencies-20261022
