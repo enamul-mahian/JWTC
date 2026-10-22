@@ -18,6 +18,7 @@ class StagingReleasePreflight extends Command
         {--expected-db= : Exact isolated staging MySQL database name}
         {--production-db= : Exact production database name (must differ)}
         {--expected-url= : Exact staging application URL}
+        {--expected-key-sha256= : SHA-256 fingerprint from independently escrowed original APP_KEY}
         {--production-root= : Existing on-disk live application root to protect}
         {--uploads=* : Repeat for each staging-relative upload/storage folder to verify}';
 
@@ -51,6 +52,7 @@ class StagingReleasePreflight extends Command
         $expected = trim((string) $this->option('expected-db'));
         $production = trim((string) $this->option('production-db'));
         $url = rtrim(trim((string) $this->option('expected-url')), '/');
+        $escrowedKeyHash = strtolower(trim((string) $this->option('expected-key-sha256')));
         $liveRoot = trim((string) $this->option('production-root'));
         $paths = (array) $this->option('uploads');
 
@@ -85,6 +87,13 @@ class StagingReleasePreflight extends Command
         }
         $this->check($keyValid, 'APP_KEY encryption/decryption',
             'Cannot encrypt/decrypt private data with the current APP_KEY.');
+        $currentKeyHash = hash('sha256', (string) config('app.key'));
+        $this->check(
+            preg_match('/^[a-f0-9]{64}$/', $escrowedKeyHash) === 1 &&
+                hash_equals($escrowedKeyHash, $currentKeyHash),
+            'Escrowed APP_KEY identity',
+            'Staging key does not match the independently retained original key fingerprint.'
+        );
 
         $this->check(
             count($paths) >= 2 &&
