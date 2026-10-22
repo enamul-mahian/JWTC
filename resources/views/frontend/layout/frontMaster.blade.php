@@ -25,10 +25,12 @@
     @else
         <meta name="keywords" content="Bootstrap, Landing page, Template, Registration, Landing">
     @endif
-    <meta name="author" content="UIdeck">
+    <meta name="author" content="Join Gallagher">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title> @yield('title') </title>
-    <link rel="icon" href="{{ asset('assets/images/setting/' . $setting->favicon) }}" type="image/x-icon">
+    @if(isset($setting?->favicon) && $setting->favicon)
+        <link rel="icon" href="{{ asset('assets/images/setting/' . $setting->favicon) }}" type="image/x-icon">
+    @endif
     @include('frontend.includes.style')
     @if(config('jwtc_design.enabled'))
         <link rel="stylesheet" href="{{ asset('theme/jwtc.css') }}">
