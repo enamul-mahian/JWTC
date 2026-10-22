@@ -32,6 +32,15 @@
                         </table>
                     </td></tr>
                 @endif
+                @if(!empty($inlineVisualPages))
+                    @foreach($inlineVisualPages as $visual)
+                        <tr><td align="center" style="padding:0 12px 12px;">
+                            <img src="{{ $message->embed($visual['absolute_path']) }}"
+                                 alt="Document page {{ $visual['page_number'] }}" width="576"
+                                 style="display:block;width:100%;max-width:576px;height:auto;border:0;">
+                        </td></tr>
+                    @endforeach
+                @endif
                 @if($footerText !== '')
                     <tr><td style="border-top:1px solid #e3e8ee;padding:16px 28px 24px;color:#687689;font-size:12px;line-height:1.5;text-align:center;">
                         {!! nl2br(e($footerText)) !!}
