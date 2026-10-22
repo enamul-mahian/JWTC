@@ -26,6 +26,7 @@
         </div>
         <div id="private-chat-app"
             data-poll-url="{{ route('application-chat.poll',$thread->id) }}"
+            data-history-url="{{ route('application-chat.history',$thread->id) }}"
             data-send-url="{{ route('application-chat.send',$thread->id) }}"
             data-read-url="{{ route('application-chat.read',$thread->id) }}"
             data-csrf="{{ csrf_token() }}"
