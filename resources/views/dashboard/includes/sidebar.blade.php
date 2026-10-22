@@ -54,6 +54,15 @@
                 </li>
             @endif
 
+            @if(config('application_chat.enabled') && in_array(auth()->user()?->user_type, [\App\Enum\UserType::ADMIN, \App\Enum\UserType::SUPER_ADMIN], true) && auth()->user()->can('manage-application-chat'))
+                <li class="sidebar-item">
+                    <a href="{{ route('application-chat.index') }}" class="sidebar-link">
+                        <span><i class="ti ti-messages"></i></span>
+                        <span class="hide-menu">Applicant Messaging</span>
+                    </a>
+                </li>
+            @endif
+
             {{-- TODO Something to put --}}
 
             @if (auth()->user()->can('job-categories.index') || auth()->user()->can('review-private-documents') || auth()->user()->can('inactive-job'))
