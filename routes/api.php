@@ -176,6 +176,7 @@ Route::middleware(['auth:sanctum','throttle:60,1'])
         Route::post('/applications/{application}', [ApplicationChatController::class, 'open'])
             ->middleware('throttle:8,1');
         Route::get('/threads/{id}', [ApplicationChatController::class, 'thread']);
+        Route::get('/threads/{id}/history', [ApplicationChatController::class, 'history']);
         Route::get('/threads/{id}/poll', [ApplicationChatController::class, 'poll']);
         Route::post('/threads/{id}/messages', [ApplicationChatController::class, 'send'])
             ->middleware('throttle:12,1');
