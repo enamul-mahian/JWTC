@@ -182,6 +182,8 @@ class JWTCDesignRegressionTest extends TestCase
         ]);
 
         $this->actingAs(\App\Models\User::findOrFail(19));
+        // Direct view::render() bypasses the ShareErrorsFromSession middleware.
+        \Illuminate\Support\Facades\View::share('errors', new \Illuminate\Support\ViewErrorBag());
         \Illuminate\Support\Facades\View::share([
             'setting' => (object) ['logo' => null, 'favicon' => null],
             'pages' => [],
