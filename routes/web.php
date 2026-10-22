@@ -1149,6 +1149,8 @@ Route::middleware(['auth', 'application.chat.headers'])
             ->whereNumber('id')->middleware('throttle:12,1')->name('support.reply');
         Route::post('/tickets/{id}/status', [SupportCenterController::class, 'status'])
             ->whereNumber('id')->middleware('throttle:10,1')->name('support.status');
+        Route::post('/tickets/{id}/assign', [SupportCenterController::class, 'assign'])
+            ->whereNumber('id')->middleware('throttle:10,1')->name('support.assign');
         Route::post('/tickets/{id}/refund-request', [SupportCenterController::class, 'requestRefund'])
             ->whereNumber('id')->middleware('throttle:3,1')->name('support.refund.request');
         Route::post('/tickets/{id}/refund-review', [SupportCenterController::class, 'reviewRefund'])
