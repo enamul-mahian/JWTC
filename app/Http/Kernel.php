@@ -67,6 +67,7 @@ class Kernel extends HttpKernel
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'private.document.headers' => \App\Http\Middleware\PrivateDocumentResponseHeaders::class,
         'email.studio.headers' => \App\Http\Middleware\EmailStudioResponseHeaders::class,
+        'application.chat.headers' => \App\Http\Middleware\ChatResponseHeaders::class,
         'admin' => \App\Http\Middleware\AdminMiddleware::class,
         'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
         'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
