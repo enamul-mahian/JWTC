@@ -339,4 +339,45 @@ class SupportCenterTest extends TestCase
             ->assertDontSee('Private staff notes');
     }
 
+    public function test_support_agent_can_assign_approved_staff_with_audit(): void
+    {
+        $ticket=$this->create();
+        $this->actingAs(User::findOrFail(5))
+            ->post(route('support.assign',$ticket->id),[
+                'assignee_id'=>5,
+            ])->assertRedirect();
+
+        $this->assertDatabaseHas('support_tickets',[
+            'id'=>$ticket->id,'assigned_to'=>5,
+        ]);
+        $this->assertDatabaseHas('support_ticket_events',[
+            'ticket_id'=>$ticket->id,'action'=>'assigned',
+            'related_user_id'=>5,
+        ]);
+
+        $this->get(route('support.show',$ticket->id))
+            ->assertOk()->assertSee('Update assignment');
+
+        $this->post(route('support.assign',$ticket->id),[
+            'assignee_id'=>'',
+        ])->assertRedirect();
+        $this->assertDatabaseHas('support_tickets',[
+            'id'=>$ticket->id,'assigned_to'=>null,
+        ]);
+    }
+
+    public function test_unprivileged_customer_and_refund_staff_cannot_assign_support_tickets(): void
+    {
+        $ticket=$this->create();
+        $this->actingAs(User::findOrFail(1))
+            ->post(route('support.assign',$ticket->id),[
+                'assignee_id'=>5,
+            ])->assertForbidden();
+
+        $this->actingAs(User::findOrFail(5))
+            ->post(route('support.assign',$ticket->id),[
+                'assignee_id'=>2,
+            ])->assertSessionHasErrors('assignee_id');
+    }
+
 }
