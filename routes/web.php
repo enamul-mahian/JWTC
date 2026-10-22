@@ -12,6 +12,8 @@ use App\Http\Controllers\Admin\HistoryController;
 use App\Http\Controllers\Admin\IndustryTypeController;
 use App\Http\Controllers\Admin\JobCategoryController;
 use App\Http\Controllers\Admin\ApplicationStatusDefinitionController;
+use App\Http\Controllers\Secure\ApplicantDocumentWebController;
+use App\Http\Controllers\Secure\AdminDocumentWebController;
 use App\Http\Controllers\Admin\JobSeekerController;
 use App\Http\Controllers\Admin\JobTypeController;
 use App\Http\Controllers\Admin\LocationController;
@@ -966,3 +968,43 @@ Route::get('job-seeker/cv-view/{id}', [JobSeekerController::class, 'cvView'])
 */
 
 Route::get('/job-counts-by-country', [HomeController::class, 'getJobCountsByCountry']);
+
+/*
+|--------------------------------------------------------------------------
+| NEW PRIVATE DOCUMENT WORKSPACE (independent of legacy public CV library)
+|--------------------------------------------------------------------------
+| These routes use web authentication, CSRF forms and security headers.
+| Actual access is checked against account type, ownership and permission.
+*/
+Route::middleware(['auth', 'private.document.headers'])
+    ->prefix('job_seeker/private-documents')
+    ->group(function () {
+        Route::get('/', [ApplicantDocumentWebController::class, 'index'])
+            ->name('jobseeker.private-documents.index');
+        Route::post('/', [ApplicantDocumentWebController::class, 'store'])
+            ->middleware('throttle:10,1')
+            ->name('jobseeker.private-documents.store');
+        Route::get('/{id}', [ApplicantDocumentWebController::class, 'show'])
+            ->whereNumber('id')->name('jobseeker.private-documents.show');
+        Route::post('/{id}/revisions', [ApplicantDocumentWebController::class, 'revise'])
+            ->whereNumber('id')->middleware('throttle:10,1')
+            ->name('jobseeker.private-documents.revise');
+        Route::get('/{id}/versions/{version}', [ApplicantDocumentWebController::class, 'download'])
+            ->whereNumber('id')->whereNumber('version')
+            ->name('jobseeker.private-documents.download');
+    });
+
+Route::middleware(['auth', 'private.document.headers'])
+    ->prefix('admin/private-documents')
+    ->group(function () {
+        Route::get('/', [AdminDocumentWebController::class, 'index'])
+            ->name('admin.private-documents.index');
+        Route::get('/{id}', [AdminDocumentWebController::class, 'show'])
+            ->whereNumber('id')->name('admin.private-documents.show');
+        Route::post('/{id}/review', [AdminDocumentWebController::class, 'decide'])
+            ->whereNumber('id')->middleware('throttle:30,1')
+            ->name('admin.private-documents.decide');
+        Route::get('/{id}/versions/{version}', [AdminDocumentWebController::class, 'download'])
+            ->whereNumber('id')->whereNumber('version')
+            ->name('admin.private-documents.download');
+    });
