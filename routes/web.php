@@ -26,6 +26,7 @@ use App\Http\Controllers\AdsController;
 use App\Http\Controllers\AjaxSearchController;
 
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Auth\RegistrationOtpController;
 use App\Http\Controllers\Auth\SocialiteLoginController;
 
 use App\Http\Controllers\ContactController;
@@ -111,6 +112,12 @@ Route::middleware('guest')->group(function () {
         ->name('register');
 
     Route::post('register', [RegisteredUserController::class, 'store'])->middleware('throttle:5,1');
+
+    Route::get('register/verify-email', [RegistrationOtpController::class, 'show'])
+        ->name('registration.otp.show');
+    Route::post('register/verify-email', [RegistrationOtpController::class, 'confirm'])
+        ->middleware('throttle:5,1')
+        ->name('registration.otp.confirm');
 
 });
 
