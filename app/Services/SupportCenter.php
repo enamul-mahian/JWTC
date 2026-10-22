@@ -250,8 +250,9 @@ class SupportCenter
         $minor = ((int) $units * 100) + (int) str_pad($cents, 2, '0');
 
         return DB::transaction(function () use ($actor, $ticketId, $input, $minor) {
-            DB::table('support_tickets')->where('id', $ticketId)
-                ->lockForUpdate()->firstOrFail();
+            $locked = DB::table('support_tickets')->where('id', $ticketId)
+                ->lockForUpdate()->first();
+            abort_unless($locked, 404);
             if (DB::table('support_refund_requests')->where('ticket_id', $ticketId)->exists()) {
                 throw ValidationException::withMessages(['amount' =>
                     'This ticket already has a refund request.']);
