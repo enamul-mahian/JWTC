@@ -229,6 +229,24 @@ try {
     }
     $webRoots = $collectRoots($allDomains['result']['data'] ?? []);
     if (!$webRoots) throw new RuntimeException('No verified document roots');
+    $backupPhase = 'account-quota-check';
+    $quotaResponse = json_decode($run([$uapi, '--output=json', '--user=dropoqux',
+        'Quota', 'get_quota_info']), true, 64, JSON_THROW_ON_ERROR);
+    if (($quotaResponse['result']['status'] ?? 0) !== 1) {
+        throw new RuntimeException('Cannot establish account disk quota');
+    }
+    $quota = $quotaResponse['result']['data'] ?? [];
+    $limit = $quota['bytes_limit'] ?? null;
+    $remaining = $quota['bytes_remain'] ?? null;
+    if ($remaining === null && is_numeric($limit) && is_numeric($quota['bytes_used'] ?? null)) {
+        $remaining = (float) $limit - (float) $quota['bytes_used'];
+    }
+    $unlimited = is_string($limit) && in_array(strtolower($limit), ['unlimited', 'unlim'], true);
+    if (!$unlimited && (!is_numeric($remaining) || (float) $remaining < max(1073741824, $bytes * 4))) {
+        echo "STOP: account quota is insufficient or cannot be verified; no snapshot created\n";
+        echo 'QUOTA_FIELD_NAMES '.implode(',', array_keys($quota))."\n";
+        exit(2);
+    }
     $home = realpath(getenv('HOME') ?: '');
     if (!$home || $home === '/' || !str_starts_with($root, $home.DIRECTORY_SEPARATOR)) {
         throw new RuntimeException('Unexpected hosting home');
