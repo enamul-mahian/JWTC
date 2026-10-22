@@ -120,6 +120,32 @@ class EmailStudioHtml
                 continue;
             }
 
+            // Preserve safe legacy table layout attributes so imported .html
+            // messages keep their basic Gmail-friendly structure.
+            if (in_array($tag, ['table', 'td', 'th'], true) &&
+                $key === 'width' && preg_match('/^(?:[1-9][0-9]{0,2}px?|100%|[1-9][0-9]?%)$/', $value)) {
+                continue;
+            }
+            if (in_array($tag, ['table', 'td', 'th'], true) &&
+                $key === 'align' && in_array(strtolower($value), ['left', 'center', 'right'], true)) {
+                continue;
+            }
+            if (in_array($tag, ['td', 'th'], true) && $key === 'valign' &&
+                in_array(strtolower($value), ['top', 'middle', 'bottom'], true)) {
+                continue;
+            }
+            if (in_array($tag, ['td', 'th'], true) && in_array($key, ['colspan', 'rowspan'], true)
+                && preg_match('/^[1-4]$/', $value)) {
+                continue;
+            }
+            if ($tag === 'table' && in_array($key, ['cellpadding', 'cellspacing'], true)
+                && preg_match('/^(?:[0-9]|1[0-9]|20)$/', $value)) {
+                continue;
+            }
+            if ($tag === 'table' && $key === 'border' && $value === '0') {
+                continue;
+            }
+
             if ($key === 'href' && $tag === 'a' && $this->safeHref($value)) {
                 $node->setAttribute('rel', 'noopener noreferrer');
                 continue;
@@ -174,6 +200,10 @@ class EmailStudioHtml
                 'font-style' => preg_match('/^(normal|italic)$/i', $val),
                 'text-decoration' => preg_match('/^(none|underline|line-through)$/i', $val),
                 'line-height' => preg_match('/^(1(\.[0-9])?|2(\.0)?)$/', $val),
+                'width','max-width' => preg_match('/^(?:[1-9][0-9]{0,2}px|100%|[1-9][0-9]?%)$/', $val),
+                'padding' => preg_match('/^(?:[0-9]|[1-4][0-9]|50)px(?:\\s+(?:[0-9]|[1-4][0-9]|50)px){0,3}$/', $val),
+                'border-collapse' => $val === 'collapse',
+                'vertical-align' => in_array($val, ['top','middle','bottom'], true),
                 default => false,
             };
             if ($valid) {
