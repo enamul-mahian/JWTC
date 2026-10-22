@@ -9,26 +9,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="handheldfriendly" content="true" />
     <meta name="MobileOptimized" content="width" />
-    <meta name="description" content="Mordenize" />
+    <meta name="description" content="Join Gallagher private administration dashboard" />
+    <meta name="robots" content="noindex,nofollow,noarchive" />
     <meta name="author" content="" />
-    <meta name="keywords" content="Mordenize" />
+    {{-- Admin content is private; do not expose marketing keywords. --}}
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <!--  Favicon -->
     <link rel="shortcut icon" type="image/png" href="{{ asset('assets/images/setting/' . $setting?->favicon) }}" />
     <!-- Owl Carousel  -->
     @include('dashboard.includes.style')
+    @if(config('jwtc_design.enabled'))
+        <link rel="stylesheet" href="{{ asset('theme/jwtc.css') }}">
+    @endif
     @stack('style')
 </head>
 
-<body>
-    <!-- Preloader -->
-    <div class="preloader">
-        <img src="{{ asset('backend/dist/images/logos/favicon.ico') }}" alt="loader" class="lds-ripple img-fluid" />
-    </div>
-    <!-- Preloader -->
-    <div class="preloader">
-        <img src="{{ asset('backend/dist/images/logos/favicon.ico') }}" alt="loader" class="lds-ripple img-fluid" />
-    </div>
+<body @if(config('jwtc_design.enabled'))class="jwtc-redesign"@endif>
+    @if(config('jwtc_design.enabled'))
+        <a href="#jw-admin-content" class="jw-skip">Skip to dashboard content</a>
+    @endif
+    <!-- One legacy preloader retained for compatibility with bundled dashboard JS. -->
+    @unless(config('jwtc_design.enabled'))
+        <div class="preloader">
+            <img src="{{ asset('backend/dist/images/logos/favicon.ico') }}" alt="" class="lds-ripple img-fluid" />
+        </div>
+    @endunless
     <!--  Body Wrapper -->
     <div class="page-wrapper" id="main-wrapper" data-theme="blue_theme" data-layout="vertical" data-sidebartype="full"
         data-sidebar-position="fixed" data-header-position="fixed">
@@ -44,14 +49,15 @@
                 @include('dashboard.includes.header')
             </header>
 
-            <div class="container-fluid">
+            <main class="container-fluid" id="jw-admin-content">
                 @yield('content')
-            </div>
-            
+            </main>
+
         </div>
     </div>
     
-    <!--  Search Bar -->
+    @unless(config('jwtc_design.enabled'))
+    <!-- Legacy theme demo search modal; omitted in redesigned dashboard. -->
     <div class="modal fade" id="exampleModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-scrollable modal-lg">
             <div class="modal-content rounded-1">
@@ -143,6 +149,8 @@
             </div>
         </div>
     </div>
+
+    @endunless
 
     @include('dashboard.includes.script')
     @stack('script')
