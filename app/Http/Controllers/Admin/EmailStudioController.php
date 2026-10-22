@@ -298,4 +298,190 @@ class EmailStudioController extends Controller
         return back()->with('success',
             'The configured SMTP server accepted the message. Check the recipient inbox.');
     }
+    public function duplicate(Request $request, int $id)
+    {
+        $this->authorizeStudio($request);
+        $original = $this->template($id);
+        abort_if(DB::table('email_studio_templates')->count() >=
+            config('email_studio.max_templates', 200), 422);
+
+        $stored = [];
+        try {
+            $newId = DB::transaction(function () use ($request, $original, $id, &$stored) {
+                $now = now();
+                $newId = DB::table('email_studio_templates')->insertGetId([
+                    'name' => mb_substr($original->name . ' (Copy)', 0, 180),
+                    'subject' => $original->subject,
+                    'html_body' => $original->html_body,
+                    'footer' => $original->footer,
+                    'images' => '{}', 'created_by' => $request->user()->id,
+                    'updated_by' => $request->user()->id,
+                    'created_at' => $now, 'updated_at' => $now,
+                ]);
+                $oldImages = json_decode($original->images ?: '{}', true) ?: [];
+                $copies = [];
+                foreach (self::SLOTS as $slot) {
+                    $img = $oldImages[$slot] ?? null;
+                    $path = $img['path'] ?? null;
+                    if (!$path || !str_starts_with($path,
+                        'private/email-studio/' . $id . '/' . $slot . '/')) continue;
+                    $newPath = 'private/email-studio/' . $newId . '/' . $slot .
+                        '/' . \Illuminate\Support\Str::uuid() . '.' . pathinfo($path, PATHINFO_EXTENSION);
+                    if (!Storage::disk('local')->copy($path, $newPath)) {
+                        throw new \RuntimeException('Image copy failed.');
+                    }
+                    $stored[] = $newPath;
+                    $copies[$slot] = ['path' => $newPath, 'width' => $img['width'] ?? 250];
+                }
+                DB::table('email_studio_templates')->where('id', $newId)
+                    ->update(['images' => json_encode($copies, JSON_THROW_ON_ERROR)]);
+
+                if (Schema::hasTable('email_studio_visual_pages')) {
+                    $pages = DB::table('email_studio_visual_pages')
+                        ->where('template_id', $id)->orderBy('page_number')->get();
+                    foreach ($pages as $page) {
+                        $newPath = 'private/email-studio/' . $newId . '/pdf-visual/' .
+                            \Illuminate\Support\Str::uuid() . '.' .
+                            pathinfo($page->private_path, PATHINFO_EXTENSION);
+                        if (!Storage::disk('local')->copy($page->private_path, $newPath)) {
+                            throw new \RuntimeException('Page image copy failed.');
+                        }
+                        $stored[] = $newPath;
+                        DB::table('email_studio_visual_pages')->insert([
+                            'template_id' => $newId,
+                            'page_number' => $page->page_number,
+                            'private_path' => $newPath,
+                            'file_size' => $page->file_size,
+                            'sha256' => $page->sha256,
+                            'created_at' => now(),
+                        ]);
+                    }
+                }
+                return $newId;
+            }, 3);
+        } catch (\Throwable $error) {
+            foreach ($stored as $path) Storage::disk('local')->delete($path);
+            report($error);
+            throw ValidationException::withMessages([
+                'template' => 'The template could not be duplicated. No changes were saved.',
+            ]);
+        }
+
+        return redirect()->route('email-studio.edit', $newId)
+            ->with('success', 'Template duplicated with separate private image files.');
+    }
+
+    public function destroy(Request $request, int $id)
+    {
+        $this->authorizeStudio($request);
+        $original = $this->template($id);
+        $images = json_decode($original->images ?: '{}', true) ?: [];
+        $paths = [];
+        foreach ($images as $img) {
+            $path = $img['path'] ?? null;
+            if (is_string($path) && str_starts_with($path,
+                'private/email-studio/' . $id . '/')) $paths[] = $path;
+        }
+        if (Schema::hasTable('email_studio_visual_pages')) {
+            $paths = array_merge($paths, DB::table('email_studio_visual_pages')
+                ->where('template_id', $id)->pluck('private_path')->all());
+        }
+        DB::transaction(function () use ($id) {
+            DB::table('email_studio_send_logs')->where('template_id', $id)
+                ->update(['template_id' => null]);
+            if (Schema::hasTable('email_studio_visual_pages')) {
+                DB::table('email_studio_visual_pages')->where('template_id', $id)->delete();
+            }
+            DB::table('email_studio_templates')->where('id', $id)->delete();
+        }, 3);
+
+        foreach ($paths as $path) {
+            if (str_starts_with((string) $path, 'private/email-studio/' . $id . '/')) {
+                Storage::disk('local')->delete($path);
+            }
+        }
+        return redirect()->route('email-studio.index')
+            ->with('success', 'Template deleted. Historical SMTP attempt logs remain.');
+    }
+
+    public function visualPage(Request $request, int $id, int $page)
+    {
+        $this->authorizeStudio($request);
+        $this->template($id);
+        abort_unless($page >= 1 && $page <= 3 &&
+            Schema::hasTable('email_studio_visual_pages'), 404);
+        $record = DB::table('email_studio_visual_pages')
+            ->where('template_id', $id)->where('page_number', $page)->first();
+        abort_unless($record && str_starts_with($record->private_path,
+            'private/email-studio/' . $id . '/pdf-visual/') &&
+            Storage::disk('local')->exists($record->private_path), 404);
+
+        return Storage::disk('local')->response($record->private_path, null, [
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
+    public function importVisual(Request $request, StudioPdfVisuals $visuals, int $id)
+    {
+        $this->authorizeStudio($request);
+        $this->template($id);
+        abort_unless(Schema::hasTable('email_studio_visual_pages'), 503);
+
+        $data = $request->validate([
+            'pdf_visual' => ['nullable','file','mimes:pdf','max:8192'],
+            'visual_page_1' => ['nullable','file','mimes:png,jpg,jpeg','max:3072'],
+            'visual_page_2' => ['nullable','file','mimes:png,jpg,jpeg','max:3072'],
+            'visual_page_3' => ['nullable','file','mimes:png,jpg,jpeg','max:3072'],
+        ]);
+        if ($request->hasFile('pdf_visual') && (
+            $request->hasFile('visual_page_1') || $request->hasFile('visual_page_2')
+            || $request->hasFile('visual_page_3'))) {
+            throw ValidationException::withMessages([
+                'pdf_visual' => 'Choose either a PDF or individual page images.',
+            ]);
+        }
+
+        $new = $request->hasFile('pdf_visual')
+            ? $visuals->fromPdf($data['pdf_visual'], $id)
+            : $visuals->fromImages([
+                1 => $data['visual_page_1'] ?? null,
+                2 => $data['visual_page_2'] ?? null,
+                3 => $data['visual_page_3'] ?? null,
+            ], $id);
+
+        $old = DB::table('email_studio_visual_pages')
+            ->where('template_id', $id)->get()->all();
+        try {
+            DB::transaction(function () use ($new, $id) {
+                DB::table('email_studio_visual_pages')->where('template_id', $id)->delete();
+                foreach ($new as $row) {
+                    DB::table('email_studio_visual_pages')
+                        ->insert(['template_id' => $id] + $row);
+                }
+            }, 3);
+        } catch (\Throwable $error) {
+            $visuals->deletePageFiles($new);
+            throw $error;
+        }
+
+        $visuals->deletePageFiles($old);
+        return redirect()->route('email-studio.edit', $id)
+            ->with('success', 'Visual pages imported and ready for CID email embedding.');
+    }
+
+    public function removeVisual(Request $request, StudioPdfVisuals $visuals, int $id)
+    {
+        $this->authorizeStudio($request);
+        $this->template($id);
+        abort_unless(Schema::hasTable('email_studio_visual_pages'), 503);
+        $old = DB::table('email_studio_visual_pages')
+            ->where('template_id', $id)->get()->all();
+
+        DB::table('email_studio_visual_pages')->where('template_id', $id)->delete();
+        $visuals->deletePageFiles($old);
+        return redirect()->route('email-studio.edit', $id)
+            ->with('success', 'Imported visual pages removed from this template.');
+    }
+
 }
