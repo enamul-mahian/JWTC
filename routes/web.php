@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\JobSeekerController;
 use App\Http\Controllers\Admin\JobTypeController;
 use App\Http\Controllers\Admin\LocationController;
 use App\Http\Controllers\Admin\MassmailController;
+use App\Http\Controllers\Admin\EmailStudioController;
 use App\Http\Controllers\Admin\PaymentCredentialsController;
 use App\Http\Controllers\Admin\PlanController;
 use App\Http\Controllers\Admin\RoleController;
@@ -1038,3 +1039,31 @@ Route::middleware(['auth', 'private.document.headers'])->group(function () {
         ->whereNumber('application')->middleware('throttle:10,1')
         ->name('interviews.manage.action');
 });
+
+
+/*
+|----------------------------------------------------------------------
+| JWTC VISUAL SMTP EMAIL STUDIO (isolated from legacy Mass Mail)
+|----------------------------------------------------------------------
+| Feature flag + admin type + dedicated permission enforced in controller.
+| No credentials or server secrets are written through these endpoints.
+*/
+Route::middleware(['auth', 'email.studio.headers'])
+    ->prefix('admin/email-studio')
+    ->group(function () {
+        Route::get('/', [EmailStudioController::class, 'index'])->name('email-studio.index');
+        Route::get('/new', [EmailStudioController::class, 'edit'])->name('email-studio.create');
+        Route::post('/templates', [EmailStudioController::class, 'save'])
+            ->middleware('throttle:10,1')->name('email-studio.store');
+        Route::get('/templates/{id}', [EmailStudioController::class, 'edit'])
+            ->whereNumber('id')->name('email-studio.edit');
+        Route::patch('/templates/{id}', [EmailStudioController::class, 'save'])
+            ->whereNumber('id')->middleware('throttle:10,1')
+            ->name('email-studio.update');
+        Route::get('/templates/{id}/images/{slot}', [EmailStudioController::class, 'image'])
+            ->whereNumber('id')->where('slot', 'top|bottom_left|bottom_right')
+            ->name('email-studio.image');
+        Route::post('/templates/{id}/send', [EmailStudioController::class, 'send'])
+            ->whereNumber('id')->middleware(['throttle:5,1', 'throttle:25,60'])
+            ->name('email-studio.send');
+    });
