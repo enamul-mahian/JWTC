@@ -29,6 +29,8 @@ jobs:
         run: composer validate --no-check-publish
       - name: Install PHP dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Block destructive new-module migrations
+        run: python3 scripts/release/check_migration_safety.py
       - name: Lint tracked application PHP files
         run: find app routes config database tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Compile Blade views
