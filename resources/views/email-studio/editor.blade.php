@@ -122,12 +122,14 @@
                                     <input type="range" name="width_{{ $slot }}" id="width-{{ $slot }}"
                                         min="80" max="600" step="10" value="{{ old('width_'.$slot, $images[$slot]['width'] ?? 250) }}" data-slot-width="{{ $slot }}">
                                 @endif
+                                @if($slot !== 'top')
                                 <label for="image-align-{{ $slot }}">Alignment</label>
                                 <select id="image-align-{{ $slot }}" name="align_{{ $slot }}" data-slot-align="{{ $slot }}">
                                     @foreach(['left'=>'Left','center'=>'Center','right'=>'Right'] as $v=>$label2)
                                         <option value="{{ $v }}" @selected(old('align_'.$slot, $images[$slot]['align'] ?? 'center')===$v)>{{ $label2 }}</option>
                                     @endforeach
                                 </select>
+                                @endif
                                 @if(isset($images[$slot]['path']))
                                     <label><input type="checkbox" name="delete_{{ $slot }}" value="1" style="width:auto"> Remove</label>
                                 @endif
