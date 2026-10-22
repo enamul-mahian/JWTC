@@ -123,7 +123,7 @@ class EmailStudioHtml
             // Preserve safe legacy table layout attributes so imported .html
             // messages keep their basic Gmail-friendly structure.
             if (in_array($tag, ['table', 'td', 'th'], true) &&
-                $key === 'width' && preg_match('/^(?:[1-9][0-9]{0,2}px?|100%|[1-9][0-9]?%)$/', $value)) {
+                $key === 'width' && preg_match('/^(?:[1-9][0-9]{0,2}(?:px)?|100%|[1-9][0-9]?%)$/', $value)) {
                 continue;
             }
             if (in_array($tag, ['table', 'td', 'th'], true) &&
