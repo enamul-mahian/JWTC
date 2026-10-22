@@ -98,4 +98,44 @@ class PrivateDocumentWebAccessTest extends TestCase
         $this->assertContains('auth', $route->gatherMiddleware());
         $this->assertContains('private.document.headers', $route->gatherMiddleware());
     }
+    public function test_explicitly_authorized_reviewer_can_lock_and_unlock_with_audit(): void
+    {
+        \Spatie\Permission\Models\Permission::findOrCreate('review-private-documents', 'web');
+        $admin = User::findOrFail(4);
+        $admin->givePermissionTo('review-private-documents');
+
+        $this->actingAs($admin)
+            ->get(route('admin.private-documents.show', 40))
+            ->assertOk()
+            ->assertSee('Personal Passport')
+            ->assertDontSee('maps.googleapis.com');
+
+        $this->post(route('admin.private-documents.decide', 40), [
+            'action' => 'lock',
+            'reason' => 'Identity document is approved for restricted processing.',
+        ])->assertRedirect(route('admin.private-documents.show', 40));
+
+        $this->assertNotNull(DB::table('applicant_private_documents')
+            ->where('id', 40)->value('locked_at'));
+        $this->assertDatabaseHas('applicant_private_document_events', [
+            'document_id' => 40, 'actor_id' => 4, 'action' => 'lock',
+        ]);
+
+        $this->post(route('admin.private-documents.decide', 40), [
+            'action' => 'unlock', 'reason' => 'Applicant is permitted to submit a revision.',
+        ])->assertRedirect(route('admin.private-documents.show', 40));
+
+        $this->assertNull(DB::table('applicant_private_documents')
+            ->where('id', 40)->value('locked_at'));
+        $this->assertDatabaseCount('applicant_private_document_events', 2);
+    }
+
+    public function test_explicit_review_permission_is_not_implicitly_granted_to_admin(): void
+    {
+        \Spatie\Permission\Models\Permission::findOrCreate('review-private-documents', 'web');
+        $this->actingAs(User::findOrFail(4))
+            ->get(route('admin.private-documents.show', 40))
+            ->assertForbidden();
+    }
+
 }
