@@ -88,4 +88,22 @@ class StagingReleasePreflightTest extends TestCase
             '--uploads' => ['storage/app','public/images'],
         ])->assertExitCode(1);
     }
+    public function test_wrong_escrowed_app_key_fingerprint_is_release_blocking(): void
+    {
+        config()->set('app.env', 'staging');
+        config()->set('app.url', 'https://staging.example.invalid');
+        config()->set('app.debug', false);
+        DB::shouldReceive('connection')->never();
+
+        $this->artisan('jwtc:staging-preflight', [
+            '--expected-db' => 'sample_staging',
+            '--production-db' => 'sample_live',
+            '--expected-url' => 'https://staging.example.invalid',
+            '--expected-key-sha256' => str_repeat('1', 64),
+            '--production-root' => dirname(base_path()),
+            '--uploads' => ['storage/app','public/images'],
+        ])->expectsOutputToContain('Escrowed APP_KEY identity')
+            ->assertExitCode(1);
+    }
+
 }
