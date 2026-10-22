@@ -36,7 +36,8 @@
         ]);
         const allowedStyle = new Set([
             'text-align','color','background-color','font-size',
-            'font-family','font-weight','font-style','text-decoration','line-height'
+            'font-family','font-weight','font-style','text-decoration','line-height',
+            'width','max-width','padding','border-collapse','vertical-align'
         ]);
         const cssValueIsSafe = (name, value) => {
             if (!value || value.length > 100 || /[<>{}@]|url\s*\(|expression\s*\(/i.test(value)) return false;
@@ -51,6 +52,10 @@
             if (name === 'font-style') return /^(normal|italic)$/i.test(value);
             if (name === 'text-decoration') return /^(none|underline|line-through)$/i.test(value);
             if (name === 'line-height') return /^(1(\.[0-9])?|2(\.0)?)$/.test(value);
+            if (name === 'width' || name === 'max-width') return /^(?:[1-9][0-9]{0,2}px|100%|[1-9][0-9]?%)$/.test(value);
+            if (name === 'padding') return /^(?:[0-9]|[1-4][0-9]|50)px(?:\s+(?:[0-9]|[1-4][0-9]|50)px){0,3}$/.test(value);
+            if (name === 'border-collapse') return value === 'collapse';
+            if (name === 'vertical-align') return /^(top|middle|bottom)$/.test(value);
             return false;
         };
 
@@ -75,6 +80,26 @@
                     }
                 });
                 if (styles.length) clone.setAttribute('style', styles.join(';'));
+            }
+            if (safe && ['TABLE', 'TD', 'TH'].includes(node.tagName)) {
+                const width = node.getAttribute('width') || '';
+                const align = node.getAttribute('align') || '';
+                if (/^(?:[1-9][0-9]{0,2}px?|100%|[1-9][0-9]?%)$/.test(width)) clone.setAttribute('width', width);
+                if (/^(left|center|right)$/i.test(align)) clone.setAttribute('align', align.toLowerCase());
+                if (node.tagName === 'TABLE') {
+                    ['cellpadding', 'cellspacing'].forEach((key) => {
+                        const value = node.getAttribute(key) || '';
+                        if (/^(?:[0-9]|1[0-9]|20)$/.test(value)) clone.setAttribute(key, value);
+                    });
+                    if (node.getAttribute('border') === '0') clone.setAttribute('border', '0');
+                } else {
+                    const valign = node.getAttribute('valign') || '';
+                    if (/^(top|middle|bottom)$/i.test(valign)) clone.setAttribute('valign', valign.toLowerCase());
+                    ['colspan', 'rowspan'].forEach((key) => {
+                        const value = node.getAttribute(key) || '';
+                        if (/^[1-4]$/.test(value)) clone.setAttribute(key, value);
+                    });
+                }
             }
             if (safe && node.tagName === 'A') {
                 const href = node.getAttribute('href') || '';
