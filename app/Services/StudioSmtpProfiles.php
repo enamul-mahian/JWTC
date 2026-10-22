@@ -5,6 +5,7 @@ namespace App\Services;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 class StudioSmtpProfiles
@@ -60,6 +61,7 @@ class StudioSmtpProfiles
 
     public function defaultId(): ?int
     {
+        if (!Schema::hasTable('email_studio_smtp_profiles')) return null;
         $id = DB::table('email_studio_smtp_profiles')
             ->where('is_default', true)->value('id');
         return $id === null ? null : (int) $id;
