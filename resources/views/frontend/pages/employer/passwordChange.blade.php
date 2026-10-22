@@ -35,6 +35,20 @@
                             </div>
                         @endif
 
+                        @if (session('otp_sent'))
+                            <div class="alert alert-info" role="status">{{ session('otp_sent') }}</div>
+                        @endif
+                        @if (config('security.password_change_otp.enabled'))
+                            <form method="POST" action="{{ route('account.password.verify_otp') }}" class="mb-4">
+                                @csrf
+                                <div class="form-group">
+                                    <label for="password-otp">Email verification code</label>
+                                    <input id="password-otp" name="otp" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" minlength="6" class="form-control" autocomplete="one-time-code" placeholder="Six-digit code" required>
+                                </div>
+                                <button type="submit" class="btn btn-common">Verify code and change password</button>
+                            </form>
+                        @endif
+
                         <form action="{{ route('update.pass') }}" method="post">
                             @csrf
                             @if ($errors->any())
