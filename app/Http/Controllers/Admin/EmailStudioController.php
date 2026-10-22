@@ -200,15 +200,18 @@ class EmailStudioController extends Controller
             'reference' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', 'string', 'max:150'],
             'message' => ['nullable', 'string', 'max:4000'],
+            'smtp_profile_id' => ['nullable', 'integer', 'min:1'],
             'pdf_mode' => ['required', Rule::in(['none', 'upload', 'generate'])],
             'pdf' => ['required_if:pdf_mode,upload', 'nullable', 'file',
                 'mimes:pdf', 'max:' . config('email_studio.max_pdf_kb', 8192)],
         ]);
 
-        abort_unless(filter_var(config('email_studio.from_address'), FILTER_VALIDATE_EMAIL), 503,
-            'Email Studio sender is not configured.');
-        abort_unless(config('mail.mailers.studio_smtp.host') &&
-            config('mail.mailers.studio_smtp.username'), 503, 'Custom SMTP settings are incomplete.');
+        $chosenProfile = !empty($data['smtp_profile_id'])
+            ? (int) $data['smtp_profile_id']
+            : app(StudioSmtpProfiles::class)->defaultId();
+        $smtp = app(StudioSmtpProfiles::class)->settings($chosenProfile);
+        abort_unless(filter_var($smtp['from_address'], FILTER_VALIDATE_EMAIL), 503,
+            'The SMTP sender address is not configured.');
 
         $template = $this->template($id);
         $values = [
@@ -261,9 +264,16 @@ class EmailStudioController extends Controller
         try {
             // Explicit SMTP mailer: do not fall back to the "log" driver and
             // report a false positive when the outbound connection is broken.
-            Mail::mailer('studio_smtp')->to($data['recipient'])->send(new StudioEmail(
+            $visualPages = Schema::hasTable('email_studio_visual_pages')
+                ? DB::table('email_studio_visual_pages')->where('template_id', $id)
+                    ->orderBy('page_number')->get()->map(fn ($row) => [
+                        'page_number' => $row->page_number,
+                        'private_path' => $row->private_path,
+                    ])->all() : [];
+            Mail::mailer($smtp['mailer'])->to($data['recipient'])->send(new StudioEmail(
                 $subject, $body, $formatter->plainText($body),
-                $footer, $images, $pdfBytes, $pdfName
+                $footer, $images, $pdfBytes, $pdfName,
+                $visualPages, $smtp['from_address'], $smtp['from_name']
             ));
             $result = 'accepted'; // SMTP accepted does NOT guarantee Gmail inbox.
         } catch (\Throwable $exception) {
