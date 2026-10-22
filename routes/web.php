@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\JobCategoryController;
 use App\Http\Controllers\Admin\ApplicationStatusDefinitionController;
 use App\Http\Controllers\Secure\ApplicantDocumentWebController;
 use App\Http\Controllers\Secure\AdminDocumentWebController;
+use App\Http\Controllers\Interview\InterviewController;
 use App\Http\Controllers\Admin\JobSeekerController;
 use App\Http\Controllers\Admin\JobTypeController;
 use App\Http\Controllers\Admin\LocationController;
@@ -1008,3 +1009,32 @@ Route::middleware(['auth', 'private.document.headers'])
             ->whereNumber('id')->whereNumber('version')
             ->name('admin.private-documents.download');
     });
+
+
+/*
+|----------------------------------------------------------------------
+| ONLINE INTERVIEW SCHEDULING (no recording or native video)
+|----------------------------------------------------------------------
+| Meetings are secure HTTPS links issued by an approved organizer.
+| Session-authenticated views use no third-party scripts.
+*/
+Route::middleware(['auth', 'private.document.headers'])->group(function () {
+    Route::get('job_seeker/interviews', [InterviewController::class, 'applicantIndex'])
+        ->name('interviews.applicant.index');
+    Route::get('job_seeker/interviews/{application}', [InterviewController::class, 'applicantShow'])
+        ->whereNumber('application')->name('interviews.applicant.show');
+    Route::post('job_seeker/interviews/{application}/reply', [InterviewController::class, 'act'])
+        ->whereNumber('application')->middleware('throttle:10,1')
+        ->name('interviews.applicant.reply');
+
+    Route::get('interviews/manage', [InterviewController::class, 'managerIndex'])
+        ->name('interviews.manage.index');
+    Route::get('interviews/manage/{application}', [InterviewController::class, 'managerShow'])
+        ->whereNumber('application')->name('interviews.manage.show');
+    Route::post('interviews/manage/{application}/schedule', [InterviewController::class, 'schedule'])
+        ->whereNumber('application')->middleware('throttle:10,1')
+        ->name('interviews.manage.schedule');
+    Route::post('interviews/manage/{application}/action', [InterviewController::class, 'act'])
+        ->whereNumber('application')->middleware('throttle:10,1')
+        ->name('interviews.manage.action');
+});
