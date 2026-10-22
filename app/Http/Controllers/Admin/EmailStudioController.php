@@ -188,10 +188,10 @@ class EmailStudioController extends Controller
                 'mimes:pdf', 'max:' . config('email_studio.max_pdf_kb', 8192)],
         ]);
 
-        abort_unless(filter_var(config('mail.from.address'), FILTER_VALIDATE_EMAIL), 503,
-            'SMTP sender is not configured.');
-        abort_unless(config('mail.mailers.smtp.host') &&
-            config('mail.mailers.smtp.username'), 503, 'SMTP settings are incomplete.');
+        abort_unless(filter_var(config('email_studio.from_address'), FILTER_VALIDATE_EMAIL), 503,
+            'Email Studio sender is not configured.');
+        abort_unless(config('mail.mailers.studio_smtp.host') &&
+            config('mail.mailers.studio_smtp.username'), 503, 'Custom SMTP settings are incomplete.');
 
         $template = $this->template($id);
         $values = [
@@ -244,7 +244,7 @@ class EmailStudioController extends Controller
         try {
             // Explicit SMTP mailer: do not fall back to the "log" driver and
             // report a false positive when the outbound connection is broken.
-            Mail::mailer('smtp')->to($data['recipient'])->send(new StudioEmail(
+            Mail::mailer('studio_smtp')->to($data['recipient'])->send(new StudioEmail(
                 $subject, $body, $formatter->plainText($body),
                 $footer, $images, $pdfBytes, $pdfName
             ));
