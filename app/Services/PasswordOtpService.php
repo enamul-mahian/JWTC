@@ -20,8 +20,9 @@ class PasswordOtpService
     {
         $now = now();
         $code = (string) random_int(100000, 999999);
+        $codeHash = Hash::make($code);
 
-        DB::transaction(function () use ($user, $newPasswordHash, $now, $code) {
+        DB::transaction(function () use ($user, $newPasswordHash, $now, $codeHash) {
             User::whereKey($user->getKey())->lockForUpdate()->firstOrFail();
 
             $existing = DB::table('email_otp_challenges')
@@ -39,7 +40,7 @@ class PasswordOtpService
             DB::table('email_otp_challenges')->updateOrInsert([
                 'user_id' => $user->getKey(), 'purpose' => self::PURPOSE,
             ], [
-                'code_hash' => Hash::make($code),
+                'code_hash' => $codeHash,
                 'payload_hash' => $newPasswordHash,
                 'attempts' => 0,
                 'expires_at' => $now->copy()->addMinutes((int) config('security.password_change_otp.ttl_minutes', 10)),
@@ -61,7 +62,7 @@ class PasswordOtpService
             DB::table('email_otp_challenges')
                 ->where('user_id', $user->getKey())
                 ->where('purpose', self::PURPOSE)
-                ->where('code_hash', '!=', '')
+                ->where('code_hash', $codeHash)
                 ->delete();
             throw ValidationException::withMessages([
                 'otp' => 'We could not deliver your email verification code. Please try again.',
