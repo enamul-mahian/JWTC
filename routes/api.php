@@ -197,6 +197,7 @@ Route::middleware(['auth:sanctum', 'throttle:40,1'])
         Route::post('/tickets/{id}/replies', [SupportCenterController::class, 'reply'])
             ->middleware('throttle:12,1');
         Route::post('/tickets/{id}/status', [SupportCenterController::class, 'status']);
+        Route::post('/tickets/{id}/assign', [SupportCenterController::class, 'assign']);
         Route::post('/tickets/{id}/refund-request', [SupportCenterController::class, 'requestRefund'])
             ->middleware('throttle:3,1');
         Route::post('/tickets/{id}/refund-review', [SupportCenterController::class, 'reviewRefund']);
