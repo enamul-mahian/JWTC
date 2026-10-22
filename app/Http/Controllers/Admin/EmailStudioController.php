@@ -46,7 +46,10 @@ class EmailStudioController extends Controller
         if ($id !== null && (!ctype_digit((string) $id) || (int) $id < 1)) {
             abort(404);
         }
-        return $this->edit($request, $id !== null ? (int) $id : null);
+        $this->authorizeStudio($request);
+        $selected = $id !== null ? (int) $id
+            : DB::table('email_studio_templates')->orderByDesc('updated_at')->value('id');
+        return $this->edit($request, $selected ? (int) $selected : null);
     }
 
     public function edit(Request $request, ?int $id = null)
