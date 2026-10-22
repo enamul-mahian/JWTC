@@ -33,6 +33,8 @@
             data-self-id="{{ $actor->id }}"
             data-poll-seconds="{{ config('application_chat.poll_seconds',15) }}"
             data-last-id="{{ $messages->last()['id'] ?? 0 }}">
+            <button type="button" class="secondary" id="chat-load-older"
+                @if($messages->count() < 40) hidden @endif>Load older messages</button>
             <ol id="chat-messages" aria-label="Private messages" aria-live="polite"
                 style="list-style:none;padding:0;max-height:500px;overflow:auto;border:1px solid #dde6f1;border-radius:10px;background:#f7f9fc">
                 @forelse($messages as $message)
