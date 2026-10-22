@@ -26,6 +26,7 @@ Route::post('registration', [AuthController::class, 'registerEmployer'])->middle
 Route::post('login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 Route::post('logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 Route::post('update-password', [AuthController::class, 'updatePassword'])->middleware(['auth:sanctum', 'throttle:5,1']);
+Route::post('confirm-password-otp', [AuthController::class, 'confirmPasswordOtp'])->middleware(['auth:sanctum', 'throttle:5,1']);
 //Home Page  route.....
 Route::get('home-page', [CommonController::class, 'getHomePageData']);
 Route::get('search-job', [JobApplicationController::class, 'jobSearch']);
