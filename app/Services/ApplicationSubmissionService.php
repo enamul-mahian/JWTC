@@ -58,6 +58,23 @@ class ApplicationSubmissionService
             $code->is_used = 1;
             $code->save();
 
+            // After staging's additive migration, include the first status
+            // event in the same transaction as code consumption.
+            if (\Illuminate\Support\Facades\Schema::hasTable('application_status_events')) {
+                $first = app(ApplicationStatusCatalog::class)->find(1);
+                DB::table('application_status_events')->insert([
+                    'application_id' => $application->id,
+                    'actor_id' => $applicant->id,
+                    'from_status_id' => null,
+                    'to_status_id' => 1,
+                    'status_name' => $first['name'] ?? 'Application received',
+                    'progress' => $first['progress'] ?? 0,
+                    'source' => 'system',
+                    'note' => null,
+                    'created_at' => now(),
+                ]);
+            }
+
             return $application;
         }, 3);
     }
