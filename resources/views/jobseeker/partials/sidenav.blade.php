@@ -49,6 +49,10 @@
             href="{{ route('application-chat.index') }}">Private Messages</a></li>
     @endif
 
+    @if(config('support_center.enabled') && auth()->user()?->user_type === \App\Enum\UserType::JOB_SEEKER)
+        <li><a href="{{ route('support.index') }}" class="{{ Route::is('support.*') ? 'active' : '' }}">Support &amp; Refunds</a></li>
+    @endif
+
     {{-- TODO Something to put --}}
 
     <li>
