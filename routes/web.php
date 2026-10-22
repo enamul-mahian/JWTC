@@ -385,7 +385,7 @@ Route::middleware(['auth', 'admin_user'])->group(function () {
         Route::get('/email-setting', [SettingController::class, 'emailSetting'])
             ->name('email-setting');
 
-        Route::get('/send-test-email', [SettingController::class, 'emailTesting'])
+        Route::post('/send-test-email', [SettingController::class, 'emailTesting'])
             ->name('send-test-email');
 
         Route::post('/database-backup', [SettingController::class, 'databaseBackup'])
