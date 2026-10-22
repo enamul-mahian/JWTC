@@ -27,6 +27,15 @@
             </li>
             <!-- =================== -->
 
+            @if (in_array(auth()->user()?->user_type, [\App\Enum\UserType::ADMIN, \App\Enum\UserType::SUPER_ADMIN], true) && auth()->user()->can('active-job'))
+                <li class="sidebar-item">
+                    <a href="{{ route('admin.private-documents.index') }}" class="sidebar-link">
+                        <span><i class="ti ti-file-lock"></i></span>
+                        <span class="hide-menu">Private Document Reviews</span>
+                    </a>
+                </li>
+            @endif
+
             {{-- TODO Something to put --}}
 
             @if (auth()->user()->can('job-categories.index') || auth()->user()->can('active-job') || auth()->user()->can('inactive-job'))
