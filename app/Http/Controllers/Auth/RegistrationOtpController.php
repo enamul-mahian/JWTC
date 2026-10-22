@@ -35,7 +35,7 @@ class RegistrationOtpController extends Controller
         $request->session()->regenerate();
 
         return redirect()->route(
-            $user->user_type === UserType::EMPLOYER ? 'employer.dashboard' : 'view-jobseeker-profile'
+            $user->user_type === UserType::EMPLOYER ? 'company.approval' : 'view-jobseeker-profile'
         )->with('success', 'Your email has been verified. Welcome!');
     }
 }

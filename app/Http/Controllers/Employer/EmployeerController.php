@@ -41,7 +41,7 @@ class EmployeerController extends Controller
         if (!Auth::user()) {
             $jobCategories = JobCategory::latest()->get();
 
-            return view('frontend.pages.register', compact('title', 'jobCategories'));
+            return view('frontend.auth.company_register', compact('title', 'jobCategories'));
         } else {
             return to_route('home');
         }
@@ -60,13 +60,13 @@ class EmployeerController extends Controller
 
     public function registerStore(Request $request)
     {
-        // return $request->all();
+        $request->merge(['user_type' => UserType::EMPLOYER]);
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'user_type' => ['required', 'string', \Illuminate\Validation\Rule::in([UserType::EMPLOYER, UserType::JOB_SEEKER])],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:' . User::class],
-            'phone' => ['required', 'numeric', 'unique:' . User::class],
-            'password' => ['required', 'min:4', 'confirmed'],
+            'phone' => ['required', 'string', 'max:20', 'unique:' . User::class],
+            'password' => ['required', 'min:8', 'confirmed'],
             'job_categories_id' => ['required', 'integer', 'exists:job_categories,id'],
             'h-captcha-response' => [
                 \Illuminate\Validation\Rule::requiredIf((bool) config('services.hcaptcha.enabled')),
@@ -104,7 +104,7 @@ class EmployeerController extends Controller
             'email' => $request->email,
             'phone' => $request->phone,
             'job_category_id' => $request->job_categories_id,
-            'status' => StatusType::ACTIVE,
+            'status' => StatusType::INACTIVE,
             'password' => Hash::make($request->password),
         ]);
 
@@ -121,7 +121,7 @@ class EmployeerController extends Controller
         Auth::login($user);
 
         if ($user->user_type == UserType::EMPLOYER) {
-            return to_route('employer.dashboard')->with([
+            return to_route('company.approval')->with([
                 'message' => 'register success',
                 'class' => 'success',
             ]);
@@ -173,8 +173,9 @@ class EmployeerController extends Controller
 
     public function updateProfile(Request $request, $id)
     {
-        $user = User::findOrFail($id);
-        $user->update($request->all());
+        abort_unless((int)$id === (int)$request->user()->id, 403);
+        $user = $request->user();
+        $user->update($request->validate(['name' => ['required','string','max:255'], 'phone' => ['nullable','string','max:20']]));
 
         return redirect()->back()->withSuccess('profile updated success');
     }

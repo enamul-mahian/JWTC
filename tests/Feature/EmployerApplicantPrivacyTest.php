@@ -26,6 +26,8 @@ class EmployerApplicantPrivacyTest extends TestCase
             $table->string('name');
             $table->string('email')->unique();
             $table->string('user_type');
+            $table->timestamp('employer_approved_at')->nullable();
+            $table->tinyInteger('status')->default(1);
             $table->softDeletes();
             $table->timestamps();
         });
@@ -79,6 +81,8 @@ class EmployerApplicantPrivacyTest extends TestCase
             ['id' => 4, 'name' => 'Applicant B', 'email' => 'applicant-b@example.invalid', 'user_type' => 'job_seeker'],
         ]);
         $postJob = Permission::findOrCreate('post-job', 'web');
+        User::findOrFail(1)->forceFill(['employer_approved_at' => now()])->save();
+        User::findOrFail(2)->forceFill(['employer_approved_at' => now()])->save();
         User::findOrFail(1)->givePermissionTo($postJob);
         User::findOrFail(2)->givePermissionTo($postJob);
         DB::table('companies')->insert([

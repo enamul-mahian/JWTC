@@ -23,7 +23,7 @@ class ApplicationChatTest extends TestCase
 
         Schema::create('users', function (Blueprint $t) {
             $t->id(); $t->string('name'); $t->string('email')->unique();
-            $t->string('user_type'); $t->string('password')->nullable();
+            $t->string('user_type'); $t->timestamp('employer_approved_at')->nullable(); $t->tinyInteger('status')->default(1); $t->string('password')->nullable();
             $t->softDeletes(); $t->timestamps();
         });
         Schema::create('companies', function (Blueprint $t) {
@@ -53,6 +53,7 @@ class ApplicationChatTest extends TestCase
             ['id'=>5,'name'=>'Regular Admin','email'=>'admin@example.invalid','user_type'=>'admin'],
             ['id'=>6,'name'=>'Support Admin','email'=>'support@example.invalid','user_type'=>'super_admin'],
         ]);
+        User::where('user_type', 'employer')->each(fn ($company) => $company->forceFill(['employer_approved_at' => now()])->save());
         DB::table('companies')->insert([
             ['id'=>10,'user_id'=>3,'company_name'=>'Company A'],
             ['id'=>20,'user_id'=>4,'company_name'=>'Company B'],

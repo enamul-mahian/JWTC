@@ -19,7 +19,7 @@ class AdminRoleCompatibilityTest extends TestCase
             $table->id();
             $table->string('name');
             $table->string('email')->unique();
-            $table->string('user_type');
+            $table->string('user_type'); $table->timestamp('employer_approved_at')->nullable(); $table->tinyInteger('status')->default(1);
             $table->softDeletes();
             $table->timestamps();
         });
@@ -36,6 +36,7 @@ class AdminRoleCompatibilityTest extends TestCase
                 'name' => 'Synthetic admin', 'email' => 'admin'.$i.'@example.invalid',
                 'user_type' => $role,
             ]);
+            $user->forceFill(['employer_approved_at' => now(), 'status' => 1])->save();
             $this->actingAs($user)->get('/__test_jwtc_admin_guard')
                 ->assertOk()->assertSee('ADMIN_OK');
         }
@@ -48,6 +49,7 @@ class AdminRoleCompatibilityTest extends TestCase
                 'name' => 'Synthetic non-admin', 'email' => 'nonadmin'.$i.'@example.invalid',
                 'user_type' => $role,
             ]);
+            $user->forceFill(['employer_approved_at' => now(), 'status' => 1])->save();
             $this->actingAs($user)->get('/__test_jwtc_admin_guard')
                 ->assertForbidden();
         }

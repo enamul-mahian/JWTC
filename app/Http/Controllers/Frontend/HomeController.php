@@ -35,20 +35,17 @@ class HomeController extends Controller
         // return view('frontend.pages.register', compact('title', 'jobCategories'));
 
 
-        if (config('jwtc_design.enabled')) {
-            // Only publish real, currently open jobs. No fabricated counters
-            // or external listing feed, and this runs only on the homepage.
-            $latestJobs = \Illuminate\Support\Facades\Schema::hasTable('jobs')
-                ? Job::query()->with(['company', 'country'])
-                    ->where('is_publish', 1)
-                    ->where('application_deadline', '>=', now()->toDateString())
-                    ->orderByDesc('created_at')->limit(6)->get()
-                : collect();
+        $latestJobs = Job::query()->with(['company', 'country', 'job_category'])->where('is_publish', 1)->latest()->limit(6)->get();
+        $publishedJobCount = Job::where('is_publish', 1)->count();
+        $hiringCompanyCount = Job::where('is_publish', 1)->distinct()->count('company_id');
+        $locations = Country::where('status', 1)->orderBy('name')->get(['id', 'name']);
+        return view('frontend.index', compact('latestJobs', 'publishedJobCount', 'hiringCompanyCount', 'locations'));
+    }
 
-            return view('frontend.index', compact('latestJobs'));
-        }
-
-        return view('frontend.index');
+    public function publicJob(int $job)
+    {
+        $job = Job::with(['company', 'country', 'job_category'])->where('is_publish', 1)->findOrFail($job);
+        return view('frontend.pages.public_job', compact('job'));
     }
 
     public function searchJobs(Request $request)
@@ -58,6 +55,7 @@ class HomeController extends Controller
         $country_id = $request->input('country_id');
         $category_id = $request->input('category_id');
 
+        $request->validate(['title' => ['nullable','string','max:120'], 'country_id' => ['nullable','integer'], 'category_id' => ['nullable','integer'], 'salary_type' => ['nullable','in:hourly,monthly,yearly']]);
         $query = Job::query();
 
         if ($request->filled('title')) {
@@ -66,7 +64,8 @@ class HomeController extends Controller
             $query->where(function ($query) use ($title) {
                 $query->where('title', 'like', '%' . $title . '%')
                     ->orWhere('job_responsibilities', 'like', '%' . $title . '%')
-                    ->orWhere('job_context', 'like', '%' . $title . '%');
+                    ->orWhere('job_context', 'like', '%' . $title . '%')
+                    ->orWhereHas('company', fn ($company) => $company->where('company_name', 'like', '%'.$title.'%'));
             });
         }
 
@@ -78,7 +77,8 @@ class HomeController extends Controller
             $query->where('job_category_id', $category_id);
         }
 
-        $jobs = $query->where('is_publish', 1)->where('application_deadline', '>', now())->with(['country', 'company'])->paginate(10);
+        if ($request->filled('salary_type')) $query->where('salary_type', $request->input('salary_type'));
+        $jobs = $query->where('is_publish', 1)->with(['country', 'company', 'job_category'])->latest()->paginate(10);
 
         $locations = Country::whereStatus(1)->get();
         $job_categories = JobCategory::whereStatus(1)->get();

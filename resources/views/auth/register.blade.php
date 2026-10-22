@@ -1,4 +1,7 @@
-<x-guest-layout>
+@extends('frontend.layout.frontMaster')
+@section('title', 'Job Seeker Registration')
+@section('content')
+<section class="jg-auth"><div class="jg-auth-card"><span class="jg-pill">For job seekers</span><h1>Create Your Account</h1><p>Jobs are visible to everyone. Enter your registration code to create a job seeker account.</p>
 
     <form method="POST" action="{{ route('register') }}">
         @csrf
@@ -76,7 +79,7 @@
 
         <!-- Referral Code -->
         <div class="mt-4">
-            <x-input-label for="referral_code" :value="__('Referral Code')" />
+            <x-input-label for="referral_code" :value="__('Solicitor / Registration Code')" />
 
             <x-text-input
                 id="referral_code"
@@ -136,7 +139,7 @@
 
             <a
                 class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md"
-                href="{{ route('login') }}"
+                href="{{ route('jobseeker.login') }}"
             >
                 {{ __('Already registered?') }}
             </a>
@@ -149,4 +152,5 @@
 
     </form>
 
-</x-guest-layout>
+</div></section>
+@endsection

@@ -54,17 +54,18 @@ class AuthController extends Controller
                 'phone' => $data['phone'],
                 'job_category_id' => $data['job_categories_id'],
                 'user_type' => UserType::EMPLOYER,
-                'status' => StatusType::ACTIVE,
+                'status' => StatusType::INACTIVE,
                 'password' => Hash::make($data['password']),
             ]);
             $user->assignRole($role);
             return $user;
         });
 
-        $token = $user->createToken('jwtc-api')->plainTextToken;
+        $token = null;
 
         return response()->json([
-            'message' => 'Employer registered.',
+            'message' => 'Company registered. Administrator approval is required.',
+            'approval_required' => true,
             'user' => $user->only(['id', 'name', 'email', 'user_type']),
             'token' => $token,
         ], 201);
@@ -83,11 +84,13 @@ class AuthController extends Controller
         ]);
 
         $user = User::where('email', $data['email'])->first();
-        if (!$user || (int) $user->status !== StatusType::ACTIVE ||
+        if (!$user ||
             !Hash::check($data['password'], (string) $user->password)) {
             return response()->json(['message' => 'Invalid credentials.'], 422);
         }
 
+        if ($user->user_type === UserType::EMPLOYER && (!$user->employer_approved_at || (int)$user->status !== 1)) return response()->json(['message' => 'Company requires administrator approval.', 'approval_required' => true], 403);
+        if ((int)$user->status !== 1) return response()->json(['message' => 'Invalid credentials.'], 422);
         return response()->json([
             'user' => $user->only(['id', 'name', 'email', 'user_type']),
             'token' => $user->createToken('jwtc-api')->plainTextToken,
@@ -163,7 +166,8 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Email verified. Registration completed.',
             'user' => $user->only(['id', 'name', 'email', 'user_type']),
-            'token' => $user->createToken('jwtc-api')->plainTextToken,
+            'token' => $user->user_type === UserType::EMPLOYER ? null : $user->createToken('jwtc-api')->plainTextToken,
+            'approval_required' => $user->user_type === UserType::EMPLOYER,
         ], 201);
     }
 

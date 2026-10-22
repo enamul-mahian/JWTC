@@ -25,7 +25,7 @@ class InterviewManagementTest extends TestCase
             $t->id();
             $t->string('name');
             $t->string('email')->unique();
-            $t->string('user_type');
+            $t->string('user_type'); $t->timestamp('employer_approved_at')->nullable(); $t->tinyInteger('status')->default(1);
             $t->string('password')->nullable();
             $t->softDeletes();
             $t->timestamps();
@@ -68,6 +68,7 @@ class InterviewManagementTest extends TestCase
             ['id'=>4,'name'=>'Other Employer','email'=>'employer2@example.invalid','user_type'=>'employer'],
             ['id'=>5,'name'=>'Admin','email'=>'admin@example.invalid','user_type'=>'admin'],
         ]);
+        User::where('user_type', 'employer')->each(fn ($company) => $company->forceFill(['employer_approved_at' => now()])->save());
         DB::table('companies')->insert([
             ['id'=>10,'user_id'=>3,'company_name'=>'First Company'],
             ['id'=>20,'user_id'=>4,'company_name'=>'Other Company'],

@@ -30,6 +30,10 @@ class UserAuthLoginController extends Controller
             ]);
         }
 
+        $audience = $request->route('audience') ?? UserType::JOB_SEEKER;
+        $allowed = $audience === 'admin' ? [UserType::ADMIN, UserType::SUPER_ADMIN] : [$audience];
+        if (!in_array(strtolower((string)$user->user_type), $allowed, true)) return back()->withErrors(['email' => 'Use the sign-in panel for your account type.'])->onlyInput('email');
+        if (strtolower((string)$user->user_type) !== UserType::EMPLOYER && (int)$user->status !== 1) return back()->withErrors(['email' => 'This account is inactive.'])->onlyInput('email');
         $credentials = $request->only('email', 'password');
 
         if (Auth::attempt($credentials)) {
@@ -38,6 +42,7 @@ class UserAuthLoginController extends Controller
             // Authentication passed
             $user = Auth::user();
 
+            if (strtolower((string)$user->user_type) === UserType::EMPLOYER && (!$user->employer_approved_at || (int)$user->status !== 1)) return redirect()->route('company.approval');
             // Redirect or perform additional actions
             if ($user->user_type === RoleType::JOB_SEEKER || $user->user_type === UserType::JOB_SEEKER) {
                 return redirect()->route('view-jobseeker-profile');
@@ -50,9 +55,10 @@ class UserAuthLoginController extends Controller
         // Default redirect
         return redirect('/');
     }
-    public function login()
+    public function login(Request $request)
     {
-        $title = 'Login';
+        $audience = $request->route('audience') ?? UserType::JOB_SEEKER;
+        $title = $audience === UserType::EMPLOYER ? 'Company Sign In' : ($audience === 'admin' ? 'Administrator Sign In' : 'Job Seeker Sign In');
 
         if (Auth::user()) {
             $user = User::findOrFail(Auth::user()->id);
@@ -65,7 +71,7 @@ class UserAuthLoginController extends Controller
             }
         }
 
-        return view('frontend.pages.login', compact('title'));
+        return view('frontend.auth.login', compact('title', 'audience'));
     }
 
     public function logout(Request $request)

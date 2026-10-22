@@ -15,6 +15,13 @@ class Company extends Model
 
     protected $guarded = ['id'];
 
+    public function toArray()
+    {
+        $values = parent::toArray();
+        if (!app(\App\Services\PosterEmailVisibility::class)->enabled()) unset($values['contact_per_email']);
+        return $values;
+    }
+
     public function jobs()
     {
         return $this->hasMany(Job::class);

@@ -27,7 +27,9 @@ class JWTCDesignRegressionTest extends TestCase
         Schema::create('countries', static function (Blueprint $table) {
             $table->id();
             $table->string('name');
+            $table->boolean('status')->default(true);
         });
+        Schema::create('job_categories', static function (Blueprint $table) { $table->id(); $table->string('name'); });
         Schema::create('companies', static function (Blueprint $table) {
             $table->id();
             $table->string('company_name');
@@ -38,6 +40,7 @@ class JWTCDesignRegressionTest extends TestCase
             $table->string('title');
             $table->unsignedBigInteger('company_id')->nullable();
             $table->unsignedBigInteger('country_id')->nullable();
+            $table->unsignedBigInteger('job_category_id')->nullable();
             $table->boolean('is_publish')->default(false);
             $table->date('application_deadline')->nullable();
             $table->softDeletes();
@@ -51,12 +54,12 @@ class JWTCDesignRegressionTest extends TestCase
         });
     }
 
-    public function test_redesign_flag_is_off_by_default(): void
+    public function test_approved_design_is_enabled_by_default(): void
     {
-        $this->assertFalse((bool) config('jwtc_design.enabled'));
+        $this->assertTrue((bool) config('jwtc_design.enabled'));
     }
 
-    public function test_redesigned_home_only_lists_published_open_jobs(): void
+    public function test_approved_home_preserves_published_listings_and_hides_drafts(): void
     {
         config()->set('jwtc_design.enabled', true);
 
@@ -91,17 +94,19 @@ class JWTCDesignRegressionTest extends TestCase
         $view = app(HomeController::class)();
         $this->assertSame('frontend.index', $view->name());
         $latest = $view->getData()['latestJobs'];
-        $this->assertCount(1, $latest);
+        $this->assertCount(2, $latest);
+        $this->assertFalse($latest->contains('title', 'Unpublished Position'));
         $this->assertSame('Live Customer Service', $latest->first()->title);
         $this->assertSame('Example Employer', $latest->first()->company->company_name);
     }
 
-    public function test_legacy_home_remains_exact_view_without_new_queries_when_disabled(): void
+    public function test_confirmed_home_always_supplies_actual_job_data(): void
     {
         config()->set('jwtc_design.enabled', false);
         $view = app(HomeController::class)();
         $this->assertSame('frontend.index', $view->name());
-        $this->assertArrayNotHasKey('latestJobs', $view->getData());
+        $this->assertArrayHasKey('latestJobs', $view->getData());
+        $this->assertSame(0, $view->getData()['publishedJobCount']);
     }
 
     public function test_admin_overview_uses_real_counts_without_sample_revenue(): void
@@ -161,10 +166,10 @@ class JWTCDesignRegressionTest extends TestCase
 
         $this->get(route('home'))
             ->assertOk()
-            ->assertSee('Find your next opportunity with confidence.')
+            ->assertSee('Find Your Next Opportunity')
             ->assertSee('Public Application Assistant')
-            ->assertSee('jw-hero-title')
-            ->assertSee('theme/jwtc.css')
+            ->assertSee('jg-hero')
+            ->assertSee('theme/approved.css')
             ->assertSee('Skip to main content')
             ->assertDontSee('AIzaSyBxJIqIIz', false);
     }
