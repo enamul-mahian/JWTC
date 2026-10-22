@@ -16,3 +16,14 @@ Reference images: `JoinGallagher Job Portal Showcase.png` (Library ID `libfile_f
 ## Release constraints
 
 The additive migration raises the migration count from 58 to 59. Preserve original rows, original columns, uploads, production credentials, APP_KEY, SEO and analytics configuration. Retain encrypted predeployment backup and private previous code. Validate the exact CI artifact on private staging before promotion.
+
+## Verified deployment
+
+- CI artifact: run 39869968041, source 6814413693aa41b94293d49479f7d76940910b8d. All four jobs passed; 143 tests / 979 assertions; Composer and npm audits clear.
+- Deployment: run 39871088546; deployment ID 20261022-232103-b738ab89.
+- Fresh encrypted backup: 20261022-232033-9c1667b2, decrypt/hash verification passed. Mixed-engine tables were backed up under explicit all-base-table READ locks.
+- Production migration count 59; original rows across 69 existing tables, uploads, original APP_KEY and environment preserved.
+- Browser verified approved London homepage with 27 published jobs, public job details with poster email hidden, separate company/job seeker sign-in and company registration approval notice.
+- Owner-only application timeline and admin approval actions were covered by automated tests; no real customer accounts were changed during browser checks.
+- Regenerable extracted packages were removed only after verifying their retained compressed archive and file hashes, resolving hosting quota exhaustion. Encrypted backups and private previous production code remain retained.
+- Deployment workflow returned to manual-only after successful promotion.

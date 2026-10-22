@@ -1,15 +1,6 @@
 name: cPanel Deploy Approved Portal
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/cpanel-deploy-approved.yml'
-      - 'scripts/release/upgrade_approved_portal.php'
-      - 'scripts/release/approved_approved_predeploy_gate.php'
-      - 'scripts/release/deploy_approved_portal.php'
-      - 'scripts/release/deduplicate_candidate_packages.php'
-      - 'scripts/release/create_approved_backup.php'
   workflow_dispatch:
 
 permissions:
