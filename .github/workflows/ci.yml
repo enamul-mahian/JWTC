@@ -31,6 +31,8 @@ jobs:
         run: composer install --prefer-dist --no-interaction --no-progress
       - name: Block destructive new-module migrations
         run: python3 scripts/release/check_migration_safety.py
+      - name: Validate backup and migration safety guards
+        run: python3 -m unittest discover -s scripts/release -p 'test_*.py'
       - name: Lint tracked application PHP files
         run: find app routes config database tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Compile Blade views
