@@ -20,12 +20,19 @@
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="keywords" content="Bootstrap, Landing page, Template, Registration, Landing">
+    @if(config('jwtc_design.enabled'))
+        <meta name="description" content="@yield('meta_description', 'Discover job opportunities and manage recruitment applications with Join Gallagher.')">
+    @else
+        <meta name="keywords" content="Bootstrap, Landing page, Template, Registration, Landing">
+    @endif
     <meta name="author" content="UIdeck">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title> @yield('title') </title>
     <link rel="icon" href="{{ asset('assets/images/setting/' . $setting->favicon) }}" type="image/x-icon">
     @include('frontend.includes.style')
+    @if(config('jwtc_design.enabled'))
+        <link rel="stylesheet" href="{{ asset('theme/jwtc.css') }}">
+    @endif
     @stack('style')
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
@@ -35,7 +42,10 @@
     </style>
 </head>
 
-<body>
+<body @if(config('jwtc_design.enabled'))class="jwtc-redesign"@endif>
+    @if(config('jwtc_design.enabled'))
+        <a href="#jw-main" class="jw-skip">Skip to main content</a>
+    @endif
 
     <!-- Header Section Start -->
     <header>
@@ -47,7 +57,7 @@
     </header>
 
     <!-- Header Section End -->
- <main class="site-content">
+ <main class="site-content" id="jw-main">
     @yield('content')
 </main>
     <!-- Footer Section Start -->
