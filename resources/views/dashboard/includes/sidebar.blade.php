@@ -63,6 +63,16 @@
                 </li>
             @endif
 
+            @if(config('support_center.enabled') && in_array(auth()->user()?->user_type, [\App\Enum\UserType::ADMIN, \App\Enum\UserType::SUPER_ADMIN], true) &&
+                (auth()->user()->can('manage-support-tickets') || auth()->user()->can('review-refund-requests') || auth()->user()->can('confirm-refund-settlement')))
+                <li class="sidebar-item">
+                    <a href="{{ route('support.index') }}" class="sidebar-link">
+                        <span><i class="ti ti-headset"></i></span>
+                        <span class="hide-menu">Support &amp; Refunds</span>
+                    </a>
+                </li>
+            @endif
+
             {{-- TODO Something to put --}}
 
             @if (auth()->user()->can('job-categories.index') || auth()->user()->can('review-private-documents') || auth()->user()->can('inactive-job'))
