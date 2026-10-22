@@ -33,6 +33,22 @@
         <section class="card">
             <h2>Visual editor</h2>
             <p class="small muted">Pasted text retains supported bold, italic, underline, colors, fonts, lists and alignment. Unsupported or unsafe HTML is automatically stripped before saving.</p>
+            <div class="grid">
+                <div>
+                    <label for="studio-import-html">Import an HTML email template (.html)</label>
+                    <input type="file" id="studio-import-html" accept=".html,.htm,text/html">
+                </div>
+                <div>
+                    <label for="studio-import-mode">Import mode</label>
+                    <select id="studio-import-mode">
+                        <option value="replace">Replace existing editor content</option>
+                        <option value="append">Append after existing content</option>
+                    </select>
+                </div>
+            </div>
+            <p class="small muted" id="studio-import-feedback" role="status" aria-live="polite">
+                Maximum HTML file size: 1 MB. Embedded and remote images are excluded for safety; re-add approved images through the private image slots below. The file is read locally in your browser.
+            </p>
             <div class="row" id="editor-toolbar" role="toolbar" aria-label="Text formatting tools">
                 <button type="button" class="secondary" data-editor-command="bold" aria-label="Bold">B</button>
                 <button type="button" class="secondary" data-editor-command="italic" aria-label="Italic"><em>I</em></button>
