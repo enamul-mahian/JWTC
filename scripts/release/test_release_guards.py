@@ -13,6 +13,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import check_migration_safety as migration
 import verify_backup_archives as backups
 import compare_upload_trees as upload_trees
+import audit_legacy_sql as legacy_sql
 
 
 def migration_php(up: str, down: str = "Schema::dropIfExists('module_events');") -> str:
@@ -129,6 +130,52 @@ class UploadPreservationTests(unittest.TestCase):
                                                   target_is_directory=True)
             with self.assertRaises(upload_trees.UnsafeTreeError):
                 upload_trees.inventory(source, "uploads")
+
+
+class LegacySchemaAuditTests(unittest.TestCase):
+    def test_matching_old_schema_and_new_additive_table_pass(self) -> None:
+        sql = (
+            "CREATE TABLE \x60users\x60 (\x60id\x60 bigint NOT NULL, \x60email\x60 varchar(255)) ENGINE=InnoDB;"
+            "CREATE TABLE \x60migrations\x60 (\x60id\x60 int, \x60migration\x60 varchar(255), "
+            "\x60batch\x60 int) ENGINE=InnoDB;"
+            "INSERT INTO \x60migrations\x60 (\x60id\x60,\x60migration\x60,\x60batch\x60) VALUES "
+            "(1, '2014_10_12_000000_create_users_table', 1);"
+        )
+        migrations = {
+            "2014_10_12_000000_create_users_table": (
+                "public function up() { Schema::create('users'); } "
+                "public function down() { Schema::drop('users'); }"),
+            "2026_10_22_000001_create_new_module_table": (
+                "public function up() { Schema::create('new_module'); } "
+                "public function down() { Schema::drop('new_module'); }"),
+        }
+        result = legacy_sql.inspect(sql, migrations,
+                                    {"users": {"id", "email"}, "migrations": {"id"}})
+        self.assertEqual([], result.blockers)
+        self.assertEqual(1, len(result.historical))
+        self.assertEqual(1, len(result.additions))
+        self.assertEqual({"new_module"}, result.new_tables)
+
+    def test_absent_legacy_column_is_blocking(self) -> None:
+        sql = "CREATE TABLE \x60users\x60 (\x60id\x60 bigint) ENGINE=InnoDB;"
+        result = legacy_sql.inspect(sql, {}, {"users": {"id", "email"}})
+        self.assertTrue(any("users.email" in error for error in result.blockers))
+
+    def test_new_migration_cannot_create_existing_legacy_table(self) -> None:
+        sql = (
+            "CREATE TABLE \x60users\x60 (\x60id\x60 bigint) ENGINE=InnoDB;"
+            "CREATE TABLE \x60migrations\x60 (\x60id\x60 int, \x60migration\x60 varchar(255), "
+            "\x60batch\x60 int) ENGINE=InnoDB;"
+            "INSERT INTO \x60migrations\x60 (\x60id\x60,\x60migration\x60,\x60batch\x60) "
+            "VALUES (1, '2014_10_12_000000_create_users_table', 1);"
+        )
+        code = {
+            "2014_10_12_000000_create_users_table": "function up() {} function down() {}",
+            "2026_10_22_000001_create_users_again": (
+                "function up() { Schema::create('users'); } function down() {}")
+        }
+        result = legacy_sql.inspect(sql, code, {"users": {"id"}})
+        self.assertTrue(any("re-creates old table" in error for error in result.blockers))
 
 
 if __name__ == "__main__":
