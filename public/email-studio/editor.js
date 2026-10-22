@@ -17,6 +17,124 @@
         .replaceAll('&', '&amp;').replaceAll('<', '&lt;')
         .replaceAll('>', '&gt;').replaceAll('"', '&quot;');
 
+    /*
+     * Legacy WorkForNZ import compatibility: select an HTML file and preserve
+     * whitelisted Gmail-safe text/table formatting. Never load remote assets.
+     * Server-side EmailStudioHtml::sanitize() is still the final authority.
+     */
+    function importSafeMarkup(htmlSource) {
+        const parsed = new DOMParser().parseFromString(htmlSource, 'text/html');
+        const permitted = new Set([
+            'P','DIV','SPAN','BR','STRONG','B','EM','I','U','S','DEL',
+            'STRIKE','UL','OL','LI','BLOCKQUOTE','H1','H2','H3',
+            'A','TABLE','THEAD','TBODY','TR','TD','TH','HR'
+        ]);
+        const dropped = new Set([
+            'SCRIPT','STYLE','IFRAME','OBJECT','EMBED','SVG','MATH','FORM',
+            'INPUT','SELECT','TEXTAREA','BUTTON','VIDEO','AUDIO','SOURCE',
+            'PICTURE','IMG','LINK','META','BASE','TEMPLATE','NOSCRIPT'
+        ]);
+        const allowedStyle = new Set([
+            'text-align','color','background-color','font-size',
+            'font-family','font-weight','font-style','text-decoration','line-height'
+        ]);
+        const cssValueIsSafe = (name, value) => {
+            if (!value || value.length > 100 || /[<>{}@]|url\s*\(|expression\s*\(/i.test(value)) return false;
+            if (name === 'text-align') return /^(left|right|center|justify)$/i.test(value);
+            if (name === 'color' || name === 'background-color') {
+                return /^#[a-f0-9]{3}(?:[a-f0-9]{3})?$/i.test(value) ||
+                    /^rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\)$/i.test(value);
+            }
+            if (name === 'font-size') return /^(1[0-9]|2[0-8])px$/.test(value);
+            if (name === 'font-family') return /^(Arial|Georgia|Verdana|Tahoma|Helvetica|Times New Roman)(?:,\s*(sans-serif|serif))?$/i.test(value);
+            if (name === 'font-weight') return /^(normal|bold|[4-7]00)$/i.test(value);
+            if (name === 'font-style') return /^(normal|italic)$/i.test(value);
+            if (name === 'text-decoration') return /^(none|underline|line-through)$/i.test(value);
+            if (name === 'line-height') return /^(1(\.[0-9])?|2(\.0)?)$/.test(value);
+            return false;
+        };
+
+        function cleanNode(node) {
+            if (node.nodeType === Node.TEXT_NODE) return document.createTextNode(node.nodeValue || '');
+            if (node.nodeType !== Node.ELEMENT_NODE || dropped.has(node.tagName)) return null;
+
+            const safe = permitted.has(node.tagName);
+            const clone = safe ? document.createElement(node.tagName.toLowerCase())
+                : document.createDocumentFragment();
+
+            if (safe && node.hasAttribute('style')) {
+                const raw = node.getAttribute('style').split(';');
+                const styles = [];
+                raw.forEach((pair) => {
+                    const divider = pair.indexOf(':');
+                    if (divider < 1) return;
+                    const key = pair.substring(0, divider).trim().toLowerCase();
+                    const value = pair.substring(divider + 1).trim();
+                    if (allowedStyle.has(key) && cssValueIsSafe(key, value)) {
+                        styles.push(key + ':' + value);
+                    }
+                });
+                if (styles.length) clone.setAttribute('style', styles.join(';'));
+            }
+            if (safe && node.tagName === 'A') {
+                const href = node.getAttribute('href') || '';
+                if (/^https:\/\/[^\s<>]+$/i.test(href) || /^mailto:[^\s<>@]+@[^\s<>@]+$/i.test(href)) {
+                    clone.setAttribute('href', href);
+                    clone.setAttribute('rel', 'noopener noreferrer');
+                }
+            }
+            Array.from(node.childNodes).forEach((child) => {
+                const converted = cleanNode(child);
+                if (converted) clone.appendChild(converted);
+            });
+            return clone;
+        }
+
+        const result = document.createElement('div');
+        Array.from(parsed.body.childNodes).forEach((child) => {
+            const converted = cleanNode(child);
+            if (converted) result.appendChild(converted);
+        });
+        return result;
+    }
+
+    const htmlFile = document.getElementById('studio-import-html');
+    const importMode = document.getElementById('studio-import-mode');
+    const importFeedback = document.getElementById('studio-import-feedback');
+
+    htmlFile?.addEventListener('change', async () => {
+        const file = htmlFile.files?.[0];
+        if (!file) return;
+
+        if (!/\.html?$/i.test(file.name) || file.size > 1024 * 1024) {
+            importFeedback.textContent = 'Please choose an .html or .htm file under 1 MB.';
+            htmlFile.value = '';
+            return;
+        }
+
+        try {
+            const source = await file.text();
+            const safe = importSafeMarkup(source);
+            if (!(safe.textContent || '').trim()) {
+                throw new Error('No readable email text was found in this file.');
+            }
+
+            if (importMode?.value !== 'append') {
+                editor.replaceChildren(safe);
+            } else {
+                editor.append(document.createElement('hr'), safe);
+            }
+            importFeedback.textContent =
+                'HTML imported safely. Review the preview, add approved images into private slots, then save.';
+            hiddenBody.value = editor.innerHTML;
+            drawPreview();
+        } catch (error) {
+            importFeedback.textContent = error?.message || 'Unable to read this HTML file.';
+        } finally {
+            htmlFile.value = '';
+        }
+    });
+
     function normalizeFormatting() {
         // execCommand may use <font> tags; normalize those into portable inline CSS.
         editor.querySelectorAll('font').forEach((node) => {
