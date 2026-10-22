@@ -260,10 +260,19 @@ class JobController extends Controller
 
     public function jobApplicationStatusUpdate(Request $request)
     {
-        $app = Application::find($request->application_id);
-        $app->status = $request->status;
-        $app->save();
+        abort_unless($request->user()?->can('active-job'), 403);
+        $data = $request->validate([
+            'application_id' => ['required', 'integer', 'exists:applications,id'],
+            'status' => ['required', 'integer', 'min:1'],
+            'note' => ['nullable', 'string', 'max:1000'],
+        ]);
 
-        return redirect()->route('job.show-apply', [$app->job_id])->withSuccess('Application status Updated Successfully.');
+        $app = app(\App\Services\ApplicationStatusManager::class)->transition(
+            Application::findOrFail($data['application_id']),
+            (int) $data['status'], $request->user(), 'admin', $data['note'] ?? null
+        );
+
+        return redirect()->route('job.show-apply', [$app->job_id])
+            ->withSuccess('Application status updated and recorded in history.');
     }
 }
