@@ -61,3 +61,75 @@ jobs:
           retention-days: 7
       - name: Inspect web and API route registration
         run: php artisan route:list --except-vendor
+
+
+  mysql-schema:
+    # Ephemeral GitHub-hosted database only; no connection to any account's
+    # production/staging hosting, uploads, or real credentials.
+    name: Laravel schema compatibility — temporary MySQL 8
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci_root_fixture_only
+          MYSQL_DATABASE: jwtc_ci_only
+          MYSQL_USER: jwtc_ci
+          MYSQL_PASSWORD: ci_password_fixture_only
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
+    env:
+      APP_ENV: testing
+      APP_DEBUG: 'false'
+      APP_KEY: 'base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
+      APP_URL: 'https://ci.example.invalid'
+      LOG_CHANNEL: stderr
+      DB_CONNECTION: mysql
+      DB_HOST: '127.0.0.1'
+      DB_PORT: '3306'
+      DB_DATABASE: jwtc_ci_only
+      DB_USERNAME: jwtc_ci
+      DB_PASSWORD: ci_password_fixture_only
+      CACHE_DRIVER: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up PHP matching cPanel 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, fileinfo, pdo_mysql, gd, zip
+          coverage: none
+      - name: Prepare isolated Laravel cache directories
+        run: mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs
+      - name: Install locked dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Verify migration commands against isolated MySQL schema
+        run: |
+          php artisan migrate --force --no-interaction
+          php artisan migrate:status --no-interaction
+          php artisan migrate --force --no-interaction
+      - name: Confirm essential tables and all migrations applied
+        run: |
+          php -r '
+            $app = require "bootstrap/app.php";
+            $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+            $db = Illuminate\Support\Facades\DB::connection("mysql");
+            $schema = Illuminate\Support\Facades\Schema::connection("mysql");
+            if (($db->selectOne("SELECT DATABASE() AS name")->name ?? "") !== "jwtc_ci_only") exit(1);
+            foreach (["users","jobs","applications","migrations",
+              "application_chat_threads","support_tickets",
+              "email_studio_templates","applicant_private_documents"] as $table) {
+              if (!$schema->hasTable($table)) exit(2);
+            }
+            $count = $db->table("migrations")->count();
+            if ($count < 55) exit(3);
+            echo "PASS: ".$count." migrations installed in temporary MySQL 8\n";
+          '
