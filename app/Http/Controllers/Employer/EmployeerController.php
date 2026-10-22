@@ -68,6 +68,11 @@ class EmployeerController extends Controller
             'phone' => ['required', 'numeric', 'unique:' . User::class],
             'password' => ['required', 'min:4', 'confirmed'],
             'job_categories_id' => 'required',
+            'h-captcha-response' => [
+                \Illuminate\Validation\Rule::requiredIf((bool) config('services.hcaptcha.enabled')),
+                'nullable', 'string', 'max:8192',
+                new \App\Rules\ValidHcaptcha(),
+            ],
         ]);
 
         if ($request->user_type == UserType::EMPLOYER) {
