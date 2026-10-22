@@ -143,4 +143,30 @@ class JWTCDesignRegressionTest extends TestCase
         $view = app(AdminDashboardController::class)->dashboard(Request::create('/admin/dashboard'));
         $this->assertSame('admin.dashboard.index', $view->name());
     }
+    public function test_redesigned_public_homepage_renders_and_avoids_unused_map_sdk(): void
+    {
+        config()->set('jwtc_design.enabled', true);
+        \Illuminate\Support\Facades\View::share([
+            'setting' => (object) ['logo' => null, 'favicon' => null],
+            'pages' => [],
+        ]);
+
+        DB::table('jobs')->insert([
+            'id' => 14,
+            'title' => 'Public Application Assistant',
+            'is_publish' => 1,
+            'application_deadline' => now()->addDays(3)->toDateString(),
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $this->get(route('home'))
+            ->assertOk()
+            ->assertSee('Find your next opportunity with confidence.')
+            ->assertSee('Public Application Assistant')
+            ->assertSee('jw-hero-title')
+            ->assertSee('theme/jwtc.css')
+            ->assertSee('Skip to main content')
+            ->assertDontSee('AIzaSyBxJIqIIz', false);
+    }
+
 }
