@@ -22,7 +22,7 @@
         if (announcement) announcement.textContent = message;
     }
 
-    function append(message) {
+    function append(message, older = false) {
         const id = Number(message.id);
         if (!Number.isSafeInteger(id) || id < 1) return;
         if (messageList.querySelector('[data-message-id="' + id + '"]')) return;
@@ -45,10 +45,15 @@
         // textContent is critical: messages must never become executable HTML.
         content.textContent = String(message.body || '');
         element.append(by, content);
-        messageList.append(element);
-        // Limit DOM memory for long conversations. Historical messages remain in DB.
-        while (messageList.children.length > 70) messageList.firstElementChild.remove();
-        messageList.scrollTop = messageList.scrollHeight;
+        if (older) {
+            messageList.prepend(element);
+            while (messageList.children.length > 90) messageList.lastElementChild.remove();
+        } else {
+            messageList.append(element);
+            // Messages are paginated on the server and never removed from storage.
+            while (messageList.children.length > 90) messageList.firstElementChild.remove();
+            messageList.scrollTop = messageList.scrollHeight;
+        }
     }
 
     async function request(url, options = {}) {
@@ -96,6 +101,34 @@
             busy = false;
         }
     }
+
+    const olderButton = document.getElementById('chat-load-older');
+    olderButton?.addEventListener('click', async () => {
+        const first = messageList.querySelector('[data-message-id]');
+        if (!first) {
+            olderButton.hidden = true;
+            return;
+        }
+        const cursor = Number(first.dataset.messageId || 0);
+        if (!Number.isSafeInteger(cursor) || cursor < 1) return;
+
+        olderButton.disabled = true;
+        try {
+            const url = new URL(root.dataset.historyUrl, location.origin);
+            url.searchParams.set('before', String(cursor));
+            const result = await request(url.href);
+            const initialHeight = messageList.scrollHeight;
+            // Prepend in reverse so oldest-to-newest order remains correct.
+            [...(result.messages || [])].reverse().forEach((m) => append(m, true));
+            messageList.scrollTop += messageList.scrollHeight - initialHeight;
+            olderButton.hidden = !result.has_more || !(result.messages || []).length;
+            announce((result.messages || []).length + ' older messages loaded.');
+        } catch (error) {
+            announce(error.message || 'Could not load older messages.');
+        } finally {
+            olderButton.disabled = false;
+        }
+    });
 
     form?.addEventListener('submit', async (event) => {
         event.preventDefault();
