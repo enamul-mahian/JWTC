@@ -36,7 +36,9 @@
         <link rel="stylesheet" href="{{ asset('theme/jwtc.css') }}">
     @endif
     @stack('style')
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    @unless(config('jwtc_design.enabled') && request()->routeIs('home'))
+        <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    @endunless
     <style>
         #map {
             height: 600px;
@@ -91,27 +93,27 @@
     <script>
         // success message popup notification
         @if (Session::has('success'))
-            toastr.success("{{ Session::get('success') }}");
+            toastr.success(@json(Session::get('success')));
         @endif
 
         // info message popup notification
         @if (Session::has('info'))
-            toastr.info("{{ Session::get('info') }}");
+            toastr.info(@json(Session::get('info')));
         @endif
 
         // warning message popup notification
         @if (Session::has('warning'))
-            toastr.warning("{{ Session::get('warning') }}");
+            toastr.warning(@json(Session::get('warning')));
         @endif
 
         // error message popup notification
         @if (Session::has('error'))
-            toastr.error("{{ Session::get('error') }}");
+            toastr.error(@json(Session::get('error')));
         @endif
     </script>
     <script>
         @foreach ($errors->all() as $error)
-            toastr.error("{{ $error }}");
+            toastr.error(@json($error));
         @endforeach
         $(document).ready(function() {
             // $('#summernote').summernote();
@@ -128,6 +130,7 @@
             window.location.href = url + "?lang=" + $(this).val();
         });
     </script>
+    @unless(config('jwtc_design.enabled') && request()->routeIs('home'))
     <script
         src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBxJIqIIz-wJi4Wt3UtBYyMiW50JQy6yeY&loading=async&callback=initMap">
     </script>
@@ -245,6 +248,8 @@
             window.onload = initMap;
         });
     </script>
+
+    @endunless
 
     {{-- Shamim  Code --}}
     {{-- 
