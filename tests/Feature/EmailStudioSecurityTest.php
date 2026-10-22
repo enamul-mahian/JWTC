@@ -24,9 +24,10 @@ class EmailStudioSecurityTest extends TestCase
         Mail::fake();
 
         config()->set('email_studio.enabled', true);
-        config()->set('mail.mailers.smtp.host', 'smtp.example.invalid');
-        config()->set('mail.mailers.smtp.username', 'test@example.invalid');
-        config()->set('mail.from.address', 'test@example.invalid');
+        config()->set('mail.mailers.studio_smtp.host', 'smtp.example.invalid');
+        config()->set('mail.mailers.studio_smtp.username', 'test@example.invalid');
+        config()->set('email_studio.from_address', 'test@example.invalid');
+        config()->set('email_studio.from_name', 'Join Gallagher');
 
         Schema::create('users', function (Blueprint $t) {
             $t->id();
