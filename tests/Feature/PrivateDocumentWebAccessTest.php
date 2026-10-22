@@ -20,7 +20,7 @@ class PrivateDocumentWebAccessTest extends TestCase
             $table->id();
             $table->string('name');
             $table->string('email')->unique();
-            $table->string('user_type');
+            $table->string('user_type'); $table->timestamp('employer_approved_at')->nullable(); $table->tinyInteger('status')->default(1);
             $table->string('password')->nullable();
             $table->softDeletes();
             $table->timestamps();
@@ -35,6 +35,7 @@ class PrivateDocumentWebAccessTest extends TestCase
             ['id' => 3, 'name' => 'Employer', 'email' => 'employer@example.invalid', 'user_type' => 'employer'],
             ['id' => 4, 'name' => 'Admin Without Document Permission', 'email' => 'admin@example.invalid', 'user_type' => 'admin'],
         ]);
+        User::where('user_type', 'employer')->each(fn ($company) => $company->forceFill(['employer_approved_at' => now()])->save());
         DB::table('applicant_private_documents')->insert([
             'id' => 40, 'user_id' => 1, 'type' => 'passport',
             'title' => 'Personal Passport', 'status' => 'pending_review',

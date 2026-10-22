@@ -65,7 +65,7 @@ class EmployeerController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'user_type' => ['required', 'string', \Illuminate\Validation\Rule::in([UserType::EMPLOYER, UserType::JOB_SEEKER])],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:' . User::class],
-            'phone' => ['required', 'numeric', 'unique:' . User::class],
+            'phone' => ['required', 'string', 'max:20', 'unique:' . User::class],
             'password' => ['required', 'min:8', 'confirmed'],
             'job_categories_id' => ['required', 'integer', 'exists:job_categories,id'],
             'h-captcha-response' => [

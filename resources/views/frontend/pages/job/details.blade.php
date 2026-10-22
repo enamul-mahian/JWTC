@@ -102,8 +102,8 @@
                             <div class="col-md-12 col-sm-12 col-lg-6">
                                 <h4 class="text-info mb-2">{{ $jobDetails?->title }}</h4>
                                 <h6>{{ $jobDetails?->company?->company_name }}</h6>
-                                @if(app(\App\Services\PosterEmailVisibility::class)->enabled() && filter_var($jobDetails?->company?->contact_per_email, FILTER_VALIDATE_EMAIL))
-                                    <a class="jg-poster-email" href="mailto:{{ $jobDetails->company->contact_per_email }}">{{ $jobDetails->company->contact_per_email }}</a>
+                                @if($jobDetails?->publicPosterEmail())
+                                    <a class="jg-poster-email" href="mailto:{{ $jobDetails->publicPosterEmail() }}">{{ $jobDetails->publicPosterEmail() }}</a>
                                 @endif
                                 <p>{{ __('messages.ApplicationDeadline') }}:
                                     <strong>{{ Carbon\Carbon::parse($jobDetails?->application_deadline)->format('d M Y') }}

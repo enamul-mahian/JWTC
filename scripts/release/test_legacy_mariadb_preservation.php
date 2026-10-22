@@ -100,14 +100,21 @@ try {
         });
     }
 
+    $prior = null;
+    if ($mode !== 'seed') {
+        if (!is_file($baselinePath)) throw new RuntimeException('No trusted pre-upgrade CI baseline.');
+        $prior = json_decode((string) file_get_contents($baselinePath), true, 512, JSON_THROW_ON_ERROR);
+    }
     $fingerprints = [];
     foreach ($tables as $table) {
-        $rows = $db->table($table)->orderBy('id')->get()->toArray();
+        $columns = $prior[$table]['columns'] ?? $db->getSchemaBuilder()->getColumnListing($table);
+        $rows = $db->table($table)->select($columns)->orderBy('id')->get()->toArray();
         if (count($rows) === 0) {
             throw new RuntimeException('Missing synthetic legacy record in ' . $table);
         }
         $fingerprints[$table] = [
             'count' => count($rows),
+            'columns' => $columns,
             'sha256' => hash('sha256', json_encode($rows, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES)),
         ];
     }

@@ -88,10 +88,16 @@ class CompanyApprovalAndPrivacyTest extends TestCase
         $settings = DB::table('application_settings');
         // Create fixture from the schema's nullable/default columns only.
         $settings->insert(['show_poster_email' => false]);
+        $job = new \App\Models\Job(['resume_receiving_email' => 'poster-private@example.test', 'job_context' => 'Email poster-private@example.test to apply']);
+        $job->setRelation('company', $company);
+        $this->assertArrayNotHasKey('resume_receiving_email', $job->toArray());
+        $this->assertStringNotContainsString('poster-private@example.test', $job->toArray()['job_context']);
+        $this->assertNull($job->publicPosterEmail());
         $this->assertArrayNotHasKey('contact_per_email', $company->toArray());
         $settings->update(['show_poster_email' => true]);
         app()->forgetInstance(PosterEmailVisibility::class);
         $this->assertSame('poster-private@example.test', $company->toArray()['contact_per_email']);
+        $this->assertSame('poster-private@example.test', $job->publicPosterEmail());
     }
     public function test_public_job_and_portal_routes_exist_without_authentication(): void
     {

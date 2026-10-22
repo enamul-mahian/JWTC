@@ -17,6 +17,36 @@ class Job extends Model
     protected $guarded = [];
 
 
+    public function publicPosterEmail(): ?string
+    {
+        if (!app(\App\Services\PosterEmailVisibility::class)->enabled()) return null;
+        $email = $this->resume_receiving_email ?: $this->company?->contact_per_email;
+        return filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : null;
+    }
+
+    public function publicDescription(?string $value): string
+    {
+        $text = html_entity_decode(strip_tags($value ?? ''), ENT_QUOTES, 'UTF-8');
+        if (!app(\App\Services\PosterEmailVisibility::class)->enabled()) {
+            foreach ([$this->resume_receiving_email, $this->company?->contact_per_email] as $email) {
+                if (is_string($email) && $email !== '') $text = str_ireplace($email, '[contact hidden]', $text);
+            }
+        }
+        return $text;
+    }
+
+    public function toArray()
+    {
+        $values = parent::toArray();
+        if (!app(\App\Services\PosterEmailVisibility::class)->enabled()) {
+            unset($values['resume_receiving_email']);
+            foreach (['job_context', 'job_responsibilities', 'additional_requirements', 'other_benefits', 'apply_procedure'] as $field) {
+                if (isset($values[$field])) $values[$field] = $this->publicDescription($values[$field]);
+            }
+        }
+        return $values;
+    }
+
     public function company()
     {
         return $this->belongsTo(Company::class, 'company_id', 'id');
