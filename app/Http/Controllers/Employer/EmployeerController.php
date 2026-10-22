@@ -63,11 +63,11 @@ class EmployeerController extends Controller
         // return $request->all();
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'user_type' => ['required', 'string', 'max:255'],
+            'user_type' => ['required', 'string', \Illuminate\Validation\Rule::in([UserType::EMPLOYER, UserType::JOB_SEEKER])],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:' . User::class],
             'phone' => ['required', 'numeric', 'unique:' . User::class],
             'password' => ['required', 'min:4', 'confirmed'],
-            'job_categories_id' => 'required',
+            'job_categories_id' => ['required', 'integer', 'exists:job_categories,id'],
             'h-captcha-response' => [
                 \Illuminate\Validation\Rule::requiredIf((bool) config('services.hcaptcha.enabled')),
                 'nullable', 'string', 'max:8192',
@@ -86,6 +86,16 @@ class EmployeerController extends Controller
                 'message' => 'registration failed.',
                 'class' => 'success',
             ]);
+        }
+
+        if (config('security.registration_otp.enabled')) {
+            $payload = $request->only([
+                'name', 'email', 'phone', 'password', 'password_confirmation', 'user_type',
+            ]);
+            $payload['job_category_id'] = (int) $request->input('job_categories_id');
+            $pendingId = app(\App\Services\RegistrationOtpService::class)->issue($payload);
+            $request->session()->put('pending_registration_id', $pendingId);
+            return redirect()->route('registration.otp.show');
         }
 
         $user = User::create([
