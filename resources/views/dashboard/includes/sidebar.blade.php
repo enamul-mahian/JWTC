@@ -36,6 +36,15 @@
                 </li>
             @endif
 
+            @if(in_array(auth()->user()?->user_type, [\App\Enum\UserType::ADMIN, \App\Enum\UserType::SUPER_ADMIN], true) && auth()->user()->can('manage-interviews'))
+                <li class="sidebar-item">
+                    <a href="{{ route('interviews.manage.index') }}" class="sidebar-link">
+                        <span><i class="ti ti-calendar-event"></i></span>
+                        <span class="hide-menu">Online Interviews</span>
+                    </a>
+                </li>
+            @endif
+
             {{-- TODO Something to put --}}
 
             @if (auth()->user()->can('job-categories.index') || auth()->user()->can('review-private-documents') || auth()->user()->can('inactive-job'))
