@@ -68,7 +68,8 @@ class EmailStudioSmtpController extends Controller
             );
         }
 
-        return redirect()->route('email-studio.index', ['smtp_profile' => $id])
+        return redirect()->route('email-studio.index',
+            $id === null ? [] : ['smtp_profile' => $id])
             ->with('success', 'SMTP profile saved. The password is encrypted and never displayed.');
     }
 
@@ -102,9 +103,20 @@ class EmailStudioSmtpController extends Controller
             ->with('success', 'SMTP profile deleted. Old send logs remain available.');
     }
 
+    public function testEnvironment(Request $request, StudioSmtpProfiles $profiles)
+    {
+        $this->authorized($request);
+        return $this->performTest($request, $profiles, null);
+    }
+
     public function test(Request $request, StudioSmtpProfiles $profiles, int $id)
     {
         $this->authorized($request);
+        return $this->performTest($request, $profiles, $id);
+    }
+
+    private function performTest(Request $request, StudioSmtpProfiles $profiles, ?int $id)
+    {
         $settings = $profiles->settings($id);
         $recipient = (string) $request->user()->email;
         abort_unless(filter_var($recipient, FILTER_VALIDATE_EMAIL), 422);
@@ -118,7 +130,10 @@ class EmailStudioSmtpController extends Controller
             );
             $result = 'accepted';
         } catch (\Throwable $exception) {
-            report($exception);
+            \Illuminate\Support\Facades\Log::warning('SMTP Studio profile test failed', [
+                'profile_id' => $id,
+                'error_type' => get_class($exception),
+            ]);
         }
 
         DB::table('email_studio_send_logs')->insert([
