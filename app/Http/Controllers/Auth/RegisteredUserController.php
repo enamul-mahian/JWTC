@@ -58,6 +58,11 @@ class RegisteredUserController extends Controller
                 'max:100',
             ],
 
+            'h-captcha-response' => [
+                \Illuminate\Validation\Rule::requiredIf((bool) config('services.hcaptcha.enabled')),
+                'nullable', 'string', 'max:8192',
+                new \App\Rules\ValidHcaptcha(),
+            ],
             'password' => [
                 'required',
                 'confirmed',
