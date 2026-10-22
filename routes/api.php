@@ -10,6 +10,7 @@ use App\Http\Controllers\API\Jobseeker\PrivateDocumentController;
 use App\Http\Controllers\API\Admin\PrivateDocumentReviewController;
 use App\Http\Controllers\Interview\InterviewController;
 use App\Http\Controllers\Chat\ApplicationChatController;
+use App\Http\Controllers\Support\SupportCenterController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
