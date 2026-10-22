@@ -1,0 +1,34 @@
+name: Resolve Security Dependencies
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/resolve-security-dependencies.yml']
+permissions:
+  contents: write
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: c1542df0b2af539a00a485650bda5da2abdba0fd
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, fileinfo, pdo_mysql, pdo_sqlite, gd, zip
+          tools: composer:v2
+          coverage: none
+      - name: Resolve patched dependencies within existing constraints
+        run: |
+          composer update --with-all-dependencies --prefer-dist --no-interaction --no-progress --no-scripts --no-plugins
+          composer audit --locked --no-dev --format=json
+      - name: Preserve the resolved lock for CI review
+        run: |
+          git switch -c fix/security-dependencies-20261022
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add composer.lock
+          git commit -m 'Update locked dependencies to patched compatible versions'
+          git push origin HEAD:refs/heads/fix/security-dependencies-20261022
