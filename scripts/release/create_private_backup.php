@@ -194,10 +194,11 @@ try {
         foreach (['/usr/bin/', '/bin/', '/usr/local/bin/', '/usr/local/cpanel/bin/'] as $directory) {
             if (is_executable($directory.$name)) return $directory.$name;
         }
-        throw new RuntimeException('Required backup tool unavailable');
+        throw new RuntimeException('Required backup tool unavailable: '.$name);
     };
     $backupPhase = 'domain-root-check';
     $uapi = $binary('uapi');
+    $backupPhase = 'uapi-domain-query';
     $domain = json_decode($run([$uapi, '--output=json', '--user=dropoqux',
         'DomainInfo', 'single_domain_data', 'domain=joingallagher.uk']), true, 64, JSON_THROW_ON_ERROR);
     if (($domain['result']['status'] ?? 0) !== 1) {
@@ -217,6 +218,7 @@ try {
         }
         return array_values(array_unique($roots));
     };
+    $backupPhase = 'domain-root-mapping';
     $domainRoots = $collectRoots($domain['result']['data'] ?? []);
     if (count($domainRoots) !== 1 || ($domainRoots[0] !== $root
         && !str_starts_with($domainRoots[0], $root.DIRECTORY_SEPARATOR))) {
@@ -381,6 +383,18 @@ try {
 
 } catch (Throwable $error) {
     // Deliberately suppress PDO messages, DB host/schema, password and paths.
+    $safeReasons = [
+        'Cannot establish domain document root',
+        'Separate public document root needs backup mapping',
+        'Cannot establish private backup destination',
+        'No verified document roots',
+        'Backup command failed; details suppressed',
+    ];
+    $reason = $error->getMessage();
+    if (in_array($reason, $safeReasons, true)
+        || preg_match('/^Required backup tool unavailable: (uapi|mysqldump|tar|openssl)$/D', $reason)) {
+        fwrite(STDERR, "REASON: ".$reason."\n");
+    }
     fwrite(STDERR, "FAIL: private backup stopped at ".$backupPhase."; private details suppressed. Retain partial outputs for review.\n");
     exit(1);
 }
