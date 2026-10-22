@@ -59,8 +59,11 @@ try {
     $guard = base64_decode(trim(stream_get_contents(STDIN)), true);
     if (!$guard) throw new RuntimeException('Extractor unavailable');
     $unpacked = $base.'/candidate-unpacked';
-    if (file_exists($unpacked) || !mkdir($unpacked, 0700)) throw new RuntimeException('Candidate destination exists');
-    $run(['/usr/bin/python3', '-c', $guard, 'extract', $input.'/'.$manifest['package'], $unpacked, '536870912']);
+    if (is_link($unpacked)) throw new RuntimeException('Candidate destination exists');
+    if (!is_dir($unpacked)) {
+        if (!mkdir($unpacked, 0700)) throw new RuntimeException('Candidate destination exists');
+        $run(['/usr/bin/python3', '-c', $guard, 'extract', $input.'/'.$manifest['package'], $unpacked, '536870912']);
+    }
     $expected = [];
     foreach ($manifest['files'] as $record) {
         $path = $record['path'];
@@ -150,6 +153,7 @@ try {
     echo 'PRESERVED_FILE_COUNT '.count($assets)."\n";
     echo "INFO: browser flows and real SMTP delivery remain unverified; live application unchanged\n";
 } catch (Throwable $error) {
+    if (in_array($error->getMessage(), ['Candidate hash mismatch', 'Candidate file mismatch', 'Unmanifested candidate file', 'Candidate destination exists', 'Candidate command failed'], true)) fwrite(STDERR, 'REASON: '.$error->getMessage()."\n");
     fwrite(STDERR, 'FAIL: private staging candidate stopped at '.$phase."; private details suppressed; preserve staging for investigation\n");
     exit(1);
 }

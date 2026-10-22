@@ -89,7 +89,7 @@ jobs:
           sha256sum -c SHA256SUMS
           target='/home/dropoqux/jwtc-private-staging/20261022-215145-f92ca979/candidate-input'
           ssh_options=(-p "$SSH_PORT" -i "$RUNNER_TEMP/jwtc-stage-ssh/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/jwtc-stage-ssh/known_hosts" -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=2)
-          ssh -T "${ssh_options[@]}" "$SSH_USER@$SSH_HOST" "test ! -e '$target' && test ! -L '$target' && umask 077 && mkdir '$target'"
+          ssh -T "${ssh_options[@]}" "$SSH_USER@$SSH_HOST" "test ! -L '$target' && umask 077 && mkdir -p '$target'"
           scp -P "$SSH_PORT" -i "$RUNNER_TEMP/jwtc-stage-ssh/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/jwtc-stage-ssh/known_hosts" ./*.tar.gz release-manifest.json "$SSH_USER@$SSH_HOST:$target/"
           cd "$GITHUB_WORKSPACE"
           script_base64="$(base64 -w0 scripts/release/verify_staging_candidate.php)"
