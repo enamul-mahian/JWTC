@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\InterviewManager;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
@@ -17,6 +18,7 @@ class InterviewManagementTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        Mail::fake();
 
         Schema::create('users', function (Blueprint $t) {
             $t->id();
@@ -259,4 +261,30 @@ class InterviewManagementTest extends TestCase
         $this->get('/interviews/manage/99')
             ->assertRedirect();
     }
+    public function test_explicitly_permitted_admin_can_view_and_manage_any_applicant_interview(): void
+    {
+        $admin = User::findOrFail(5);
+        $admin->givePermissionTo('manage-interviews');
+        $this->seedInterview();
+
+        $this->actingAs($admin)
+            ->get('/interviews/manage/99')
+            ->assertOk()
+            ->assertSee('private-room');
+
+        $this->assertTrue(app(InterviewManager::class)->canManage($admin, $this->applicant()));
+    }
+
+    public function test_private_interview_notifications_use_account_page_instead_of_meeting_token(): void
+    {
+        $this->seedInterview();
+        $interview = DB::table('application_interviews')->first();
+
+        app(\App\Services\InterviewEmailNotifier::class)->notify(
+            $this->applicant(), $interview, 'schedule', User::findOrFail(3)
+        );
+
+        Mail::assertSentCount(1);
+    }
+
 }
