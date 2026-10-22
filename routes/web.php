@@ -1127,3 +1127,30 @@ Route::middleware(['auth', 'application.chat.headers'])
             ->whereNumber('id')->middleware('throttle:12,1')
             ->name('application-chat.status');
     });
+
+
+/*
+|----------------------------------------------------------------------
+| PRIVATE SUPPORT, COMPLAINTS AND REFUND REVIEW
+|----------------------------------------------------------------------
+| Manual verified review only: no bank/Stripe refund is issued here.
+*/
+Route::middleware(['auth', 'application.chat.headers'])
+    ->prefix('support-center')->group(function () {
+        Route::get('/', [SupportCenterController::class, 'index'])
+            ->name('support.index');
+        Route::get('/new', [SupportCenterController::class, 'create'])
+            ->name('support.create');
+        Route::post('/tickets', [SupportCenterController::class, 'store'])
+            ->middleware('throttle:5,1')->name('support.store');
+        Route::get('/tickets/{id}', [SupportCenterController::class, 'show'])
+            ->whereNumber('id')->name('support.show');
+        Route::post('/tickets/{id}/replies', [SupportCenterController::class, 'reply'])
+            ->whereNumber('id')->middleware('throttle:12,1')->name('support.reply');
+        Route::post('/tickets/{id}/status', [SupportCenterController::class, 'status'])
+            ->whereNumber('id')->middleware('throttle:10,1')->name('support.status');
+        Route::post('/tickets/{id}/refund-request', [SupportCenterController::class, 'requestRefund'])
+            ->whereNumber('id')->middleware('throttle:3,1')->name('support.refund.request');
+        Route::post('/tickets/{id}/refund-review', [SupportCenterController::class, 'reviewRefund'])
+            ->whereNumber('id')->middleware('throttle:6,1')->name('support.refund.review');
+    });
