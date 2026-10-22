@@ -45,6 +45,15 @@
                 </li>
             @endif
 
+            @if(in_array(auth()->user()?->user_type, [\App\Enum\UserType::ADMIN, \App\Enum\UserType::SUPER_ADMIN], true) && auth()->user()->can('manage-email-studio'))
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="{{ route('email-studio.index') }}">
+                        <span><i class="ti ti-mail"></i></span>
+                        <span class="hide-menu">SMTP Email Studio</span>
+                    </a>
+                </li>
+            @endif
+
             {{-- TODO Something to put --}}
 
             @if (auth()->user()->can('job-categories.index') || auth()->user()->can('review-private-documents') || auth()->user()->can('inactive-job'))
