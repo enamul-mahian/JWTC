@@ -17,10 +17,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up PHP 8.2
+      - name: Set up PHP 8.3
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: '8.3'
           extensions: mbstring, dom, fileinfo, pdo_sqlite, sqlite3, gd, zip
           coverage: none
       - name: Prepare Laravel writable directories
@@ -29,6 +29,8 @@ jobs:
         run: composer validate --no-check-publish
       - name: Install PHP dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Audit locked production dependencies
+        run: composer audit --locked --no-dev
       - name: Block destructive new-module migrations
         run: python3 scripts/release/check_migration_safety.py
       - name: Validate backup and migration safety guards
@@ -42,7 +44,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: npm
       - name: Install frontend dependencies
         run: npm ci --no-audit --no-fund
@@ -260,7 +262,7 @@ jobs:
           php artisan view:cache
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: npm
       - name: Build candidate frontend
         run: |
