@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Route;
 
 // Auth routes...............
 Route::post('registration', [AuthController::class, 'registerEmployer'])->middleware('throttle:5,1');
+Route::post('registration/verify', [AuthController::class, 'confirmRegistration'])->middleware('throttle:5,1');
 Route::post('login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 Route::post('logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 Route::post('update-password', [AuthController::class, 'updatePassword'])->middleware(['auth:sanctum', 'throttle:5,1']);
