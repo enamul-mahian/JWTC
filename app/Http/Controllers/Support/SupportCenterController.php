@@ -63,12 +63,6 @@ class SupportCenterController extends Controller
         return view('support.index', [
             'tickets' => $items,
             'canManage' => $center->canManage($actor),
-            'staff' => $center->canManage($actor)
-                ? \App\Models\User::whereIn('user_type', [
-                    UserType::ADMIN, UserType::SUPER_ADMIN,
-                ])->get(['id','name','user_type'])->filter(fn ($u) => $center->canManage($u))
-                    ->values()
-                : collect(),
             'canReview' => $center->canReview($actor),
         ]);
     }
@@ -125,6 +119,12 @@ class SupportCenterController extends Controller
             'actor' => $actor,
             'isOwner' => (int) $ticket->requester_id === (int) $actor->id,
             'canManage' => $center->canManage($actor),
+            'staff' => $center->canManage($actor)
+                ? \App\Models\User::whereIn('user_type', [
+                    UserType::ADMIN, UserType::SUPER_ADMIN,
+                ])->get(['id','name','user_type'])->filter(fn ($u) => $center->canManage($u))
+                    ->values()
+                : collect(),
             'canReview' => $center->canReview($actor),
             'canSettle' => $center->canSettle($actor),
             'audit' => $center->canManage($actor) ?
