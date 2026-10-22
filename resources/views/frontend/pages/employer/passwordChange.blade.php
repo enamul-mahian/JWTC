@@ -37,7 +37,12 @@
 
                         <form action="{{ route('update.pass') }}" method="post">
                             @csrf
-                            <input type="hidden" name="user_id" value="{{ $user->id }}">
+                            @if ($errors->any())
+                                <div class="alert alert-danger" role="alert">{{ $errors->first() }}</div>
+                            @endif
+                            @if (session('success'))
+                                <div class="alert alert-success" role="alert">{{ session('success') }}</div>
+                            @endif
                             <div class="form-group is-empty">
                                 <label class="control-label">{{ __('messages.OldPassword') }}<span class="text-danger">*</span> </label>
                                 <input class="form-control" name="old_pass" type="password">
@@ -47,6 +52,10 @@
                                 <label class="control-label">{{ __('messages.NewPassword') }}<span class="text-danger">*</span></label>
                                 <input class="form-control" name="new_pass" type="password">
                                 <span class="material-input"></span>
+                            </div>
+                            <div class="form-group is-empty">
+                                <label class="control-label">Confirm New Password<span class="text-danger">*</span></label>
+                                <input class="form-control" name="new_pass_confirmation" type="password" autocomplete="new-password" required minlength="8">
                             </div>
                             <button class="btn btn-common" type="submit"> {{ __('messages.SaveChange') }}</button>
                         </form>
