@@ -50,7 +50,10 @@ class StudioSmtpProfiles
         // This dynamic named mailer exists for this request only. It is never
         // written into .env or config/mail.php and won't affect regular mail.
         config()->set('mail.mailers.studio_profile_runtime', $settings);
-        Mail::purge('studio_profile_runtime');
+        // Facade fakes used by automated tests deliberately lack purge().
+        if (method_exists(Mail::getFacadeRoot(), 'purge')) {
+            Mail::purge('studio_profile_runtime');
+        }
 
         return [
             'mailer' => 'studio_profile_runtime',
