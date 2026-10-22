@@ -42,6 +42,7 @@ class EmployerApplicantPrivacyTest extends TestCase
             $table->string('slug')->nullable();
             $table->boolean('is_publish')->default(false);
             $table->softDeletes();
+            $table->timestamps();
         });
         Schema::create('applications', function (Blueprint $table) {
             $table->id();
