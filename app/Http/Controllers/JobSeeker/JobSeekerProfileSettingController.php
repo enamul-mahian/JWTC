@@ -27,7 +27,17 @@ class JobSeekerProfileSettingController extends Controller
             return redirect()->back()->with('error', 'Current password is incorrect');
         }
 
-        // Update the password
+        if (config('security.password_change_otp.enabled')) {
+            app(\App\Services\PasswordOtpService::class)->issue(
+                $user, Hash::make($request->input('new_password'))
+            );
+            return response()->json([
+                'otp_required' => true,
+                'success' => 'We emailed you a six-digit code. Enter it to complete your password change.',
+            ], 202);
+        }
+
+        // Legacy behavior remains available until OTP is staged and enabled.
         $user->update([
             'password' => Hash::make($request->input('new_password')),
         ]);

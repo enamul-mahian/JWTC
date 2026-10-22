@@ -21,7 +21,9 @@ class RegisteredUserController extends Controller
      */
     public function create(): View
     {
-        return view('auth.register');
+        return view('auth.register', [
+            'jobCategories' => \App\Models\Dashboard\JobCategory::orderBy('name')->get(['id', 'name']),
+        ]);
     }
 
     /**
@@ -52,12 +54,21 @@ class RegisteredUserController extends Controller
                 'unique:users,phone',
             ],
 
+            'job_category_id' => [
+                \Illuminate\Validation\Rule::requiredIf((bool) config('security.registration_otp.enabled')),
+                'nullable', 'integer', 'exists:job_categories,id',
+            ],
             'referral_code' => [
                 'required',
                 'string',
                 'max:100',
             ],
 
+            'h-captcha-response' => [
+                \Illuminate\Validation\Rule::requiredIf((bool) config('services.hcaptcha.enabled')),
+                'nullable', 'string', 'max:8192',
+                new \App\Rules\ValidHcaptcha(),
+            ],
             'password' => [
                 'required',
                 'confirmed',
@@ -107,6 +118,16 @@ class RegisteredUserController extends Controller
         | Create Job Seeker
         |--------------------------------------------------------------------------
         */
+
+        if (config('security.registration_otp.enabled')) {
+            $payload = $request->only([
+                'name', 'email', 'phone', 'password', 'password_confirmation', 'job_category_id',
+            ]);
+            $payload['user_type'] = UserType::JOB_SEEKER;
+            $pendingId = app(\App\Services\RegistrationOtpService::class)->issue($payload);
+            $request->session()->put('pending_registration_id', $pendingId);
+            return redirect()->route('registration.otp.show');
+        }
 
         $user = User::create([
             'name' => $request->name,

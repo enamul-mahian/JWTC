@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Enum\UserType;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -9,15 +10,18 @@ use Symfony\Component\HttpFoundation\Response;
 class CheckAdminuserMiddleware
 {
     /**
-     * Handle an incoming request.
-     *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * Legacy databases can contain "Admin", while newer API accounts use
+     * UserType::ADMIN ("admin"). Reject non-admin roles consistently.
      */
-    public function handle(Request $request, Closure $next)
+    public function handle(Request $request, Closure $next): Response
     {
-        if (auth()->user()->user_type != 'Admin') {
-            return redirect()->route('home')->with('error', 'You do not have permission to access this page.');
-        }
+        $user = $request->user();
+        $type = strtolower((string) ($user?->user_type ?? ''));
+
+        abort_unless($user && in_array($type, [
+            UserType::ADMIN,
+            UserType::SUPER_ADMIN,
+        ], true), 403);
 
         return $next($request);
     }

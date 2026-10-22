@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Models\User;
 use App\Mail\TestEmail;
+use App\Services\StudioSmtpProfiles;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
@@ -20,8 +21,8 @@ class SettingController extends Controller
 {
     public function __construct()
     {
-        $this->middleware(['permission:application-setting'])->only('index', 'databaseBackup');
-        $this->middleware(['permission:email-setting'])->only('email_setting');
+        $this->middleware(['permission:application-setting'])->only(['index', 'update', 'cachClear', 'databaseBackup']);
+        $this->middleware(['permission:email-setting'])->only(['emailSetting', 'emailSettingUpdate', 'emailTesting']);
     }
 
     public function index()
@@ -46,80 +47,99 @@ class SettingController extends Controller
      */
     public function emailSettingUpdate(Request $request)
     {
-        DB::beginTransaction();
+        // A hosting environment file is not a writable application setting.
+        // SMTP profiles for Email Studio remain isolated and encrypted.
+        $data = $request->validate([
+            'mail_host' => ['required', 'string', 'max:253', 'regex:/^[a-zA-Z0-9.-]+$/'],
+            'mail_port' => ['required', 'integer', 'between:1,65535'],
+            'mail_username' => ['required', 'string', 'max:254'],
+            'mail_password' => ['nullable', 'string', 'max:255'],
+            'mail_from_name' => ['required', 'string', 'max:180'],
+            'mail_from_address' => ['required', 'email:rfc', 'max:254'],
+            'mail_status' => ['required', 'in:Active,Inactive'],
+            'mail_encryption' => ['required', 'in:tls,ssl'],
+        ]);
 
         try {
-            $general = gs();
+            DB::transaction(function () use ($data) {
+                $general = gs();
+                $general->mail_host = $data['mail_host'];
+                $general->mail_port = (int) $data['mail_port'];
+                $general->mail_username = $data['mail_username'];
+                // An empty password means "keep existing", not "erase".
+                if (!empty($data['mail_password'])) {
+                    $general->mail_password = $data['mail_password'];
+                }
+                $general->mail_from_name = $data['mail_from_name'];
+                $general->mail_from_address = $data['mail_from_address'];
+                $general->mail_status = $data['mail_status'];
+                $general->mail_encryption = $data['mail_encryption'];
+                $general->save();
+            });
 
-            $general->mail_host = $request->mail_host;
-            $general->mail_port = $request->mail_port;
-            $general->mail_username = $request->mail_username;
-            $general->mail_password = $request->mail_password;
-            $general->mail_from_name = $request->mail_from_name;
-            $general->mail_from_address = $request->mail_from_address;
-            $general->mail_status = $request->mail_status;
-            $general->mail_encryption = $request->mail_encryption;
-
-            $general->save();
-
-            $this->setEnv('MAIL_HOST', $request->mail_host);
-            $this->setEnv('MAIL_PORT', $request->mail_port);
-            $this->setEnv('MAIL_USERNAME', $request->mail_username);
-            $this->setEnv('MAIL_PASSWORD', $request->mail_password);
-            $this->setEnv('MAIL_FROM_ADDRESS', $request->mail_from_address);
-            $this->setEnv('MAIL_FROM_NAME', $request->mail_from_name);
-            $this->setEnv('MAIL_ENCRYPTION', $request->mail_encryption);
-
-            Artisan::call('config:clear');
-
-            DB::commit();
-
-            return redirect()
-                ->route('setting')
-                ->with('success', 'Setting saved Successfully');
-
-        } catch (\Exception $e) {
-
-            DB::rollback();
-
-            return redirect()
-                ->route('setting')
-                ->with('error', 'Something went wrong');
+            return redirect()->route('email-setting')
+                ->with('success', 'SMTP configuration saved in the database. Hosting MAIL_* settings were not overwritten.');
+        } catch (\Throwable $exception) {
+            report($exception);
+            return redirect()->route('email-setting')
+                ->with('error', 'Unable to save email settings. Check the private server log.');
         }
     }
 
-    private function setEnv($key, $value)
+    /**
+     * Test the saved DB SMTP profile without rewriting .env or the global
+     * default mailer. This is an explicit authenticated POST action only.
+     */
+    public function emailTesting(Request $request)
     {
-        $envFilePath = app()->environmentFilePath();
-        $envContents = File::get($envFilePath);
+        $general = gs();
+        if (($general->mail_status ?? '') !== 'Active') {
+            return redirect()->route('email-setting')
+                ->with('error', 'Activate a saved SMTP configuration before testing.');
+        }
 
-        $newEnvContents = preg_replace(
-            "/^$key=.*/m",
-            "$key=$value",
-            $envContents
+        $host = (string) ($general->mail_host ?? '');
+        $port = (int) ($general->mail_port ?? 0);
+        $recipient = (string) ($general->business_email ?? '');
+        if (!preg_match('/^[a-zA-Z0-9.-]{1,253}$/', $host)
+            || $port < 1 || $port > 65535
+            || !filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
+            return redirect()->route('email-setting')
+                ->with('error', 'Saved SMTP host, port or recipient is invalid.');
+        }
+
+        // Reuse the outbound SMTP SSRF guard used by Email Studio.
+        app(StudioSmtpProfiles::class)->validateServer(
+            $host, $port, (string) ($general->mail_encryption ?? '')
         );
 
-        File::put($envFilePath, $newEnvContents);
-    }
+        Config::set('mail.mailers.jwtc_legacy_test', [
+            'transport' => 'smtp',
+            'host' => $host,
+            'port' => $port,
+            'encryption' => (string) ($general->mail_encryption ?? 'tls'),
+            'username' => (string) ($general->mail_username ?? ''),
+            'password' => (string) ($general->mail_password ?? ''),
+            'timeout' => 20,
+            'local_domain' => config('mail.mailers.smtp.local_domain'),
+        ]);
 
-    /**
-     * Send test email.
-     */
-    public function emailTesting()
-    {
         try {
-
-            Mail::to(gs()->business_email)->send(new TestEmail());
-
-            return redirect()
-                ->route('setting')
-                ->with('success', 'Email send successfully');
-
-        } catch (\Exception $e) {
-
-            return redirect()
-                ->route('setting')
-                ->with('error', 'Error sending email: ' . $e->getMessage());
+            Mail::purge('jwtc_legacy_test');
+            Mail::mailer('jwtc_legacy_test')->to($recipient)->send(
+                (new TestEmail())->from(
+                    (string) ($general->mail_from_address ?? ''),
+                    (string) ($general->mail_from_name ?? '')
+                )
+            );
+            return redirect()->route('email-setting')
+                ->with('success', 'SMTP accepted the test message. Verify inbox delivery.');
+        } catch (\Throwable $exception) {
+            report($exception);
+            return redirect()->route('email-setting')
+                ->with('error', 'SMTP connection or delivery failed. Check private logs.');
+        } finally {
+            Mail::purge('jwtc_legacy_test');
         }
     }
 

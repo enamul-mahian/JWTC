@@ -46,6 +46,19 @@ return [
             'local_domain' => env('MAIL_EHLO_DOMAIN'),
         ],
 
+        // Isolated SMTP transport for the visual Email Studio only.
+        // Credentials are defined in the server environment, never in templates.
+        'studio_smtp' => [
+            'transport' => 'smtp',
+            'host' => env('EMAIL_STUDIO_SMTP_HOST', env('MAIL_HOST')),
+            'port' => env('EMAIL_STUDIO_SMTP_PORT', env('MAIL_PORT', 587)),
+            'encryption' => env('EMAIL_STUDIO_SMTP_ENCRYPTION', env('MAIL_ENCRYPTION', 'tls')),
+            'username' => env('EMAIL_STUDIO_SMTP_USERNAME', env('MAIL_USERNAME')),
+            'password' => env('EMAIL_STUDIO_SMTP_PASSWORD', env('MAIL_PASSWORD')),
+            'timeout' => 20,
+            'local_domain' => env('MAIL_EHLO_DOMAIN'),
+        ],
+
         'ses' => [
             'transport' => 'ses',
         ],

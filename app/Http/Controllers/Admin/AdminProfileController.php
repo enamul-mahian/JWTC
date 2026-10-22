@@ -53,24 +53,43 @@ class AdminProfileController extends Controller
         }
     }
 
-    function updateAdminPassword(Request $request) {
-        $request->validate([
-            'current_password' => 'required',
-            'new_password' => 'required|string|min:8|confirmed',
+    public function updateAdminPassword(Request $request)
+    {
+        $validated = $request->validate([
+            'current_password' => ['required', 'string'],
+            'new_password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
-        $user = Auth::user();
-
-        // Check if the current password matches the one in the database
-        if (!Hash::check($request->input('current_password'), $user->password)) {
-            return redirect()->back()->with('error', 'Current password is incorrect');
+        $user = $request->user();
+        if (!Hash::check($validated['current_password'], (string) $user->password)) {
+            return back()->withErrors(['current_password' => 'Current password is incorrect.']);
         }
 
-        // Update the password
-        $user->update([
-            'password' => Hash::make($request->input('new_password')),
-        ]);
+        if (config('security.password_change_otp.enabled')) {
+            app(\App\Services\PasswordOtpService::class)->issue(
+                $user, Hash::make($validated['new_password'])
+            );
+            return back()->with('otp_sent', 'We emailed you a six-digit verification code.');
+        }
 
-        return redirect()->route('setting')->with('success','Data updated successfully');
+        DB::transaction(function () use ($user, $validated) {
+            $user->forceFill([
+                'password' => Hash::make($validated['new_password']),
+                'remember_token' => \Illuminate\Support\Str::random(60),
+            ])->save();
+            $user->tokens()->delete();
+            // A previously issued challenge must not revert a later password.
+            if (\Illuminate\Support\Facades\Schema::hasTable('email_otp_challenges')) {
+                DB::table('email_otp_challenges')->where('user_id', $user->id)
+                    ->where('purpose', 'password_change')->delete();
+            }
+        });
+
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+        return redirect()->route('login')->with(
+            'message', 'Password changed successfully. Please sign in again.'
+        );
     }
 }

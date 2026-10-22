@@ -282,6 +282,31 @@ class JobApplicationController extends Controller
         }
     }
 
+    public function applicationTimeline(Request $request, int $id)
+    {
+        $this->applicant($request);
+        $application = Application::where('user_id', $request->user()->id)
+            ->with('job:id,title,company_id')
+            ->findOrFail($id);
+
+        $catalog = app(\App\Services\ApplicationStatusCatalog::class);
+        $history = \Illuminate\Support\Facades\Schema::hasTable('application_status_events')
+            ? \Illuminate\Support\Facades\DB::table('application_status_events')
+                ->where('application_id', $application->id)
+                ->orderBy('created_at')->orderBy('id')
+                ->get(['from_status_id', 'to_status_id', 'status_name', 'progress',
+                    'source', 'note', 'created_at'])
+            : collect();
+
+        return response()->json([
+            'application' => $application,
+            'status' => $catalog->find((int) $application->status),
+            'stages' => $catalog->all(),
+            'history' => $history,
+            'history_note' => 'Older status changes may predate the audit timeline.',
+        ]);
+    }
+
     public function getAppliedJob(Request $request)
     {
         $this->applicant($request);

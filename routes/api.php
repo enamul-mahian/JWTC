@@ -6,6 +6,11 @@ use App\Http\Controllers\API\Employer\JobController;
 use App\Http\Controllers\API\EmployerInformationController;
 use App\Http\Controllers\API\Jobseeker\JobApplicationController;
 use App\Http\Controllers\API\Jobseeker\OthersController;
+use App\Http\Controllers\API\Jobseeker\PrivateDocumentController;
+use App\Http\Controllers\API\Admin\PrivateDocumentReviewController;
+use App\Http\Controllers\Interview\InterviewController;
+use App\Http\Controllers\Chat\ApplicationChatController;
+use App\Http\Controllers\Support\SupportCenterController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -23,9 +28,11 @@ use Illuminate\Support\Facades\Route;
 
 // Auth routes...............
 Route::post('registration', [AuthController::class, 'registerEmployer'])->middleware('throttle:5,1');
+Route::post('registration/verify', [AuthController::class, 'confirmRegistration'])->middleware('throttle:5,1');
 Route::post('login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 Route::post('logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 Route::post('update-password', [AuthController::class, 'updatePassword'])->middleware(['auth:sanctum', 'throttle:5,1']);
+Route::post('confirm-password-otp', [AuthController::class, 'confirmPasswordOtp'])->middleware(['auth:sanctum', 'throttle:5,1']);
 //Home Page  route.....
 Route::get('home-page', [CommonController::class, 'getHomePageData']);
 Route::get('search-job', [JobApplicationController::class, 'jobSearch']);
@@ -64,6 +71,15 @@ Route::group(['prefix' => 'employer', 'middleware' => 'auth:sanctum'], function 
 });
 
 Route::group(['prefix' => 'jobseeker', 'middleware' => 'auth:sanctum'], function () {
+    // New versioned, private document workflow; legacy CV URLs stay unchanged.
+    Route::get('private-documents', [PrivateDocumentController::class, 'index']);
+    Route::post('private-documents', [PrivateDocumentController::class, 'upload'])
+        ->middleware('throttle:10,1');
+    Route::post('private-documents/{id}/revisions', [PrivateDocumentController::class, 'revise'])
+        ->middleware('throttle:10,1');
+    Route::get('private-documents/{id}/history', [PrivateDocumentController::class, 'history']);
+    Route::get('private-documents/{id}/versions/{version}', [PrivateDocumentController::class, 'download']);
+
     Route::get('resume-views', [JobApplicationController::class, 'resumeViewd']);
     Route::post('apply-job', [JobApplicationController::class, 'applyJob']);
     Route::get('job-details/{id}', [JobApplicationController::class, 'jobDetails']);
@@ -119,6 +135,7 @@ Route::group(['prefix' => 'jobseeker', 'middleware' => 'auth:sanctum'], function
     Route::post('jobseeker-upload-document', [JobApplicationController::class, 'jobseekerDocUpload']);
 
     Route::get('get-all-applied-jobs', [JobApplicationController::class, 'getAppliedJob']);
+    Route::get('applications/{id}/timeline', [JobApplicationController::class, 'applicationTimeline']);
     Route::get('get-all-shortlist-jobs', [JobApplicationController::class, 'getShortlistedJob']);
     Route::post('send-resume', [JobApplicationController::class, 'sendResume']);
 });
@@ -133,3 +150,55 @@ Route::group(['middleware' => 'auth:sanctum'], function () {
     Route::post('contact-submit', [CommonController::class,  'contactStore']);
     Route::get('category-wise-skills', [CommonController::class,  'categoryWiseSkills']);
 });
+
+Route::middleware(['auth:sanctum', 'throttle:30,1'])->prefix('admin')->group(function () {
+    Route::get('private-documents/{id}', [PrivateDocumentReviewController::class, 'show']);
+    Route::get('private-documents/{id}/versions/{version}', [PrivateDocumentReviewController::class, 'download']);
+    Route::post('private-documents/{id}/review', [PrivateDocumentReviewController::class, 'decide']);
+});
+
+
+// All interview data is scoped by applicant ownership or authorized organizer.
+Route::middleware(['auth:sanctum', 'throttle:30,1'])->prefix('interviews')->group(function () {
+    Route::get('/my', [InterviewController::class, 'applicantIndex']);
+    Route::get('/my/{application}', [InterviewController::class, 'applicantShow']);
+    Route::post('/my/{application}/reply', [InterviewController::class, 'act']);
+
+    Route::get('/manage', [InterviewController::class, 'managerIndex']);
+    Route::get('/manage/{application}', [InterviewController::class, 'managerShow']);
+    Route::post('/manage/{application}/schedule', [InterviewController::class, 'schedule']);
+    Route::post('/manage/{application}/action', [InterviewController::class, 'act']);
+});
+
+
+Route::middleware(['auth:sanctum','throttle:60,1'])
+    ->prefix('application-messages')->group(function () {
+        Route::get('/', [ApplicationChatController::class, 'index']);
+        Route::post('/applications/{application}', [ApplicationChatController::class, 'open'])
+            ->middleware('throttle:8,1');
+        Route::get('/threads/{id}', [ApplicationChatController::class, 'thread']);
+        Route::get('/threads/{id}/history', [ApplicationChatController::class, 'history']);
+        Route::get('/threads/{id}/poll', [ApplicationChatController::class, 'poll']);
+        Route::post('/threads/{id}/messages', [ApplicationChatController::class, 'send'])
+            ->middleware('throttle:12,1');
+        Route::post('/threads/{id}/read', [ApplicationChatController::class, 'read']);
+        Route::post('/threads/{id}/status', [ApplicationChatController::class, 'status']);
+    });
+
+
+// Support ticket, complaint and refund review API requires Sanctum account auth.
+// All access controls are enforced independently of supplied ticket IDs.
+Route::middleware(['auth:sanctum', 'throttle:40,1'])
+    ->prefix('support-center')->group(function () {
+        Route::get('/tickets', [SupportCenterController::class, 'index']);
+        Route::post('/tickets', [SupportCenterController::class, 'store'])
+            ->middleware('throttle:5,1');
+        Route::get('/tickets/{id}', [SupportCenterController::class, 'show']);
+        Route::post('/tickets/{id}/replies', [SupportCenterController::class, 'reply'])
+            ->middleware('throttle:12,1');
+        Route::post('/tickets/{id}/status', [SupportCenterController::class, 'status']);
+        Route::post('/tickets/{id}/assign', [SupportCenterController::class, 'assign']);
+        Route::post('/tickets/{id}/refund-request', [SupportCenterController::class, 'requestRefund'])
+            ->middleware('throttle:3,1');
+        Route::post('/tickets/{id}/refund-review', [SupportCenterController::class, 'reviewRefund']);
+    });

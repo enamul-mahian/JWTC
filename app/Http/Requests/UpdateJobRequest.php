@@ -36,8 +36,8 @@ class UpdateJobRequest extends FormRequest
             'work_place' => 'required|array',
             'work_place.*' => 'required|string',
             'country_id' =>'required|string|max:255',
-            'minimum_salary' =>'required|numeric',
-            'maximum_salary' =>'required|numeric',
+            'minimum_salary' => 'required|integer|min:0',
+            'maximum_salary' => 'required|integer|min:0|gte:minimum_salary',
             'additional_salary_info' =>'nullable|string',
             'other_benefits' => 'nullable|array',
             'other_benefits.*' => 'nullable|string',
@@ -59,7 +59,7 @@ class UpdateJobRequest extends FormRequest
             'mini_age' => 'required',
             'max_age' => 'nullable',
             'company_id' => 'required',
-            'salary_type' => 'required',
+            'salary_type' => 'required|string|max:50',
         ];
     }
 }

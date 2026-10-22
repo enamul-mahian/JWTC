@@ -11,6 +11,8 @@ class Education extends Model
 {
     use HasFactory;
 
+    protected $table = 'education';
+
     protected $guarded = ['id'];
 
     public function user()

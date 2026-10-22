@@ -48,29 +48,10 @@
                     <!-- Progress Bar Section -->
                     <div class="mt-3">
                         @php
-    $application = getApplication($item->id); 
-
-    $statuses = [
-        ['id' => 1, 'name' => 'File Under Process of Decision Making', 'progress' => 0],
-        ['id' => 2, 'name' => 'File Under Process of Assessment', 'progress' => 20],
-        ['id' => 3, 'name' => 'File Under Process of Acceptance', 'progress' => 30],
-        ['id' => 4, 'name' => 'File Under Process of Approval', 'progress' => 40],
-        ['id' => 5, 'name' => 'Agreement on Board', 'progress' => 50],
-        ['id' => 6, 'name' => 'Police/Criminal Clearance Certificate Received', 'progress' => 55],
-        ['id' => 7, 'name' => 'Medical Test Report Received', 'progress' => 60],
-        ['id' => 8, 'name' => 'COS Letter Processed', 'progress' => 70],
-        ['id' => 9, 'name' => 'VFS Appointment Date Approved', 'progress' => 75],
-        ['id' => 10, 'name' => 'Visa Processing Complete', 'progress' => 100],
-        ['id' => 11, 'name' => 'Rejected / Terminated', 'progress' => 0],
-    ];
-
-    $applicationStatus = collect($statuses)->firstWhere('id', $application->status);
-    
-  //  print_r($application);
-    
-@endphp
-                        
-                          
+                            $application = $item->applications->first();
+                            $applicationStatus = $application
+                                ? getJobApplicationStatus((int) $application->status) : null;
+                        @endphp
 
                         @if ($applicationStatus)
                          
@@ -94,6 +75,12 @@
                 </div>
             </div>
         </a>
+        @if ($application)
+            <div class="mb-3 mt-1 d-flex justify-content-end">
+                <a href="{{ route('jobseeker.application.timeline', $application->id) }}"
+                   class="btn btn-sm btn-outline-primary">View progress &amp; status history</a>
+            </div>
+        @endif
     @empty
         <span class="job-listings-featured">{{ __('messages.Nodatafound') }}</span>
     @endforelse

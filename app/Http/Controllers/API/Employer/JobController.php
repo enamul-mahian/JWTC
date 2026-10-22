@@ -248,13 +248,19 @@ class JobController extends Controller
     {
         $data = $request->validate([
             'application_id' => ['required', 'integer', 'exists:applications,id'],
-            'status' => ['required', 'integer', Rule::in(range(1, 11))],
+            'status' => ['required', 'integer', 'min:1'],
+            'note' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $application = Application::findOrFail($data['application_id']);
         $this->job($request, (int) $application->job_id);
 
-        $application->update(['status' => $data['status']]);
-        return response()->json(['message' => 'Application status updated.', 'application' => $application]);
+        $application = app(\App\Services\ApplicationStatusManager::class)->transition(
+            $application, (int) $data['status'], $request->user(), 'employer', $data['note'] ?? null
+        );
+        return response()->json([
+            'message' => 'Application status updated with history.',
+            'application' => $application,
+        ]);
     }
 }

@@ -17,10 +17,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up PHP 8.2
+      - name: Set up PHP 8.3
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: '8.3'
           extensions: mbstring, dom, fileinfo, pdo_sqlite, sqlite3, gd, zip
           coverage: none
       - name: Prepare Laravel writable directories
@@ -29,8 +29,14 @@ jobs:
         run: composer validate --no-check-publish
       - name: Install PHP dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Audit locked production dependencies
+        run: composer audit --locked --no-dev
+      - name: Block destructive new-module migrations
+        run: python3 scripts/release/check_migration_safety.py
+      - name: Validate backup and migration safety guards
+        run: python3 -m unittest discover -s scripts/release -p 'test_*.py'
       - name: Lint tracked application PHP files
-        run: find app routes config database tests scripts/release -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+        run: find app routes config database tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Compile Blade views
         run: php artisan view:cache
       - name: PHPUnit regression suite
@@ -38,10 +44,16 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: npm
       - name: Install frontend dependencies
         run: npm ci --no-audit --no-fund
+      - name: Audit frontend dependencies
+        run: npm audit --audit-level=low
+      - name: Validate Email Studio browser JavaScript
+        run: |
+          node --check public/email-studio/editor.js
+          node --check public/chat/chat.js
       - name: Build frontend assets
         run: npm run build
       - name: Save built Vite assets
@@ -53,3 +65,218 @@ jobs:
           retention-days: 7
       - name: Inspect web and API route registration
         run: php artisan route:list --except-vendor
+
+
+  mysql-schema:
+    # Ephemeral GitHub-hosted database only; no connection to any account's
+    # production/staging hosting, uploads, or real credentials.
+    name: Laravel schema compatibility — temporary MySQL 8
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci_root_fixture_only
+          MYSQL_DATABASE: jwtc_ci_only
+          MYSQL_USER: jwtc_ci
+          MYSQL_PASSWORD: ci_password_fixture_only
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
+    env:
+      APP_ENV: testing
+      APP_DEBUG: 'false'
+      APP_KEY: 'base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
+      APP_URL: 'https://ci.example.invalid'
+      LOG_CHANNEL: stderr
+      DB_CONNECTION: mysql
+      DB_HOST: '127.0.0.1'
+      DB_PORT: '3306'
+      DB_DATABASE: jwtc_ci_only
+      DB_USERNAME: jwtc_ci
+      DB_PASSWORD: ci_password_fixture_only
+      CACHE_DRIVER: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up PHP matching cPanel 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, fileinfo, pdo_mysql, gd, zip
+          coverage: none
+      - name: Prepare isolated Laravel cache directories
+        run: mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs
+      - name: Install locked dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Verify migration commands against isolated MySQL schema
+        run: |
+          php artisan migrate --force --no-interaction
+          php artisan migrate:status --no-interaction
+          php artisan migrate --force --no-interaction
+      - name: Confirm essential tables and all migrations applied
+        run: |
+          php -r '
+            require "vendor/autoload.php";
+            $app = require "bootstrap/app.php";
+            $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+            $db = Illuminate\Support\Facades\DB::connection("mysql");
+            $schema = Illuminate\Support\Facades\Schema::connection("mysql");
+            if (($db->selectOne("SELECT DATABASE() AS name")->name ?? "") !== "jwtc_ci_only") exit(1);
+            foreach (["users","jobs","applications","migrations",
+              "application_chat_threads","support_tickets",
+              "email_studio_templates","applicant_private_documents"] as $table) {
+              if (!$schema->hasTable($table)) exit(2);
+            }
+            $count = $db->table("migrations")->count();
+            if ($count < 55) exit(3);
+            echo "PASS: ".$count." migrations installed in temporary MySQL 8\n";
+          '
+
+
+  legacy-schema-upgrade:
+    name: Sanitize legacy schema → additive MariaDB upgrade
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: fixture_root_only
+          MARIADB_DATABASE: jwtc_legacy_ci_only
+          MARIADB_USER: jwtc_ci
+          MARIADB_PASSWORD: fixture_password_only
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
+    env:
+      APP_ENV: testing
+      APP_DEBUG: 'false'
+      APP_KEY: 'base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
+      APP_URL: 'https://ci.example.invalid'
+      DB_CONNECTION: mysql
+      DB_HOST: '127.0.0.1'
+      DB_PORT: '3306'
+      DB_DATABASE: jwtc_legacy_ci_only
+      DB_USERNAME: jwtc_ci
+      DB_PASSWORD: fixture_password_only
+      LOG_CHANNEL: stderr
+      CACHE_DRIVER: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      JWTC_LEGACY_IMPORT_FIXTURE: ephemeral-only
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Laravel PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, fileinfo, pdo_mysql, gd, zip
+          coverage: none
+      - name: Install dependencies and prepare runtime directories
+        run: |
+          mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs storage/app
+          composer install --prefer-dist --no-interaction --no-progress
+      - name: Verify fixture contains structural SQL only
+        run: |
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          p = Path("tests/fixtures/legacy_schema_only.sql").read_text()
+          tables = re.findall(r"^CREATE TABLE \x60([A-Za-z0-9_]+)\x60", p, re.M)
+          inserts = re.findall(r"INSERT INTO \x60([A-Za-z0-9_]+)\x60", p, re.I)
+          assert len(tables) == 46 and len(set(tables)) == 46
+          assert inserts == ["migrations"], "Fixture must never contain real applicant rows"
+          print("PASS: Schema-only DDL and migration identifiers; no applicant records")
+          PY
+      - name: Load anonymized MariaDB legacy schema without customer records
+        run: php scripts/release/load_legacy_ci_fixture.php
+      - name: Seed fake applicant, employer, document, payment and SEO records
+        run: php scripts/release/test_legacy_mariadb_preservation.php seed
+      - name: Apply new migrations on top of the historical 43 records
+        run: |
+          php artisan migrate --force --no-interaction
+          php artisan migrate --force --no-interaction
+      - name: Verify all synthetic historical rows unchanged after migration
+        run: php scripts/release/test_legacy_mariadb_preservation.php verify
+      - name: Verify 46 old tables, 15 additive migrations and core data isolation
+        run: |
+          php -r '
+            require "vendor/autoload.php";
+            $app = require "bootstrap/app.php";
+            $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+            $db = Illuminate\Support\Facades\DB::connection("mysql");
+            $schema = Illuminate\Support\Facades\Schema::connection("mysql");
+            if (($db->selectOne("SELECT DATABASE() AS name")->name ?? "") !== "jwtc_legacy_ci_only") exit(1);
+            if ($db->table("migrations")->count() !== 58) exit(2);
+            foreach (["users", "jobs", "applications", "uploaded_cvs",
+              "jobseeker_uploads", "payment_credentials", "unique_codes",
+              "application_chat_threads", "support_tickets", "email_studio_templates",
+              "applicant_private_documents"] as $table) {
+              if (!$schema->hasTable($table)) exit(3);
+            }
+            echo "PASS: Legacy MariaDB structure upgraded through 15 additional migrations\n";
+          '
+
+
+  release-candidate:
+    name: Production dependency and candidate package check
+    needs: [laravel, mysql-schema, legacy-schema-upgrade]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      APP_ENV: production
+      APP_DEBUG: 'false'
+      APP_KEY: 'base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
+      APP_URL: 'https://candidate.example.invalid'
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ':memory:'
+      CACHE_DRIVER: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, fileinfo, pdo_mysql, pdo_sqlite, gd, zip
+          coverage: none
+      - name: Prepare candidate-only runtime directories
+        run: mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs
+      - name: Install locked production dependencies
+        run: composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader --no-scripts --no-plugins
+      - name: Verify production platform and Laravel boot
+        run: |
+          composer check-platform-reqs --no-dev
+          php artisan package:discover --ansi
+          php artisan route:list --except-vendor
+          php artisan view:cache
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Build candidate frontend
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+      - name: Package only runtime code and production dependencies
+        run: |
+          python3 scripts/release/package_candidate.py --root . --output "$RUNNER_TEMP/jwtc-candidate" --commit "$(git rev-parse HEAD)"
+      - name: Retain candidate and SHA-256 manifest for staging
+        uses: actions/upload-artifact@v4
+        with:
+          name: jwtc-application-candidate
+          path: ${{ runner.temp }}/jwtc-candidate/
+          if-no-files-found: error
+          retention-days: 7

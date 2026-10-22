@@ -58,6 +58,22 @@
         </div>
 
 
+        @if (config('security.registration_otp.enabled'))
+            <div class="mt-4">
+                <x-input-label for="job_category_id" value="Preferred Job Category" />
+                <select id="job_category_id" name="job_category_id" class="block mt-1 w-full border rounded"
+                    required>
+                    <option value="">Select a category</option>
+                    @foreach ($jobCategories as $category)
+                        <option value="{{ $category->id }}" @selected(old('job_category_id') == $category->id)>
+                            {{ $category->name }}
+                        </option>
+                    @endforeach
+                </select>
+                <x-input-error :messages="$errors->get('job_category_id')" class="mt-2" />
+            </div>
+        @endif
+
         <!-- Referral Code -->
         <div class="mt-4">
             <x-input-label for="referral_code" :value="__('Referral Code')" />
@@ -113,6 +129,8 @@
             <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
         </div>
 
+
+        @include('shared.hcaptcha')
 
         <div class="flex items-center justify-end mt-4">
 

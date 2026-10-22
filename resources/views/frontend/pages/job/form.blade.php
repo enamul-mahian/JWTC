@@ -233,8 +233,8 @@
     <div class="row">
         <div class="col-md-6">
             <span>{{ __('messages.MinimumSalary') }}<span class="text-danger"> *</span></span>
-            <input type="number" min="0" step="0.01"
-                value="{{ isset($oldValue['minimum_salary']) ? $oldValue['minimum_salary'] : '' }}{{ isset($job) ? $job['minimum_salary'] : '' }}"
+            <input type="number" min="0" step="1"
+                value="{{ old('minimum_salary', $job->minimum_salary ?? '') }}"
                 name="minimum_salary" class="form-control" required>
             @error('minimum_salary')
                 <p class="mb-0 position-absolute text-danger">
@@ -244,8 +244,8 @@
         </div>
         <div class="col-md-6">
             <span>{{ __('messages.MaximumSalary') }}<span class="text-danger"> *</span></span>
-            <input type="number" min="0"
-                value="{{ isset($oldValue['maximum_salary']) ? $oldValue['maximum_salary'] : '' }}{{ isset($job) ? $job['maximum_salary'] : '' }}"
+            <input type="number" min="0" step="1"
+                value="{{ old('maximum_salary', $job->maximum_salary ?? '') }}"
                 name="maximum_salary" class="form-control" required>
             @error('maximum_salary')
                 <p class="mb-0 position-absolute text-danger">
@@ -421,20 +421,12 @@
                 <label class="styled-select">
                     <select class="dropdown-product selectpicker" name="salary_type" required>
                         <option value="">{{ __('messages.SelectSalaryType') }}</option>
-                        <option
-                            {{ (isset($oldValue['salary_type']) && $oldValue['salary_type'] == 'weekly') || (isset($job) && $job->salary_type == 'weekly') ? 'selected' : '' }}
-                            value="weekly">
-                            {{ __('messages.Weekly') }}
-                        </option>
-                        <option
-                            {{ (isset($oldValue['salary_type']) && $oldValue['salary_type'] == 'monthly') || (isset($job) && $job->salary_type == 'monthly') ? 'selected' : '' }}
-                            value="monthly">
-                            {{ __('messages.Monthly') }}
-                        </option>
-                        <option
-                            {{ (isset($oldValue['salary_type']) && $oldValue['salary_type'] == 'yearly') || (isset($job) && $job->salary_type == 'yearly') ? 'selected' : '' }}
-                            value="yearly">
-                            {{ __('messages.Yearly') }}</option>
+                        @foreach (['hourly' => 'Hourly', 'daily' => 'Daily', 'weekly' => 'Weekly', 'monthly' => 'Monthly', 'yearly' => 'Yearly'] as $period => $label)
+                            <option value="{{ $period }}" @selected(old('salary_type', $job->salary_type ?? '') === $period)>{{ $label }}</option>
+                        @endforeach
+                        @if (!in_array(old('salary_type', $job->salary_type ?? ''), ['', 'hourly', 'daily', 'weekly', 'monthly', 'yearly'], true))
+                            <option value="{{ old('salary_type', $job->salary_type ?? '') }}" selected>Existing salary period (legacy)</option>
+                        @endif
                     </select>
                 </label>
             </div>

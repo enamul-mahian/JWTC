@@ -30,6 +30,29 @@
         </li>
     @endcan
 
+    @if (auth()->user()?->user_type === \App\Enum\UserType::JOB_SEEKER)
+        <li>
+            <a class="{{ Route::is('jobseeker.private-documents.*') ? 'active' : null }}"
+               href="{{ route('jobseeker.private-documents.index') }}">
+                Private passport &amp; documents
+            </a>
+        </li>
+    @endif
+
+    @if (auth()->user()?->user_type === \App\Enum\UserType::JOB_SEEKER)
+        <li><a class="{{ Route::is('interviews.applicant.*') ? 'active' : null }}"
+            href="{{ route('interviews.applicant.index') }}">My online interviews</a></li>
+    @endif
+
+    @if(config('application_chat.enabled') && auth()->user()?->user_type === \App\Enum\UserType::JOB_SEEKER)
+        <li><a class="{{ Route::is('application-chat.*') ? 'active' : '' }}"
+            href="{{ route('application-chat.index') }}">Private Messages</a></li>
+    @endif
+
+    @if(config('support_center.enabled') && auth()->user()?->user_type === \App\Enum\UserType::JOB_SEEKER)
+        <li><a href="{{ route('support.index') }}" class="{{ Route::is('support.*') ? 'active' : '' }}">Support &amp; Refunds</a></li>
+    @endif
+
     {{-- TODO Something to put --}}
 
     <li>

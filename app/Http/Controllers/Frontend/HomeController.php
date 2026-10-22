@@ -35,6 +35,19 @@ class HomeController extends Controller
         // return view('frontend.pages.register', compact('title', 'jobCategories'));
 
 
+        if (config('jwtc_design.enabled')) {
+            // Only publish real, currently open jobs. No fabricated counters
+            // or external listing feed, and this runs only on the homepage.
+            $latestJobs = \Illuminate\Support\Facades\Schema::hasTable('jobs')
+                ? Job::query()->with(['company', 'country'])
+                    ->where('is_publish', 1)
+                    ->where('application_deadline', '>=', now()->toDateString())
+                    ->orderByDesc('created_at')->limit(6)->get()
+                : collect();
+
+            return view('frontend.index', compact('latestJobs'));
+        }
+
         return view('frontend.index');
     }
 

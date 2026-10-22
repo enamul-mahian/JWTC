@@ -9,6 +9,8 @@ class EmployerInformation extends Model
 {
     use HasFactory;
 
+    protected $table = 'employer_information';
+
     protected $guarded = [];
 
     public function user()

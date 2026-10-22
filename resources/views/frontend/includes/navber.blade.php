@@ -11,9 +11,9 @@
             </button>
             <a href="{{ route('home') }}" class="navbar-brand">
                 @if (isset($setting->logo))
-                    <img src="{{ asset('assets/images/setting/' . $setting?->logo) }}" alt="" srcset="">
+                    <img src="{{ asset('assets/images/setting/' . $setting?->logo) }}" alt="Join Gallagher" srcset="">
                 @else
-                    <img src="{{ asset('frontend/assets/img/logo.png') }}">
+                    <img src="{{ asset('frontend/assets/img/logo.png') }}" alt="Join Gallagher">
                 @endif
             </a>
         </div>
@@ -26,6 +26,16 @@
                         Home
                     </a>
                 </li>
+                @if(config('jwtc_design.enabled'))
+                    <li class="nav-item {{ Route::is('search-jobs') ? 'active' : '' }}">
+                        <a class="nav-link" href="{{ route('search-jobs') }}"
+                           @if(Route::is('search-jobs')) aria-current="page" @endif>Find Jobs</a>
+                    </li>
+                    <li class="nav-item {{ Route::is('contact') ? 'active' : '' }}">
+                        <a class="nav-link" href="{{ route('contact') }}"
+                           @if(Route::is('contact')) aria-current="page" @endif>Contact</a>
+                    </li>
+                @endif
 
                 @if (isset($pages))
                     @foreach ($pages as $page)
@@ -42,7 +52,8 @@
                         <a class="nav-link" href="{{ route('login') }}">
                             Sign In
                         </a>
-                  <li class="nav-item {{ Route::currentRouteName() == 'registration.form' ? 'active' : '' }}">
+                  </li>
+                <li class="nav-item {{ Route::currentRouteName() == 'registration.form' ? 'active' : '' }}">
     <a class="nav-link" href="{{ route('registration.form') }}">
         Create Account
     </a>

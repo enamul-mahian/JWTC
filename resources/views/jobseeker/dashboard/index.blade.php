@@ -1,6 +1,24 @@
 @extends('frontend.layout.frontMaster')
 @Section('title', 'Jobseeker Dashbaord')
 @Section('content')
+    @if(config('jwtc_design.enabled'))
+        <section class="jw-workspace-intro container" aria-labelledby="jw-applicant-title">
+            <p class="jw-eyebrow">Applicant workspace</p>
+            <h1 id="jw-applicant-title">Your career dashboard</h1>
+            <p>Manage your profile, applications and official recruitment updates from one account.</p>
+            <nav class="jw-workspace-actions" aria-label="Applicant actions">
+                <a href="{{ route('search-jobs') }}">Find Jobs</a>
+                <a href="{{ route('applied-jobs') }}">My Applications</a>
+                <a href="{{ route('interviews.applicant.index') }}">Interviews</a>
+                @if(config('application_chat.enabled'))
+                    <a href="{{ route('application-chat.index') }}">Private Messages</a>
+                @endif
+                @if(config('support_center.enabled'))
+                    <a href="{{ route('support.index') }}">Support</a>
+                @endif
+            </nav>
+        </section>
+    @endif
     @include('modal.common')
     <style>
         .profile-image {

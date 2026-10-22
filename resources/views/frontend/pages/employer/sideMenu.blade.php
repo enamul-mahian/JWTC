@@ -36,6 +36,26 @@
             </li>
         @endcan
 
+        @can('post-job')
+            <li>
+                <a href="{{ route('interviews.manage.index') }}"
+                   class="{{ Route::is('interviews.manage.*') ? 'active' : '' }}">
+                    Online Interviews
+                </a>
+            </li>
+        @endcan
+
+        @if(config('application_chat.enabled') && auth()->user()?->user_type === \App\Enum\UserType::EMPLOYER && auth()->user()->can('post-job'))
+            <li>
+                <a href="{{ route('application-chat.index') }}"
+                   class="{{ Route::is('application-chat.*') ? 'active' : '' }}">Applicant Messages</a>
+            </li>
+        @endif
+
+        @if(config('support_center.enabled') && auth()->user()?->user_type === \App\Enum\UserType::EMPLOYER)
+            <li><a href="{{ route('support.index') }}" class="{{ Route::is('support.*') ? 'active' : '' }}">Support &amp; Refunds</a></li>
+        @endif
+
         {{-- TODO Something to add --}}
 
         <li>

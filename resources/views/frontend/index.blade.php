@@ -1,8 +1,12 @@
 @extends('frontend.layout.frontMaster')
 
-@section('title', 'Job Portal')
+@section('title', config('jwtc_design.enabled') ? 'Job Opportunities | Join Gallagher' : 'Job Portal')
+@section('meta_description', 'Search published opportunities and securely manage your job applications with Join Gallagher.')
 
 @section('content')
+@if(config('jwtc_design.enabled'))
+    @include('frontend.home_redesign')
+@else
 
 <style>
     /* =========================
@@ -77,4 +81,5 @@
     <div class="mobile-panel mobile-right"></div>
 </div>
 
+@endif
 @endsection

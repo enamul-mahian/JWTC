@@ -9,6 +9,8 @@ class PersonalInformation extends Model
 {
     use HasFactory;
 
+    protected $table = 'personal_information';
+
     protected $guarded = ['id'];
 
     public function user()

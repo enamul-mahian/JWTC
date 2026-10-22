@@ -11,10 +11,18 @@ use App\Http\Controllers\Admin\FrontPageController;
 use App\Http\Controllers\Admin\HistoryController;
 use App\Http\Controllers\Admin\IndustryTypeController;
 use App\Http\Controllers\Admin\JobCategoryController;
+use App\Http\Controllers\Admin\ApplicationStatusDefinitionController;
+use App\Http\Controllers\Secure\ApplicantDocumentWebController;
+use App\Http\Controllers\Secure\AdminDocumentWebController;
+use App\Http\Controllers\Interview\InterviewController;
 use App\Http\Controllers\Admin\JobSeekerController;
 use App\Http\Controllers\Admin\JobTypeController;
 use App\Http\Controllers\Admin\LocationController;
 use App\Http\Controllers\Admin\MassmailController;
+use App\Http\Controllers\Admin\EmailStudioController;
+use App\Http\Controllers\Admin\EmailStudioSmtpController;
+use App\Http\Controllers\Chat\ApplicationChatController;
+use App\Http\Controllers\Support\SupportCenterController;
 use App\Http\Controllers\Admin\PaymentCredentialsController;
 use App\Http\Controllers\Admin\PlanController;
 use App\Http\Controllers\Admin\RoleController;
@@ -26,6 +34,7 @@ use App\Http\Controllers\AdsController;
 use App\Http\Controllers\AjaxSearchController;
 
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Auth\RegistrationOtpController;
 use App\Http\Controllers\Auth\SocialiteLoginController;
 
 use App\Http\Controllers\ContactController;
@@ -42,6 +51,7 @@ use App\Http\Controllers\Frontend\HomeController;
 
 use App\Http\Controllers\JobSeeker\EmailResumeController;
 use App\Http\Controllers\JobSeeker\JobApplicationController;
+use App\Http\Controllers\JobSeeker\ApplicationTimelineController;
 use App\Http\Controllers\JobSeeker\JobSeekerCoverletterController;
 use App\Http\Controllers\JobSeeker\JobSeekerDashboardController;
 use App\Http\Controllers\JobSeeker\JobSeekerEducationController;
@@ -62,6 +72,7 @@ use App\Http\Controllers\LangController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StripePaymentController;
 use App\Http\Controllers\UserAuthLoginController;
+use App\Http\Controllers\Security\PasswordOtpController;
 use App\Http\Controllers\WordController;
 
 use Illuminate\Support\Facades\Route;
@@ -90,6 +101,7 @@ Route::get('registration/form', [EmployeerController::class, 'register'])
     ->name('registration.form');
 
 Route::post('employer-register', [EmployeerController::class, 'registerStore'])
+    ->middleware('throttle:5,1')
     ->name('employer-register.store');
 
 
@@ -108,7 +120,13 @@ Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])
         ->name('register');
 
-    Route::post('register', [RegisteredUserController::class, 'store']);
+    Route::post('register', [RegisteredUserController::class, 'store'])->middleware('throttle:5,1');
+
+    Route::get('register/verify-email', [RegistrationOtpController::class, 'show'])
+        ->name('registration.otp.show');
+    Route::post('register/verify-email', [RegistrationOtpController::class, 'confirm'])
+        ->middleware('throttle:5,1')
+        ->name('registration.otp.confirm');
 
 });
 
@@ -123,10 +141,15 @@ Route::get('login', [UserAuthLoginController::class, 'login'])
     ->name('login');
 
 Route::post('user/login', [UserAuthLoginController::class, 'userLogin'])
+    ->middleware('throttle:10,1')
     ->name('user.login');
 
 Route::post('logout', [UserAuthLoginController::class, 'logout'])
     ->name('logout');
+
+Route::post('account/password/verify-otp', [PasswordOtpController::class, 'confirm'])
+    ->middleware(['auth', 'throttle:5,1'])
+    ->name('account.password.verify_otp');
 
 
 /*
@@ -287,6 +310,13 @@ Route::middleware(['auth', 'admin_user'])->group(function () {
         Route::patch('jobapplication-status-update', [JobController::class, 'jobApplicationStatusUpdate'])
             ->name('jobapplication.update_status');
 
+        Route::get('application-statuses', [ApplicationStatusDefinitionController::class, 'index'])
+            ->name('admin.application-statuses.index');
+        Route::post('application-statuses', [ApplicationStatusDefinitionController::class, 'store'])
+            ->name('admin.application-statuses.store');
+        Route::patch('application-statuses/{id}', [ApplicationStatusDefinitionController::class, 'update'])
+            ->name('admin.application-statuses.update');
+
         Route::post('job-status-update-by-admin', [JobController::class, 'jobStatusUpdate'])
             ->name('job-status-update-by-admin');
 
@@ -355,7 +385,7 @@ Route::middleware(['auth', 'admin_user'])->group(function () {
         Route::get('/email-setting', [SettingController::class, 'emailSetting'])
             ->name('email-setting');
 
-        Route::get('/send-test-email', [SettingController::class, 'emailTesting'])
+        Route::post('/send-test-email', [SettingController::class, 'emailTesting'])
             ->name('send-test-email');
 
         Route::post('/database-backup', [SettingController::class, 'databaseBackup'])
@@ -389,6 +419,7 @@ Route::middleware(['auth', 'admin_user'])->group(function () {
             ->name('admin-change-password');
 
         Route::post('update-admin-password', [AdminProfileController::class, 'updateAdminPassword'])
+            ->middleware('throttle:5,1')
             ->name('update-admin-password');
     });
 
@@ -566,6 +597,9 @@ Route::group(['middleware' => 'auth'], function () {
 */
 
 Route::prefix('job_seeker')->middleware('auth')->group(function () {
+
+    Route::get('applications/{application}/timeline', [ApplicationTimelineController::class, 'show'])
+        ->name('jobseeker.application.timeline');
 
     Route::get('view-jobseeker-profile', [JobSeekerProfileShowController::class, 'show'])
         ->name('view-jobseeker-profile');
@@ -940,3 +974,186 @@ Route::get('job-seeker/cv-view/{id}', [JobSeekerController::class, 'cvView'])
 */
 
 Route::get('/job-counts-by-country', [HomeController::class, 'getJobCountsByCountry']);
+
+/*
+|--------------------------------------------------------------------------
+| NEW PRIVATE DOCUMENT WORKSPACE (independent of legacy public CV library)
+|--------------------------------------------------------------------------
+| These routes use web authentication, CSRF forms and security headers.
+| Actual access is checked against account type, ownership and permission.
+*/
+Route::middleware(['auth', 'private.document.headers'])
+    ->prefix('job_seeker/private-documents')
+    ->group(function () {
+        Route::get('/', [ApplicantDocumentWebController::class, 'index'])
+            ->name('jobseeker.private-documents.index');
+        Route::post('/', [ApplicantDocumentWebController::class, 'store'])
+            ->middleware('throttle:10,1')
+            ->name('jobseeker.private-documents.store');
+        Route::get('/{id}', [ApplicantDocumentWebController::class, 'show'])
+            ->whereNumber('id')->name('jobseeker.private-documents.show');
+        Route::post('/{id}/revisions', [ApplicantDocumentWebController::class, 'revise'])
+            ->whereNumber('id')->middleware('throttle:10,1')
+            ->name('jobseeker.private-documents.revise');
+        Route::get('/{id}/versions/{version}', [ApplicantDocumentWebController::class, 'download'])
+            ->whereNumber('id')->whereNumber('version')
+            ->name('jobseeker.private-documents.download');
+    });
+
+Route::middleware(['auth', 'private.document.headers'])
+    ->prefix('admin/private-documents')
+    ->group(function () {
+        Route::get('/', [AdminDocumentWebController::class, 'index'])
+            ->name('admin.private-documents.index');
+        Route::get('/{id}', [AdminDocumentWebController::class, 'show'])
+            ->whereNumber('id')->name('admin.private-documents.show');
+        Route::post('/{id}/review', [AdminDocumentWebController::class, 'decide'])
+            ->whereNumber('id')->middleware('throttle:30,1')
+            ->name('admin.private-documents.decide');
+        Route::get('/{id}/versions/{version}', [AdminDocumentWebController::class, 'download'])
+            ->whereNumber('id')->whereNumber('version')
+            ->name('admin.private-documents.download');
+    });
+
+
+/*
+|----------------------------------------------------------------------
+| ONLINE INTERVIEW SCHEDULING (no recording or native video)
+|----------------------------------------------------------------------
+| Meetings are secure HTTPS links issued by an approved organizer.
+| Session-authenticated views use no third-party scripts.
+*/
+Route::middleware(['auth', 'private.document.headers'])->group(function () {
+    Route::get('job_seeker/interviews', [InterviewController::class, 'applicantIndex'])
+        ->name('interviews.applicant.index');
+    Route::get('job_seeker/interviews/{application}', [InterviewController::class, 'applicantShow'])
+        ->whereNumber('application')->name('interviews.applicant.show');
+    Route::post('job_seeker/interviews/{application}/reply', [InterviewController::class, 'act'])
+        ->whereNumber('application')->middleware('throttle:10,1')
+        ->name('interviews.applicant.reply');
+
+    Route::get('interviews/manage', [InterviewController::class, 'managerIndex'])
+        ->name('interviews.manage.index');
+    Route::get('interviews/manage/{application}', [InterviewController::class, 'managerShow'])
+        ->whereNumber('application')->name('interviews.manage.show');
+    Route::post('interviews/manage/{application}/schedule', [InterviewController::class, 'schedule'])
+        ->whereNumber('application')->middleware('throttle:10,1')
+        ->name('interviews.manage.schedule');
+    Route::post('interviews/manage/{application}/action', [InterviewController::class, 'act'])
+        ->whereNumber('application')->middleware('throttle:10,1')
+        ->name('interviews.manage.action');
+});
+
+
+/*
+|----------------------------------------------------------------------
+| JWTC VISUAL SMTP EMAIL STUDIO (isolated from legacy Mass Mail)
+|----------------------------------------------------------------------
+| Feature flag + admin type + dedicated permission enforced in controller.
+| No credentials or server secrets are written through these endpoints.
+*/
+Route::middleware(['auth', 'email.studio.headers'])
+    ->prefix('admin/email-studio')
+    ->group(function () {
+        Route::get('/', [EmailStudioController::class, 'index'])->name('email-studio.index');
+        Route::get('/new', [EmailStudioController::class, 'edit'])->name('email-studio.create');
+        Route::post('/templates', [EmailStudioController::class, 'save'])
+            ->middleware('throttle:10,1')->name('email-studio.store');
+        Route::get('/templates/{id}', [EmailStudioController::class, 'edit'])
+            ->whereNumber('id')->name('email-studio.edit');
+        Route::patch('/templates/{id}', [EmailStudioController::class, 'save'])
+            ->whereNumber('id')->middleware('throttle:10,1')
+            ->name('email-studio.update');
+        Route::get('/templates/{id}/images/{slot}', [EmailStudioController::class, 'image'])
+            ->whereNumber('id')->where('slot', 'top|bottom_left|bottom_right')
+            ->name('email-studio.image');
+        Route::post('/templates/{id}/send', [EmailStudioController::class, 'send'])
+            ->whereNumber('id')->middleware(['throttle:5,1', 'throttle:25,60'])
+            ->name('email-studio.send');
+
+        Route::post('/templates/{id}/duplicate', [EmailStudioController::class, 'duplicate'])
+            ->whereNumber('id')->middleware('throttle:10,1')->name('email-studio.duplicate');
+        Route::delete('/templates/{id}', [EmailStudioController::class, 'destroy'])
+            ->whereNumber('id')->name('email-studio.destroy');
+        Route::post('/templates/{id}/visual-pages', [EmailStudioController::class, 'importVisual'])
+            ->whereNumber('id')->middleware('throttle:3,1')->name('email-studio.visual.import');
+        Route::delete('/templates/{id}/visual-pages', [EmailStudioController::class, 'removeVisual'])
+            ->whereNumber('id')->name('email-studio.visual.remove');
+        Route::get('/templates/{id}/visual-pages/{page}', [EmailStudioController::class, 'visualPage'])
+            ->whereNumber('id')->whereNumber('page')->name('email-studio.visual.page');
+
+        Route::post('/smtp-profiles', [EmailStudioSmtpController::class, 'save'])
+            ->middleware('throttle:8,1')->name('email-studio.smtp.store');
+        Route::patch('/smtp-profiles/{id}', [EmailStudioSmtpController::class, 'save'])
+            ->whereNumber('id')->middleware('throttle:8,1')->name('email-studio.smtp.update');
+        Route::delete('/smtp-profiles/{id}', [EmailStudioSmtpController::class, 'remove'])
+            ->whereNumber('id')->name('email-studio.smtp.destroy');
+        Route::post('/smtp-profiles/{id}/default', [EmailStudioSmtpController::class, 'makeDefault'])
+            ->whereNumber('id')->name('email-studio.smtp.default');
+        Route::post('/smtp-test-environment', [EmailStudioSmtpController::class, 'testEnvironment'])
+            ->middleware('throttle:3,1')->name('email-studio.smtp.test-environment');
+        Route::post('/smtp-profiles/{id}/test', [EmailStudioSmtpController::class, 'test'])
+            ->whereNumber('id')->middleware('throttle:3,1')->name('email-studio.smtp.test');
+    });
+
+
+/*
+|--------------------------------------------------------------------------
+| PRIVATE APPLICATION CHAT (no additional WebSocket service required)
+|--------------------------------------------------------------------------
+| Session/CSRF web routes, account scoping and private response headers.
+*/
+Route::middleware(['auth', 'application.chat.headers'])
+    ->prefix('messages')->group(function () {
+        Route::get('/', [ApplicationChatController::class, 'index'])
+            ->name('application-chat.index');
+        Route::post('/applications/{application}', [ApplicationChatController::class, 'open'])
+            ->whereNumber('application')->middleware('throttle:8,1')
+            ->name('application-chat.open');
+        Route::get('/threads/{id}', [ApplicationChatController::class, 'thread'])
+            ->whereNumber('id')->name('application-chat.thread');
+        Route::get('/threads/{id}/history', [ApplicationChatController::class, 'history'])
+            ->whereNumber('id')->middleware('throttle:30,1')
+            ->name('application-chat.history');
+        Route::get('/threads/{id}/poll', [ApplicationChatController::class, 'poll'])
+            ->whereNumber('id')->middleware('throttle:30,1')
+            ->name('application-chat.poll');
+        Route::post('/threads/{id}/messages', [ApplicationChatController::class, 'send'])
+            ->whereNumber('id')->middleware(['throttle:12,1', 'throttle:100,60'])
+            ->name('application-chat.send');
+        Route::post('/threads/{id}/read', [ApplicationChatController::class, 'read'])
+            ->whereNumber('id')->middleware('throttle:30,1')
+            ->name('application-chat.read');
+        Route::post('/threads/{id}/status', [ApplicationChatController::class, 'status'])
+            ->whereNumber('id')->middleware('throttle:12,1')
+            ->name('application-chat.status');
+    });
+
+
+/*
+|----------------------------------------------------------------------
+| PRIVATE SUPPORT, COMPLAINTS AND REFUND REVIEW
+|----------------------------------------------------------------------
+| Manual verified review only: no bank/Stripe refund is issued here.
+*/
+Route::middleware(['auth', 'application.chat.headers'])
+    ->prefix('support-center')->group(function () {
+        Route::get('/', [SupportCenterController::class, 'index'])
+            ->name('support.index');
+        Route::get('/new', [SupportCenterController::class, 'create'])
+            ->name('support.create');
+        Route::post('/tickets', [SupportCenterController::class, 'store'])
+            ->middleware('throttle:5,1')->name('support.store');
+        Route::get('/tickets/{id}', [SupportCenterController::class, 'show'])
+            ->whereNumber('id')->name('support.show');
+        Route::post('/tickets/{id}/replies', [SupportCenterController::class, 'reply'])
+            ->whereNumber('id')->middleware('throttle:12,1')->name('support.reply');
+        Route::post('/tickets/{id}/status', [SupportCenterController::class, 'status'])
+            ->whereNumber('id')->middleware('throttle:10,1')->name('support.status');
+        Route::post('/tickets/{id}/assign', [SupportCenterController::class, 'assign'])
+            ->whereNumber('id')->middleware('throttle:10,1')->name('support.assign');
+        Route::post('/tickets/{id}/refund-request', [SupportCenterController::class, 'requestRefund'])
+            ->whereNumber('id')->middleware('throttle:3,1')->name('support.refund.request');
+        Route::post('/tickets/{id}/refund-review', [SupportCenterController::class, 'reviewRefund'])
+            ->whereNumber('id')->middleware('throttle:6,1')->name('support.refund.review');
+    });

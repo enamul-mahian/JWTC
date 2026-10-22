@@ -20,32 +20,32 @@ https://cdn.jsdelivr.net/npm/sweetalert2@11.10.1/dist/sweetalert2.all.min.js
 <script src="{{ asset('backend/dist/js/datatable/datatable-basic.init.js') }}"></script>
 <script src="{{ asset('backend/dist/js/custom.js') }}"></script>
 <script src="{{ asset('frontend/assets/js/toastr.min.js') }}"></script>
-<script src="sweetalert2.all.min.js"></script>
+{{-- SweetAlert2 is already loaded from its versioned CDN above. --}}
 
 <script>
     // success message popup notification
     @if(Session::has('success'))
-        toastr.success("{{ Session::get('success') }}");
+        toastr.success(@json(Session::get('success')));
     @endif
 
     // info message popup notification
     @if(Session::has('info'))
-        toastr.info("{{ Session::get('info') }}");
+        toastr.info(@json(Session::get('info')));
     @endif
 
     // warning message popup notification
     @if(Session::has('warning'))
-        toastr.warning("{{ Session::get('warning') }}");
+        toastr.warning(@json(Session::get('warning')));
     @endif
 
     // error message popup notification
     @if(Session::has('error'))
-        toastr.error("{{ Session::get('error') }}");
+        toastr.error(@json(Session::get('error')));
     @endif
 </script>
 
 <script>
     @foreach($errors->all() as $error)
-        toastr.error("{{ $error }}");
+        toastr.error(@json($error));
     @endforeach
 </script>

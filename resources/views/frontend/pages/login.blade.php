@@ -40,6 +40,7 @@
                                 <label class="form-check-label"
                                     for="exampleCheck1">{{ __('messages.KeepMeSignedIn') }}</label>
                             </div>
+                            @include('shared.hcaptcha')
                             <button class="btn btn-common log-btn">{{ __('messages.Submit') }}</button>
                         </form>
 

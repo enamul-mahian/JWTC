@@ -18,6 +18,8 @@ class Handler extends ExceptionHandler
         'current_password',
         'password',
         'password_confirmation',
+        'otp',
+        'h-captcha-response',
     ];
 
     /**
@@ -25,11 +27,14 @@ class Handler extends ExceptionHandler
      */
     public function render($request, Throwable $exception)
     {
-        if ($this->isHttpException($exception)) {
-            if ($exception->getStatusCode() == 404) {
-                return response()->view('errors.404', [], 404);
-            } elseif ($exception->getStatusCode() == 500) {
-                return response()->view('errors.500', [], 500);
+        // API/Sanctum callers must receive JSON, not a missing HTML error view.
+        // Some production deployments use custom templates which are not
+        // present in the tracked source; fall back to Laravel's safe default.
+        if (!$request->expectsJson() && $this->isHttpException($exception)) {
+            $code = $exception->getStatusCode();
+            if (in_array($code, [404, 500], true) &&
+                \Illuminate\Support\Facades\View::exists('errors.' . $code)) {
+                return response()->view('errors.' . $code, [], $code);
             }
         }
 

@@ -23,7 +23,24 @@ class AuthController extends Controller
             'phone' => ['required', 'string', 'max:20', 'unique:users,phone'],
             'job_categories_id' => ['required', 'integer', 'exists:job_categories,id'],
             'password' => ['required', 'confirmed', Password::min(8)],
+            'h-captcha-response' => [
+                \Illuminate\Validation\Rule::requiredIf((bool) config('services.hcaptcha.enabled')),
+                'nullable', 'string', 'max:8192',
+                new \App\Rules\ValidHcaptcha(),
+            ],
         ]);
+
+        if (config('security.registration_otp.enabled')) {
+            $payload = $data;
+            $payload['user_type'] = UserType::EMPLOYER;
+            $payload['job_category_id'] = $payload['job_categories_id'];
+            unset($payload['job_categories_id']);
+            $challengeId = app(\App\Services\RegistrationOtpService::class)->issue($payload);
+            return response()->json([
+                'message' => 'We sent a six-digit email code. Complete registration by verifying it.',
+                'verification_id' => $challengeId,
+            ], 202);
+        }
 
         $role = Role::where('name', 'Employer')->where('guard_name', 'web')->first();
         if (!$role) {
@@ -58,6 +75,11 @@ class AuthController extends Controller
         $data = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
+            'h-captcha-response' => [
+                \Illuminate\Validation\Rule::requiredIf((bool) config('services.hcaptcha.enabled')),
+                'nullable', 'string', 'max:8192',
+                new \App\Rules\ValidHcaptcha(),
+            ],
         ]);
 
         $user = User::where('email', $data['email'])->first();
@@ -85,11 +107,28 @@ class AuthController extends Controller
     public function updatePassword(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'current_password' => ['required', 'current_password'],
+            'current_password' => ['required', 'string'],
             'password' => ['required', 'confirmed', Password::min(8)],
         ]);
 
         $user = $request->user();
+        if (!Hash::check($data['current_password'], (string) $user->password)) {
+            return response()->json([
+                'message' => 'Current password is incorrect.',
+                'errors' => ['current_password' => ['Current password is incorrect.']],
+            ], 422);
+        }
+
+        if (config('security.password_change_otp.enabled')) {
+            app(\App\Services\PasswordOtpService::class)->issue(
+                $user, Hash::make($data['password'])
+            );
+            return response()->json([
+                'message' => 'Enter the six-digit code sent to your account email to complete the change.',
+                'otp_required' => true,
+            ], 202);
+        }
+
         $user->forceFill(['password' => Hash::make($data['password'])])->save();
         $user->tokens()->delete();
 
@@ -97,4 +136,35 @@ class AuthController extends Controller
             'message' => 'Password updated. Please sign in again.',
         ]);
     }
+    public function confirmPasswordOtp(Request $request): JsonResponse
+    {
+        abort_unless(config('security.password_change_otp.enabled'), 404);
+        $data = $request->validate(['otp' => ['required', 'digits:6']]);
+
+        app(\App\Services\PasswordOtpService::class)->confirm(
+            $request->user(), $data['otp']
+        );
+
+        return response()->json(['message' => 'Password changed. Sign in again.']);
+    }
+
+    public function confirmRegistration(Request $request): JsonResponse
+    {
+        abort_unless(config('security.registration_otp.enabled'), 404);
+        $data = $request->validate([
+            'verification_id' => ['required', 'uuid'],
+            'otp' => ['required', 'digits:6'],
+        ]);
+
+        $user = app(\App\Services\RegistrationOtpService::class)->confirm(
+            $data['verification_id'], $data['otp']
+        );
+
+        return response()->json([
+            'message' => 'Email verified. Registration completed.',
+            'user' => $user->only(['id', 'name', 'email', 'user_type']),
+            'token' => $user->createToken('jwtc-api')->plainTextToken,
+        ], 201);
+    }
+
 }

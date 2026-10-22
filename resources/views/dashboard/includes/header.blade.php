@@ -1,3 +1,6 @@
+@if(config('jwtc_design.enabled'))
+    @include('dashboard.includes.redesign_header')
+@else
 @php
     $user = getUser();
 @endphp
@@ -144,3 +147,5 @@
         </div>
     </div>
 </nav>
+
+@endif

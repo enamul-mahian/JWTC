@@ -1,0 +1,9 @@
+# Admin password change — email OTP
+
+The existing PASSWORD_CHANGE_OTP_ENABLED flag now also covers the legacy admin password endpoint. When enabled, a correct current password sends a six-digit challenge to the signed-in admin's email; the password remains unchanged until the existing account/password/verify-otp form succeeds. Wrong/expired codes, cooldowns and attempt limits use PasswordOtpService. The admin form has an explicit confirmation form, accessible error output and password autocomplete hints. Issuing challenges is limited to five requests per minute, plus the existing per-account resend cooldown.
+
+When disabled, the legacy direct change remains available after current-password validation, but now revokes Sanctum tokens, rotates remember_token, removes stale password-change challenges if the table exists, and invalidates the current browser session. Other existing browser sessions are NOT claimed to be invalidated across all session drivers; that requires separate auth-session enforcement. OTP verification already revokes all Sanctum tokens and ends the current web session.
+
+No new migrations or production configuration changes. Enable only after existing OTP migration and actual SMTP/browser testing on isolated staging. Never print OTPs, passwords or applicant data. This is password-change verification, not login 2FA, email-change verification or password-reset OTP. Production backup/restore, other missing features, staging acceptance and deployment remain separate unfinished requirements.
+
+Regression tests: admin cannot change before correct OTP, invalid code leaves old password, valid confirmation clears tokens/challenge and signs out, invalid current password is refused, employer access is denied, flag-off legacy compatibility clears stale challenges and tokens.
