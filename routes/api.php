@@ -184,3 +184,20 @@ Route::middleware(['auth:sanctum','throttle:60,1'])
         Route::post('/threads/{id}/read', [ApplicationChatController::class, 'read']);
         Route::post('/threads/{id}/status', [ApplicationChatController::class, 'status']);
     });
+
+
+// Support ticket, complaint and refund review API requires Sanctum account auth.
+// All access controls are enforced independently of supplied ticket IDs.
+Route::middleware(['auth:sanctum', 'throttle:40,1'])
+    ->prefix('support-center')->group(function () {
+        Route::get('/tickets', [SupportCenterController::class, 'index']);
+        Route::post('/tickets', [SupportCenterController::class, 'store'])
+            ->middleware('throttle:5,1');
+        Route::get('/tickets/{id}', [SupportCenterController::class, 'show']);
+        Route::post('/tickets/{id}/replies', [SupportCenterController::class, 'reply'])
+            ->middleware('throttle:12,1');
+        Route::post('/tickets/{id}/status', [SupportCenterController::class, 'status']);
+        Route::post('/tickets/{id}/refund-request', [SupportCenterController::class, 'requestRefund'])
+            ->middleware('throttle:3,1');
+        Route::post('/tickets/{id}/refund-review', [SupportCenterController::class, 'reviewRefund']);
+    });
