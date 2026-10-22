@@ -39,6 +39,11 @@
         </li>
     @endif
 
+    @if (auth()->user()?->user_type === \App\Enum\UserType::JOB_SEEKER)
+        <li><a class="{{ Route::is('interviews.applicant.*') ? 'active' : null }}"
+            href="{{ route('interviews.applicant.index') }}">My online interviews</a></li>
+    @endif
+
     {{-- TODO Something to put --}}
 
     <li>
