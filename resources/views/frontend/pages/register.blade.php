@@ -247,6 +247,7 @@
                                 </div>
 
 
+                                @include('shared.hcaptcha')
                                 <button
                                     class="btn btn-common log-btn mt-3"
                                     type="submit"
@@ -468,6 +469,7 @@
 
 
                                 <!-- Register -->
+                                @include('shared.hcaptcha')
                                 <button
                                     class="btn btn-common log-btn mt-3"
                                     type="submit"
