@@ -39,6 +39,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('ticket_id')->index();
             $table->unsignedBigInteger('actor_id');
+            $table->unsignedBigInteger('related_user_id')->nullable();
             $table->string('action', 36);
             $table->string('old_status', 24)->nullable();
             $table->string('new_status', 24)->nullable();
