@@ -114,6 +114,8 @@
         </div>
 
 
+        @include('shared.hcaptcha')
+
         <div class="flex items-center justify-end mt-4">
 
             <a
