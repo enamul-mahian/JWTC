@@ -47,6 +47,20 @@
     @if($canManage)
     <section class="card">
         <h2>Agent ticket management</h2>
+        <form method="POST" action="{{ route('support.assign', $ticket->id) }}">
+            @csrf
+            <label for="assignee-id">Assign to authorized support agent</label>
+            <select id="assignee-id" name="assignee_id">
+                <option value="">Unassigned</option>
+                @foreach($staff as $member)
+                    <option value="{{ $member->id }}" @selected((int)$ticket->assigned_to === (int)$member->id)>
+                        {{ $member->name }}
+                    </option>
+                @endforeach
+            </select>
+            <button type="submit" class="secondary">Update assignment</button>
+        </form>
+        <div class="divider"></div>
         <form method="POST" action="{{ route('support.status', $ticket->id) }}">
             @csrf
             <div class="grid">
