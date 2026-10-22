@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreJobRequest extends FormRequest
@@ -22,9 +21,6 @@ class StoreJobRequest extends FormRequest
      */
     public function rules(): array
     {
-        $requestData = $this->all();
-        $value = Cache::put('key', $requestData, now()->addMinutes(10));
-
         return [
             'title' => 'required|string|max:255',
             'vacancies' => 'required|numeric',
@@ -40,8 +36,8 @@ class StoreJobRequest extends FormRequest
             'work_place' => 'required|array',
             'work_place.*' => 'required|string',
             'country_id' =>'required|integer|exists:countries,id',
-            'minimum_salary' =>'required|numeric',
-            'maximum_salary' =>'required|numeric',
+            'minimum_salary' => 'required|integer|min:0',
+            'maximum_salary' => 'required|integer|min:0|gte:minimum_salary',
             'additional_salary_info' =>'nullable|string',
             'other_benefits' => 'nullable|array',
             'other_benefits.*' => 'nullable|string',
@@ -63,7 +59,7 @@ class StoreJobRequest extends FormRequest
             'mini_age' => 'required',
             'max_age' => 'nullable',
             'company_id' => 'required',
-            'salary_type' => 'required',
+            'salary_type' => 'required|string|max:50',
         ];
     }
 }
