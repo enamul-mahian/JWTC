@@ -41,6 +41,8 @@ class EmailStudioSecurityTest extends TestCase
 
         (require database_path('migrations/2023_12_21_130613_create_permission_tables.php'))->up();
         (require database_path('migrations/2026_10_22_000008_create_email_studio_tables.php'))->up();
+        (require database_path('migrations/2026_10_22_000010_create_email_studio_pdf_visual_pages.php'))->up();
+        (require database_path('migrations/2026_10_22_000011_create_email_studio_smtp_profiles.php'))->up();
 
         DB::table('users')->insert([
             ['id'=>1,'name'=>'Allowed Admin','email'=>'admin@example.invalid','user_type'=>'admin'],
@@ -222,6 +224,162 @@ class EmailStudioSecurityTest extends TestCase
             ->assertSee('studio-import-mode')
             ->assertSee('email-studio/editor.js')
             ->assertHeader('X-Frame-Options', 'DENY');
+    }
+
+    public function test_one_page_studio_has_all_five_screenshot_panels(): void
+    {
+        $this->actingAs(User::findOrFail(1))
+            ->get(route('email-studio.index'))
+            ->assertOk()
+            ->assertSee('1. Template Builder')
+            ->assertSee('2. Live Preview')
+            ->assertSee('3. Send Email')
+            ->assertSee('4. Custom SMTP Manager')
+            ->assertSee('5. Recent Email Attempts')
+            ->assertSee('studio-import-html')
+            ->assertSee('smtp-manager-select')
+            ->assertSee('studio-preview')
+            ->assertSee('email-studio/studio.css');
+    }
+
+    public function test_smtp_profile_password_is_encrypted_never_shown_and_blank_edit_retains_it(): void
+    {
+        $admin = User::findOrFail(1);
+        $this->actingAs($admin);
+        $details = [
+            'name' => 'Office SMTP',
+            'host' => 'smtp.gmail.com',
+            'port' => 587,
+            'encryption' => 'tls',
+            'username' => 'office@example.org',
+            'password' => 'Secret-App-Password-123',
+            'from_address' => 'office@example.org',
+            'from_name' => 'Join Gallagher',
+        ];
+        $this->post(route('email-studio.smtp.store'), $details)->assertRedirect();
+        $id = DB::table('email_studio_smtp_profiles')->value('id');
+        $this->assertNotNull($id);
+        $saved = DB::table('email_studio_smtp_profiles')->first();
+        $this->assertNotSame('Secret-App-Password-123', $saved->password_encrypted);
+        $this->assertSame('Secret-App-Password-123',
+            \Illuminate\Support\Facades\Crypt::decryptString($saved->password_encrypted));
+
+        $this->get(route('email-studio.index'))
+            ->assertOk()->assertDontSee('Secret-App-Password-123');
+
+        $details['name'] = 'Office SMTP Updated';
+        $details['password'] = '';
+        $this->patch(route('email-studio.smtp.update', $id), $details)->assertRedirect();
+        $this->assertDatabaseHas('email_studio_smtp_profiles', [
+            'id' => $id, 'name' => 'Office SMTP Updated',
+        ]);
+        $this->assertSame('Secret-App-Password-123',
+            \Illuminate\Support\Facades\Crypt::decryptString(
+                DB::table('email_studio_smtp_profiles')->value('password_encrypted')
+            ));
+    }
+
+    public function test_default_smtp_profile_is_selected_and_insecure_port_is_rejected(): void
+    {
+        $this->actingAs(User::findOrFail(1));
+        $data = [
+            'name' => 'Gmail SMTP', 'host' => 'smtp.gmail.com',
+            'port' => 587, 'encryption' => 'tls',
+            'username' => 'office@example.org',
+            'password' => 'SecretTestPassword',
+            'from_address' => 'office@example.org',
+            'from_name' => 'Join Gallagher',
+        ];
+        $this->post(route('email-studio.smtp.store'), $data)->assertRedirect();
+        $id = DB::table('email_studio_smtp_profiles')->value('id');
+        $this->post(route('email-studio.smtp.default', $id))->assertRedirect();
+        $this->assertSame((int) $id, app(\App\Services\StudioSmtpProfiles::class)->defaultId());
+
+        $data['host'] = 'localhost';
+        $data['port'] = 25;
+        $this->post(route('email-studio.smtp.store'), $data)->assertSessionHasErrors();
+        $this->assertDatabaseCount('email_studio_smtp_profiles', 1);
+    }
+
+    public function test_private_page_image_import_is_rendered_to_mail_and_protected_from_other_admins(): void
+    {
+        $id = $this->template();
+        $this->actingAs(User::findOrFail(1))
+            ->post(route('email-studio.visual.import', $id), [
+                'visual_page_1' => UploadedFile::fake()->image('page1.png', 500, 700),
+                'visual_page_2' => UploadedFile::fake()->image('page2.png', 500, 700),
+            ])->assertRedirect();
+
+        $this->assertDatabaseCount('email_studio_visual_pages', 2);
+        $this->get(route('email-studio.edit', $id))
+            ->assertOk()->assertSee('PDF → Email Visual Pages');
+        $this->get(route('email-studio.visual.page', [$id, 1]))
+            ->assertOk()->assertHeader('X-Content-Type-Options', 'nosniff');
+
+        $this->post(route('email-studio.send', $id), [
+            'recipient' => 'client@example.invalid', 'pdf_mode' => 'none',
+        ])->assertRedirect();
+        Mail::assertSent(StudioEmail::class, function (StudioEmail $mail) {
+            return $mail->hasTo('client@example.invalid')
+                && count($mail->visualPages) === 2
+                && str_contains($mail->visualPages[0]['private_path'], 'pdf-visual');
+        });
+        $this->actingAs(User::findOrFail(2))
+            ->get(route('email-studio.visual.page', [$id, 1]))->assertForbidden();
+    }
+
+    public function test_duplicate_creates_independent_template_and_removal_keeps_send_history(): void
+    {
+        $id = $this->template();
+        $this->actingAs(User::findOrFail(1));
+        $this->post(route('email-studio.visual.import', $id), [
+            'visual_page_1' => UploadedFile::fake()->image('page1.png', 320, 450),
+        ])->assertRedirect();
+        $oldPath = DB::table('email_studio_visual_pages')->value('private_path');
+
+        $this->post(route('email-studio.duplicate', $id))->assertRedirect();
+        $this->assertDatabaseCount('email_studio_templates', 2);
+        $this->assertDatabaseCount('email_studio_visual_pages', 2);
+        $copyPath = DB::table('email_studio_visual_pages')
+            ->where('template_id', '!=', $id)->value('private_path');
+        $this->assertNotSame($oldPath, $copyPath);
+        Storage::disk('local')->assertExists($copyPath);
+
+        DB::table('email_studio_send_logs')->insert([
+            'template_id' => $id, 'actor_id' => 1,
+            'recipient' => 'client@example.invalid', 'subject' => 'Test case',
+            'result' => 'accepted', 'pdf_attached' => false, 'created_at' => now(),
+        ]);
+        $this->delete(route('email-studio.destroy', $id))->assertRedirect();
+        $this->assertDatabaseCount('email_studio_templates', 1);
+        $this->assertDatabaseHas('email_studio_send_logs', [
+            'recipient' => 'client@example.invalid', 'template_id' => null,
+        ]);
+        Storage::disk('local')->assertExists($copyPath);
+    }
+
+    public function test_template_actions_and_smtp_profiles_are_forbidden_to_unprivileged_admin(): void
+    {
+        $id = $this->template();
+        $this->actingAs(User::findOrFail(2))
+            ->post(route('email-studio.duplicate', $id))->assertForbidden();
+        $this->delete(route('email-studio.destroy', $id))->assertForbidden();
+        $this->post(route('email-studio.smtp.store'), [
+            'name'=>'Unapproved','host'=>'smtp.gmail.com','port'=>587,
+            'encryption'=>'tls','username'=>'evil@example.org',
+            'password'=>'secret','from_address'=>'evil@example.org',
+            'from_name'=>'Unauthorised',
+        ])->assertForbidden();
+    }
+
+    public function test_uploading_a_non_pdf_for_visual_conversion_is_rejected(): void
+    {
+        $id = $this->template();
+        $this->actingAs(User::findOrFail(1))
+            ->post(route('email-studio.visual.import', $id), [
+                'pdf_visual' => UploadedFile::fake()->image('not-a-pdf.png', 50, 50),
+            ])->assertSessionHasErrors('pdf_visual');
+        $this->assertDatabaseCount('email_studio_visual_pages', 0);
     }
 
 }
