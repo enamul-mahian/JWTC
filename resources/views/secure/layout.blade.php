@@ -6,6 +6,7 @@
     <meta name="robots" content="noindex,nofollow,noarchive">
     <meta name="referrer" content="no-referrer">
     <title>@yield('title', 'Secure Workspace') · Join Gallagher</title>
+    @stack('styles')
     <style>
       :root { color-scheme:light; --ink:#13243c; --muted:#58667b; --line:#dbe3ed; --brand:#1553a3; --paper:#fff; --wash:#f5f7fb; }
       * {box-sizing:border-box} body {margin:0;background:var(--wash);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
