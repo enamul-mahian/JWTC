@@ -48,6 +48,8 @@ jobs:
           cache: npm
       - name: Install frontend dependencies
         run: npm ci --no-audit --no-fund
+      - name: Audit frontend dependencies
+        run: npm audit --audit-level=low
       - name: Validate Email Studio browser JavaScript
         run: |
           node --check public/email-studio/editor.js
