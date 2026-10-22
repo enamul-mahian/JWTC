@@ -1,0 +1,76 @@
+name: cPanel SSH Preflight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cpanel-production-preflight
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: production
+    env:
+      SSH_HOST: ${{ secrets.CPANEL_SSH_HOST }}
+      SSH_PORT: ${{ secrets.CPANEL_SSH_PORT }}
+      SSH_USER: ${{ secrets.CPANEL_SSH_USER }}
+      SSH_KEY: ${{ secrets.CPANEL_SSH_PRIVATE_KEY }}
+      KNOWN_HOSTS: ${{ secrets.CPANEL_SSH_KNOWN_HOSTS }}
+      APP_PATH: ${{ secrets.CPANEL_APP_PATH }}
+    steps:
+      - name: Validate configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in SSH_HOST SSH_PORT SSH_USER SSH_KEY KNOWN_HOSTS APP_PATH; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing production configuration: $name"
+              exit 1
+            fi
+          done
+          [[ "$SSH_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]]
+          [[ "$SSH_USER" =~ ^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$ ]]
+          [[ "$SSH_PORT" =~ ^[0-9]{1,5}$ ]]
+          (( 10#$SSH_PORT > 0 && 10#$SSH_PORT < 65536 ))
+          [[ "$APP_PATH" =~ ^/home/[a-zA-Z0-9_.-]+(/[a-zA-Z0-9_.-]+)+$ ]]
+          [[ "$APP_PATH" != *'/../'* && "$APP_PATH" != */.. ]]
+      - name: Prepare temporary SSH identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/jwtc-ssh"
+          printf '%s\n' "$SSH_KEY" > "$RUNNER_TEMP/jwtc-ssh/key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$RUNNER_TEMP/jwtc-ssh/known_hosts"
+          ssh-keygen -y -P '' -f "$RUNNER_TEMP/jwtc-ssh/key" > /dev/null
+      - name: Read-only hosting inspection
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -T -p "$SSH_PORT" -i "$RUNNER_TEMP/jwtc-ssh/key" \
+            -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$RUNNER_TEMP/jwtc-ssh/known_hosts" \
+            -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=2 \
+            "$SSH_USER@$SSH_HOST" "bash -s -- '$APP_PATH'" <<'REMOTE'
+          set -euo pipefail
+          cd -- "$1"
+          test -f artisan && test -f composer.json && test -f .env
+          command -v php >/dev/null
+          php -r 'if (PHP_VERSION_ID < 80200) {fwrite(STDERR,"FAIL: PHP 8.2+ CLI required\n");exit(1);} echo "PASS: PHP ".PHP_VERSION."\n"; foreach (["mbstring","dom","fileinfo","pdo_mysql","gd","zip","openssl"] as $extension) { if (!extension_loaded($extension)) {fwrite(STDERR,"FAIL: missing PHP extension ".$extension."\n"); exit(1);} } echo "PASS: required PHP extensions\n";'
+          for tool in composer rsync tar gzip; do
+            command -v "$tool" >/dev/null || { echo "FAIL: missing $tool"; exit 1; }
+          done
+          test -d storage && test -d bootstrap/cache
+          test -w storage && test -w bootstrap/cache
+          echo 'PASS: Laravel root, environment file, storage permissions and deployment tools'
+          echo 'INFO: This check does not validate database access, backups, SMTP, browser flows or deployment readiness.'
+          REMOTE
+      - name: Remove temporary SSH identity
+        if: always()
+        shell: bash
+        run: rm -f -- "$RUNNER_TEMP/jwtc-ssh/key" "$RUNNER_TEMP/jwtc-ssh/known_hosts"
