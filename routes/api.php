@@ -121,6 +121,7 @@ Route::group(['prefix' => 'jobseeker', 'middleware' => 'auth:sanctum'], function
     Route::post('jobseeker-upload-document', [JobApplicationController::class, 'jobseekerDocUpload']);
 
     Route::get('get-all-applied-jobs', [JobApplicationController::class, 'getAppliedJob']);
+    Route::get('applications/{id}/timeline', [JobApplicationController::class, 'applicationTimeline']);
     Route::get('get-all-shortlist-jobs', [JobApplicationController::class, 'getShortlistedJob']);
     Route::post('send-resume', [JobApplicationController::class, 'sendResume']);
 });
