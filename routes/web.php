@@ -90,6 +90,7 @@ Route::get('registration/form', [EmployeerController::class, 'register'])
     ->name('registration.form');
 
 Route::post('employer-register', [EmployeerController::class, 'registerStore'])
+    ->middleware('throttle:5,1')
     ->name('employer-register.store');
 
 
@@ -108,7 +109,7 @@ Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])
         ->name('register');
 
-    Route::post('register', [RegisteredUserController::class, 'store']);
+    Route::post('register', [RegisteredUserController::class, 'store'])->middleware('throttle:5,1');
 
 });
 
@@ -123,6 +124,7 @@ Route::get('login', [UserAuthLoginController::class, 'login'])
     ->name('login');
 
 Route::post('user/login', [UserAuthLoginController::class, 'userLogin'])
+    ->middleware('throttle:10,1')
     ->name('user.login');
 
 Route::post('logout', [UserAuthLoginController::class, 'logout'])
