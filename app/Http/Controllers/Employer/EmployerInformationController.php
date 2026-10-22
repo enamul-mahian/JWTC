@@ -18,6 +18,7 @@ class EmployerInformationController extends Controller
      */
     public function create($id)
     {
+        abort_unless((int) $id === (int) Auth::id(), 403);
         $info = EmployerInformation::where('user_id', $id)->first();
         $user = User::where('id', Auth::user()->id)->first();
         $jobCategory = JobCategory::where('status', StatusType::ACTIVE)->select('id', 'name')->latest()->get();
@@ -30,10 +31,14 @@ class EmployerInformationController extends Controller
      */
     public function store(StoreEmployerInformationRequest $request, $id)
     {
+        abort_unless((int) $id === (int) Auth::id(), 403);
+        $request->validate([
+            'photo' => ['sometimes', 'nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'job_category_id' => ['sometimes', 'integer', 'exists:job_categories,id'],
+        ]);
         $information = EmployerInformation::where('user_id', $id)->first();
-        $data = $request->except('job_category_id');
-
-        $data['user_id'] = $id;
+        $data = $request->validated();
+        $data['user_id'] = Auth::id();
 
         if ($request->hasFile('photo')) {
             $old = $information->photo ?? null;
@@ -46,7 +51,9 @@ class EmployerInformationController extends Controller
         $matchThese = ['user_id' => $id];
         EmployerInformation::updateOrCreate($matchThese, $data);
 
-        User::where('id', Auth::user()->id)->update(['job_category_id' => $request->job_category_id]);
+        if ($request->filled('job_category_id')) {
+            User::whereKey(Auth::id())->update(['job_category_id' => $request->input('job_category_id')]);
+        }
 
         return redirect()->back()->withSuccess('profile updated success');
     }
