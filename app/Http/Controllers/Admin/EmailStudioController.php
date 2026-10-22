@@ -6,6 +6,8 @@ use App\Enum\UserType;
 use App\Http\Controllers\Controller;
 use App\Mail\StudioEmail;
 use App\Services\EmailStudioHtml;
+use App\Services\StudioPdfVisuals;
+use App\Services\StudioSmtpProfiles;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -40,26 +42,41 @@ class EmailStudioController extends Controller
 
     public function index(Request $request)
     {
-        $this->authorizeStudio($request);
-
-        return view('email-studio.index', [
-            'templates' => DB::table('email_studio_templates')
-                ->orderByDesc('updated_at')->paginate(15),
-            'logs' => DB::table('email_studio_send_logs')
-                ->where('actor_id', $request->user()->id)
-                ->orderByDesc('id')->limit(15)->get(),
-        ]);
+        $id = $request->query('template');
+        if ($id !== null && (!ctype_digit((string) $id) || (int) $id < 1)) {
+            abort(404);
+        }
+        return $this->edit($request, $id !== null ? (int) $id : null);
     }
 
     public function edit(Request $request, ?int $id = null)
     {
         $this->authorizeStudio($request);
         $template = $id === null ? null : $this->template($id);
+        $images = $template ? (json_decode($template->images ?: '{}', true) ?: []) : [];
+        $profiles = Schema::hasTable('email_studio_smtp_profiles')
+            ? app(StudioSmtpProfiles::class)->all() : collect();
+        $visualPages = $template && Schema::hasTable('email_studio_visual_pages')
+            ? DB::table('email_studio_visual_pages')
+                ->where('template_id', $template->id)->orderBy('page_number')->get()
+            : collect();
 
         return view('email-studio.editor', [
             'template' => $template,
-            'images' => $template ? (json_decode($template->images ?: '{}', true) ?: []) : [],
-            'availableFonts' => ['Arial', 'Georgia', 'Verdana', 'Tahoma', 'Helvetica', 'Times New Roman'],
+            'images' => $images,
+            'templates' => DB::table('email_studio_templates')
+                ->orderBy('name')->get(['id', 'name', 'subject']),
+            'profiles' => $profiles,
+            'defaultProfileId' => Schema::hasTable('email_studio_smtp_profiles')
+                ? app(StudioSmtpProfiles::class)->defaultId() : null,
+            'requestedSmtpProfile' => $request->query('smtp_profile'),
+            'logs' => DB::table('email_studio_send_logs')
+                ->where('actor_id', $request->user()->id)
+                ->orderByDesc('id')->limit(25)->get(),
+            'visualPages' => $visualPages,
+            'availableFonts' => [
+                'Arial', 'Georgia', 'Verdana', 'Tahoma', 'Helvetica', 'Times New Roman'
+            ],
         ]);
     }
 
