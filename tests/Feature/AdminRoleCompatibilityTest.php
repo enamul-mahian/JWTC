@@ -36,7 +36,7 @@ class AdminRoleCompatibilityTest extends TestCase
                 'name' => 'Synthetic admin', 'email' => 'admin'.$i.'@example.invalid',
                 'user_type' => $role,
             ]);
-            $user->forceFill(['employer_approved_at' => now()])->save();
+            $user->forceFill(['employer_approved_at' => now(), 'status' => 1])->save();
             $this->actingAs($user)->get('/__test_jwtc_admin_guard')
                 ->assertOk()->assertSee('ADMIN_OK');
         }
@@ -49,7 +49,7 @@ class AdminRoleCompatibilityTest extends TestCase
                 'name' => 'Synthetic non-admin', 'email' => 'nonadmin'.$i.'@example.invalid',
                 'user_type' => $role,
             ]);
-            $user->forceFill(['employer_approved_at' => now()])->save();
+            $user->forceFill(['employer_approved_at' => now(), 'status' => 1])->save();
             $this->actingAs($user)->get('/__test_jwtc_admin_guard')
                 ->assertForbidden();
         }
