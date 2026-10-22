@@ -238,8 +238,17 @@ try {
         throw new RuntimeException('Cannot establish account disk quota');
     }
     $quota = $quotaResponse['result']['data'] ?? [];
-    $limit = $quota['bytes_limit'] ?? null;
+    $limit = $quota['bytes_limit'] ?? ($quota['megabyte_limit'] ?? null);
     $remaining = $quota['bytes_remain'] ?? null;
+    // cPanel versions may expose MB rather than bytes. Use decimal MB as a
+    // conservative lower bound on available bytes (smaller than MiB).
+    if ($remaining === null && is_numeric($quota['megabytes_remain'] ?? null)) {
+        $remaining = (float) $quota['megabytes_remain'] * 1000000;
+    }
+    if ($remaining === null && is_string($quota['megabytes_remain'] ?? null)
+        && in_array(strtolower($quota['megabytes_remain']), ['unlimited', 'unlim'], true)) {
+        $limit = 'unlimited';
+    }
     if ($remaining === null && is_numeric($limit) && is_numeric($quota['bytes_used'] ?? null)) {
         $remaining = (float) $limit - (float) $quota['bytes_used'];
     }
