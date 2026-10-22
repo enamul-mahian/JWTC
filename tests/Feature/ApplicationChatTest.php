@@ -247,4 +247,32 @@ class ApplicationChatTest extends TestCase
         $this->getJson('/api/application-messages')->assertOk();
         $this->getJson('/api/application-messages/threads/9999')->assertNotFound();
     }
+    public function test_large_conversation_history_is_cursor_paginated_and_private(): void
+    {
+        $thread = $this->start();
+        $user = User::findOrFail(1);
+        $chat = app(ApplicationChat::class);
+        for ($i = 1; $i <= 43; $i++) {
+            $chat->send($user, $thread->id, 'Message number ' . $i);
+        }
+
+        $latest = $chat->messages($thread);
+        $this->assertCount(40, $latest);
+        $this->assertSame('Message number 4', $latest->first()['body']);
+        $this->assertSame('Message number 43', $latest->last()['body']);
+
+        $this->actingAs($user)
+            ->getJson(route('application-chat.history',$thread->id) .
+                '?before=' . $latest->first()['id'])
+            ->assertOk()
+            ->assertJsonCount(3, 'messages')
+            ->assertJsonPath('messages.0.body', 'Message number 1')
+            ->assertJsonPath('has_more', false);
+
+        $this->actingAs(User::findOrFail(2))
+            ->getJson(route('application-chat.history',$thread->id) .
+                '?before=' . $latest->first()['id'])
+            ->assertNotFound();
+    }
+
 }
