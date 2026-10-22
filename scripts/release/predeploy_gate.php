@@ -19,7 +19,10 @@ try {
         return $p->getOutput();
     };
     $phase = 'domain';
-    $domain = json_decode($run(['/usr/local/cpanel/bin/uapi', '--output=json', 'DomainInfo', 'single_domain_data', 'domain=joingallagher.uk']), true, 64, JSON_THROW_ON_ERROR);
+    $uapi = null;
+    foreach (['/usr/bin/uapi', '/bin/uapi', '/usr/local/bin/uapi', '/usr/local/cpanel/bin/uapi'] as $path) if (is_executable($path)) { $uapi = $path; break; }
+    if (!$uapi) throw new RuntimeException('UAPI unavailable');
+    $domain = json_decode($run([$uapi, '--output=json', 'DomainInfo', 'single_domain_data', 'domain=joingallagher.uk']), true, 64, JSON_THROW_ON_ERROR);
     $roots = [];
     $walk = static function ($data) use (&$walk, &$roots): void {
         foreach ((array) $data as $key => $value) {
@@ -29,6 +32,7 @@ try {
     };
     $walk($domain['result']['data'] ?? []);
     $roots = array_values(array_unique($roots));
+    echo 'DOCUMENT_ROOTS '.json_encode($roots)."\n";
     if (count($roots) !== 1 || !in_array($roots[0], [$root, $root.'/public'], true)) throw new RuntimeException('Unsupported web root');
     echo 'DOCUMENT_ROOT_LAYOUT '.($roots[0] === $root ? 'application-root' : 'public-subdirectory')."\n";
     echo 'ROOT_ENTRYPOINT '.(is_file($root.'/index.php') ? 'present' : 'absent')."\n";
@@ -82,6 +86,7 @@ try {
     file_put_contents($base.'/predeploy-gate.json', json_encode(['passed_at_utc' => gmdate('c'), 'document_root' => $roots[0], 'candidate_commit' => $report['candidate_commit'], 'http_smoke' => true, 'audit' => $counts], JSON_PRETTY_PRINT|JSON_THROW_ON_ERROR));
     echo "PASS: predeployment HTTP and platform gates\n";
 } catch (Throwable $e) {
+    if (in_array($e->getMessage(), ['UAPI unavailable', 'Unsupported web root', 'Gate command failed'], true)) fwrite(STDERR, 'REASON: '.$e->getMessage()."\n");
     if ($server) $server->stop(1);
     fwrite(STDERR, 'FAIL: predeployment gate at '.$phase."; private details suppressed; production unchanged\n");
     exit(1);
