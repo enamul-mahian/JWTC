@@ -39,6 +39,8 @@ class EmployerApplicantPrivacyTest extends TestCase
             $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('company_id');
             $table->string('title');
+            $table->string('slug')->nullable();
+            $table->boolean('is_publish')->default(false);
             $table->softDeletes();
         });
         Schema::create('applications', function (Blueprint $table) {
@@ -153,5 +155,56 @@ class EmployerApplicantPrivacyTest extends TestCase
             'application_id' => 301, 'actor_id' => 1,
             'from_status_id' => 1, 'to_status_id' => 2, 'source' => 'employer',
         ]);
+    }
+
+    public function test_employer_cannot_edit_archive_or_restore_another_tenants_job(): void
+    {
+        $this->actingAs(User::findOrFail(1))
+            ->get(route('jobs.edit', ['job' => 202]))
+            ->assertNotFound();
+
+        $this->delete(route('jobs.destroy', ['job' => 202]))
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('jobs', ['id' => 202, 'deleted_at' => null]);
+
+        DB::table('jobs')->where('id', 202)->update(['deleted_at' => now()]);
+        $this->post(route('archive-jobs.restore', ['id' => 202]))
+            ->assertNotFound();
+
+        $this->assertNotNull(DB::table('jobs')->where('id', 202)->value('deleted_at'));
+    }
+
+    public function test_only_job_owner_can_archive_their_record(): void
+    {
+        $this->actingAs(User::findOrFail(1))
+            ->delete(route('jobs.destroy', ['job' => 101]))
+            ->assertRedirect();
+
+        $this->assertNotNull(DB::table('jobs')->where('id', 101)->value('deleted_at'));
+        $this->assertDatabaseHas('jobs', ['id' => 202, 'deleted_at' => null]);
+    }
+
+    public function test_other_employer_cannot_preview_an_unpublished_job(): void
+    {
+        DB::table('jobs')->where('id', 202)->update([
+            'slug' => 'private-employer-b-job', 'is_publish' => 0,
+        ]);
+
+        $this->actingAs(User::findOrFail(1))
+            ->get(route('job-details.show', ['slug' => 'private-employer-b-job']))
+            ->assertNotFound();
+    }
+
+    public function test_repeated_same_status_is_not_rewritten_or_double_audited(): void
+    {
+        $this->actingAs(User::findOrFail(1))
+            ->postJson(route('shortList.cv'), ['applicationId' => 301, 'status' => 2])
+            ->assertOk();
+
+        $this->postJson(route('shortList.cv'), ['applicationId' => 301, 'status' => 2])
+            ->assertOk();
+
+        $this->assertDatabaseCount('application_status_events', 1);
     }
 }
