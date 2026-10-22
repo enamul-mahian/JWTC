@@ -66,70 +66,34 @@ class JobApplicationController extends Controller
 
     public function savePost(Request $request)
     {
-        $validated = $request->validate([
-            'job_id' => 'required|integer|exists:jobs,id',
-            'employer_id' => 'sometimes|integer|exists:companies,id',
-            'expected_salary' => 'required|numeric|min:0',
+        $data = $request->validate([
+            'job_id' => ['required', 'integer', 'exists:jobs,id'],
+            'employer_id' => ['sometimes', 'integer', 'exists:companies,id'],
+            'expected_salary' => ['required', 'numeric', 'min:0', 'max:999999.99'],
         ]);
 
-        $userId = auth()->id();
-
-        try {
-            // Locking the applicant serializes concurrent submissions from this account.
-            // The code is consumed in the same transaction as the application insert.
-            $application = \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $userId) {
-                \App\Models\User::whereKey($userId)->lockForUpdate()->firstOrFail();
-
-                if (CheckApplyEligibility() == 0) {
-                    throw new \DomainException('Please apply for a unique code.');
-                }
-
-                if (Application::where('user_id', $userId)
-                    ->where('job_id', $validated['job_id'])->exists()) {
-                    throw new \DomainException('You have already applied to this job.');
-                }
-
-                $uniqueCode = UniqueCode::where('user_id', $userId)
-                    ->where('is_used', 0)
-                    ->whereNotNull('code')
-                    ->lockForUpdate()
-                    ->first();
-
-                if (!$uniqueCode) {
-                    throw new \DomainException('Please apply for a unique code.');
-                }
-
-                $job = Job::findOrFail($validated['job_id']);
-                if (isset($validated['employer_id']) && (int) $validated['employer_id'] !== (int) $job->company_id) {
-                    throw new \DomainException('The selected employer does not match the job.');
-                }
-
-                $application = Application::create([
-                    'user_id' => $userId,
-                    'job_id' => $validated['job_id'],
-                    'employer_id' => $job->company_id,
-                    'expected_salary' => $validated['expected_salary'],
-                    'date_applied' => now(),
-                    'status' => Status::APPLIED,
-                ]);
-
-                $uniqueCode->is_used = 1;
-                $uniqueCode->save();
-
-                return $application;
-            }, 3);
-        } catch (\DomainException $e) {
-            return redirect()->route('find-jobs')->withError($e->getMessage());
-        } catch (\Throwable $e) {
-            report($e);
-            return redirect()->route('find-jobs')->withError('Application could not be submitted. Please try again.');
+        $job = Job::findOrFail($data['job_id']);
+        if (isset($data['employer_id']) &&
+            (int) $data['employer_id'] !== (int) $job->company_id) {
+            return back()->withError('Employer does not match the selected job.');
         }
 
-        // Delivery failures must not undo a successfully committed application.
+        try {
+            $application = app(\App\Services\ApplicationSubmissionService::class)->submit(
+                $request->user(), $job, (float) $data['expected_salary']
+            );
+        } catch (\DomainException $e) {
+            return back()->withError($e->getMessage());
+        } catch (\Throwable $e) {
+            report($e);
+            return back()->withError('Application could not be submitted. Please try again.');
+        }
+
         try {
             $company = Company::find($application->employer_id);
             if ($company && $company->user_id) {
-                sendNotification($company->user_id, 'New job application', '/', 'click', auth()->user()->name . ' applied for a job');
+                sendNotification($company->user_id, 'New job application', '/', 'click',
+                    $request->user()->name . ' applied for a job');
             }
         } catch (\Throwable $e) {
             report($e);
