@@ -1,0 +1,9 @@
+# cPanel staging database identity check
+
+Manual Actions workflow: cPanel Staging Database Check. Uses the existing CPANEL_* SSH secrets plus STAGING_DB_DATABASE, STAGING_DB_USERNAME and STAGING_DB_PASSWORD. The owner has specified dropoqux_jwtc_stage for both database and username. Both are explicitly checked; there is no arbitrary database input.
+
+A trusted script is sent in the SSH command and credentials only on encrypted stdin; no credentials are committed, printed, passed as process arguments, placed in an artifact or written to server files. The script reads the existing live database identity/host from cached configuration or parsed .env without bootstrapping the Laravel application, rejects ambiguous URL-based configurations, and connects ONLY to the supplied staging schema with the supplied staging user. It never uses live DB credentials. It starts a read-only transaction, checks SELECT DATABASE() and information_schema table count, then rolls back. A nonempty staging schema stops the procedure without overwriting anything. PDO errors are suppressed to avoid credential/host leakage.
+
+A passing run proves credential acceptance and an empty schema distinct from the live configured schema, not separate physical DB infrastructure, migration grants, backup/restore integrity or application readiness. No backups, data copies, migrations, live configuration changes or deployments are performed. Restore work still requires current consistent production SQL/uploads backups, APP_KEY escrow, an isolated non-public staging root and verified original file mappings. Do not copy private passports into a web-accessible directory.
+
+After this check: retain current backups independently, restore to the verified empty staging schema and private root, compare records/files, then apply reviewed additive migrations and complete staging acceptance. Do not use migrate:fresh/refresh/reset/db:wipe or destructive rollback. Production remains unchanged.

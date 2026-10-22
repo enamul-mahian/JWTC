@@ -30,7 +30,7 @@ jobs:
       - name: Install PHP dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
       - name: Lint tracked application PHP files
-        run: find app routes config database tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+        run: find app routes config database tests scripts/release -type f -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Compile Blade views
         run: php artisan view:cache
       - name: PHPUnit regression suite
