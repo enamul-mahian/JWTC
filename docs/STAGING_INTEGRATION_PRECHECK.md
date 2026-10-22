@@ -17,6 +17,7 @@ The command below checks identity/permissions and reads schema metadata; it does
       --expected-db='STAGING_MYSQL_SCHEMA' \
       --production-db='PRODUCTION_MYSQL_SCHEMA' \
       --expected-url='https://YOUR-STAGING-HOST.example' \
+      --expected-key-sha256='64_HEX_SHA256_OF_ORIGINAL_APP_KEY' \
       --production-root='/ABSOLUTE/LIVE/APP/ROOT' \
       --uploads=storage/app \
       --uploads=public/images \
@@ -26,7 +27,7 @@ Requirements:
 - APP_ENV=staging and APP_DEBUG=false; APP_URL is the expected HTTPS staging URL.
 - The live app root exists and differs from the staging root (realpath is checked).
 - The actual connected MySQL database must be exactly expected-db and **different** from production-db; SQLite/test database cannot pass. An ambiguous DATABASE_URL pointing to production must never be used.
-- A valid APP_KEY must encrypt/decrypt a transient in-memory test string. Protect the key; do not print/store secrets in Git, chat, logs or screenshots. A valid *new* key is not proof that old encrypted data can be read; test restoration with the correct old key in isolated staging.
+- A valid APP_KEY must encrypt/decrypt a transient in-memory test string. The mandatory --expected-key-sha256 is a 64-character SHA-256 digest of **the exact original Laravel APP_KEY configuration string**, recorded separately by a trusted operator from the old deployment. The staging APP_KEY must match this digest. Do not expose the key in Git, chat, command-line arguments or CI logs. A digest match is not proof that every old encrypted record is intact; independently test representative records after restoration.
 - At least two upload paths, including storage/app, must be explicitly checked. Supply all actual existing paths and inspect symlink targets; the command blocks paths resolved outside staging.
 - Essential existing tables users/jobs/applications/migrations must exist, and migration history must be nonempty. If chat, Support or Email Studio are switched on, relevant new tables must also exist.
 - If responsive redesign is enabled, staging public/theme/jwtc.css and public/build/manifest.json must be present.
