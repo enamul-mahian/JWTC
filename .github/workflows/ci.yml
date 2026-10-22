@@ -42,6 +42,8 @@ jobs:
           cache: npm
       - name: Install frontend dependencies
         run: npm ci --no-audit --no-fund
+      - name: Validate Email Studio browser JavaScript
+        run: node --check public/email-studio/editor.js
       - name: Build frontend assets
         run: npm run build
       - name: Save built Vite assets
