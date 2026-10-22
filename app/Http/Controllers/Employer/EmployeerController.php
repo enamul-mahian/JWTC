@@ -127,24 +127,22 @@ class EmployeerController extends Controller
 
     public function updatePassword(Request $request)
     {
-        $user = User::where('id', $request->user_id)->first();
+        $validated = $request->validate([
+            'old_pass' => ['required', 'string'],
+            'new_pass' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
 
-        if (!$user || !Hash::check($request->old_pass, $user->password)) {
-            return redirect()->back()->with([
-                'message' => 'credential doesn\'t match',
-                'class' => 'warning',
-            ]);
-        } else {
-            $user->update(['password' => $request->new_pass]);
+        $user = $request->user();
+        if (!$user || !Hash::check($validated['old_pass'], (string) $user->password)) {
+            return back()->withErrors(['old_pass' => 'Current password is incorrect.']);
         }
 
-        return redirect()->back()->with([
-            'message' => 'password updated success',
-            'class' => 'success',
-        ]);
+        $user->forceFill(['password' => Hash::make($validated['new_pass'])])->save();
+
+        return back()->withSuccess('Password updated successfully.');
     }
 
-    public function updateProfilePage()
+        public function updateProfilePage()
     {
         $user = Auth::user();
 
