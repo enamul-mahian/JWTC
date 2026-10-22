@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="robots" content="noindex,nofollow,noarchive">
     <meta name="referrer" content="no-referrer">
-    <title>@yield('title', 'Secure Documents') · Join Gallagher</title>
+    <title>@yield('title', 'Secure Workspace') · Join Gallagher</title>
     <style>
       :root { color-scheme:light; --ink:#13243c; --muted:#58667b; --line:#dbe3ed; --brand:#1553a3; --paper:#fff; --wash:#f5f7fb; }
       * {box-sizing:border-box} body {margin:0;background:var(--wash);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
@@ -29,8 +29,8 @@
 </head>
 <body>
     <header class="top"><div class="wrap">
-        <a href="{{ url('/') }}" class="brand">JOIN GALLAGHER · SECURE DOCUMENTS</a>
-        <span class="small">Private, account-restricted document workspace</span>
+        <a href="{{ url('/') }}" class="brand">JOIN GALLAGHER · SECURE WORKSPACE</a>
+        <span class="small">Private, account-restricted workspace</span>
     </div></header>
     <main id="main">
         @if(session('success'))<div class="alert" role="status">{{ session('success') }}</div>@endif
@@ -42,6 +42,6 @@
         @endif
         @yield('content')
     </main>
-    <footer>Files are private to the account holder and authorized reviewers. Never share passwords or verification codes.</footer>
+    <footer>Private records are accessible only to authorized account holders and reviewers. Never share passwords or verification codes.</footer>
 </body>
 </html>
