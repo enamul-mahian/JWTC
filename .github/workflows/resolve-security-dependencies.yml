@@ -20,7 +20,23 @@ jobs:
           extensions: mbstring, dom, fileinfo, pdo_mysql, pdo_sqlite, gd, zip
           tools: composer:v2
           coverage: none
-      - name: Resolve patched dependencies within existing constraints
+      - name: Prepare supported framework constraints
+        run: |
+          if rg -n 'Form::|Html::|Collective\\Html' app resources config; then
+            echo 'Legacy HTML usage requires conversion before upgrade'
+            exit 1
+          fi
+          python3 - <<'PYTHON'
+          import json
+          from pathlib import Path
+          p=Path('composer.json')
+          d=json.loads(p.read_text())
+          d['require'].update({'php':'^8.2','laravel/framework':'^12.0','laravel/sanctum':'^4.0','barryvdh/laravel-dompdf':'^3.1'})
+          d['require'].pop('laravelcollective/html',None)
+          d['require-dev'].update({'laravel/breeze':'^2.0','nunomaduro/collision':'^8.0','knuckleswtf/scribe':'^5.0'})
+          p.write_text(json.dumps(d,indent=4)+'\n')
+          PYTHON
+      - name: Resolve patched supported dependencies
         run: |
           composer update --with-all-dependencies --prefer-dist --no-interaction --no-progress --no-scripts --no-plugins
           composer audit --locked --no-dev --format=json
@@ -29,6 +45,6 @@ jobs:
           git switch -c fix/security-dependencies-20261022
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add composer.lock
+          git add composer.json composer.lock
           git commit -m 'Update locked dependencies to patched compatible versions'
           git push origin HEAD:refs/heads/fix/security-dependencies-20261022
