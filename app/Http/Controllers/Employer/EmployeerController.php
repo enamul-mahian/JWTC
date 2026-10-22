@@ -142,6 +142,13 @@ class EmployeerController extends Controller
             return back()->withErrors(['old_pass' => 'Current password is incorrect.']);
         }
 
+        if (config('security.password_change_otp.enabled')) {
+            app(\App\Services\PasswordOtpService::class)->issue(
+                $user, Hash::make($validated['new_pass'])
+            );
+            return back()->with('otp_sent', 'We emailed you a six-digit verification code.');
+        }
+
         $user->forceFill(['password' => Hash::make($validated['new_pass'])])->save();
 
         return back()->withSuccess('Password updated successfully.');
