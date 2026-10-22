@@ -32,6 +32,8 @@ class StudioEmail extends Mailable
                 $inline[$slot] = [
                     'absolute_path' => Storage::disk('local')->path($image['path']),
                     'width' => min(600, max(80, (int) $image['width'])),
+                    'align' => in_array($image['align'] ?? 'center', ['left','center','right'], true)
+                        ? ($image['align'] ?? 'center') : 'center',
                 ];
             }
         }
