@@ -24,6 +24,16 @@ def migration_php(up: str, down: str = "Schema::dropIfExists('module_events');")
 
 
 class MigrationSafetyTests(unittest.TestCase):
+    def test_future_migrations_are_guarded_and_legacy_migrations_are_not(self) -> None:
+        self.assertTrue(migration.guarded_migration(
+            pathlib.Path("2027_01_01_000001_create_ticket_logs.php")))
+        self.assertTrue(migration.guarded_migration(
+            pathlib.Path("2026_10_23_000001_create_ticket_logs.php")))
+        self.assertFalse(migration.guarded_migration(
+            pathlib.Path("2023_12_25_144802_create_jobs_table.php")))
+        self.assertFalse(migration.guarded_migration(
+            pathlib.Path("not_a_migration.php")))
+
     def test_additive_up_and_destructive_down_not_flagged(self) -> None:
         source = migration_php("Schema::create('module_events', function ($table) { $table->id(); });")
         self.assertEqual([], migration.violations(source))
