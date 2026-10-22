@@ -199,7 +199,7 @@ try {
     $backupPhase = 'domain-root-check';
     $uapi = $binary('uapi');
     $backupPhase = 'uapi-domain-query';
-    $domain = json_decode($run([$uapi, '--output=json', '--user=dropoqux',
+    $domain = json_decode($run([$uapi, '--output=json',
         'DomainInfo', 'single_domain_data', 'domain=joingallagher.uk']), true, 64, JSON_THROW_ON_ERROR);
     if (($domain['result']['status'] ?? 0) !== 1) {
         throw new RuntimeException('Cannot establish domain document root');
@@ -224,7 +224,7 @@ try {
         && !str_starts_with($domainRoots[0], $root.DIRECTORY_SEPARATOR))) {
         throw new RuntimeException('Separate public document root needs backup mapping');
     }
-    $allDomains = json_decode($run([$uapi, '--output=json', '--user=dropoqux',
+    $allDomains = json_decode($run([$uapi, '--output=json',
         'DomainInfo', 'domains_data', 'format=list']), true, 64, JSON_THROW_ON_ERROR);
     if (($allDomains['result']['status'] ?? 0) !== 1) {
         throw new RuntimeException('Cannot establish private backup destination');
@@ -232,7 +232,7 @@ try {
     $webRoots = $collectRoots($allDomains['result']['data'] ?? []);
     if (!$webRoots) throw new RuntimeException('No verified document roots');
     $backupPhase = 'account-quota-check';
-    $quotaResponse = json_decode($run([$uapi, '--output=json', '--user=dropoqux',
+    $quotaResponse = json_decode($run([$uapi, '--output=json',
         'Quota', 'get_quota_info']), true, 64, JSON_THROW_ON_ERROR);
     if (($quotaResponse['result']['status'] ?? 0) !== 1) {
         throw new RuntimeException('Cannot establish account disk quota');
