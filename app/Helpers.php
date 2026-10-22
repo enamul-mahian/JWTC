@@ -531,47 +531,15 @@ if (!function_exists("CheckApplyEligibility")) {
 if (!function_exists('getJobApplicationStatuses')) {
     function getJobApplicationStatuses()
     {
-        return [
-            ['id' => 1, 'name' => 'File Under Process of Decision Making', 'progress' => 0],
-            ['id' => 2, 'name' => 'File Under Process of Assessment', 'progress' => 20],
-            ['id' => 3, 'name' => 'File Under Process of Acceptance', 'progress' => 30],
-            ['id' => 4, 'name' => 'File Under Process of Approval', 'progress' => 40],
-            ['id' => 5, 'name' => 'Agreement on Board', 'progress' => 50],
-            ['id' => 6, 'name' => 'Police/Criminal Clearance Certificate Received', 'progress' => 55],
-            ['id' => 7, 'name' => 'Medical Test Report Received', 'progress' => 60],
-            ['id' => 8, 'name' => 'COS Letter Processed', 'progress' => 70],
-            ['id' => 9, 'name' => 'VFS Appointment Date Approved', 'progress' => 75],
-            ['id' => 10, 'name' => 'Visa Processing Complete', 'progress' => 100],
-            ['id' => 11, 'name' => 'Rejected / Terminated', 'progress' => 0],
-        ];
+        return app(\App\Services\ApplicationStatusCatalog::class)->all();
     }
 }
 
 if (!function_exists('getJobApplicationStatus')) {
     function getJobApplicationStatus($id)
     {
-        $statuses = [
-              ['id' => 1, 'name' => 'File Under Process of Decision Making', 'progress' => 0],
-            ['id' => 2, 'name' => 'File Under Process of Assessment', 'progress' => 20],
-            ['id' => 3, 'name' => 'File Under Process of Acceptance', 'progress' => 30],
-            ['id' => 4, 'name' => 'File Under Process of Approval', 'progress' => 40],
-            ['id' => 5, 'name' => 'Agreement on Board', 'progress' => 50],
-            ['id' => 6, 'name' => 'Police/Criminal Clearance Certificate Received', 'progress' => 55],
-            ['id' => 7, 'name' => 'Medical Test Report Received', 'progress' => 60],
-            ['id' => 8, 'name' => 'COS Letter Processed', 'progress' => 70],
-            ['id' => 9, 'name' => 'VFS Appointment Date Approved', 'progress' => 75],
-            ['id' => 10, 'name' => 'Visa Processing Complete', 'progress' => 100],
-            ['id' => 11, 'name' => 'Rejected / Terminated', 'progress' => 0],
-        ];
-
-        // Use array filter to find the status by id
-        $status = array_filter($statuses, function ($status) use ($id) {
-            return $status['id'] === $id;
-        });
-
-        // Return the first matched status or null if not found
-        return array_values($status)[0] ?? null;
+        return app(\App\Services\ApplicationStatusCatalog::class)->find(
+            $id === null ? null : (int) $id
+        );
     }
 }
-
-
