@@ -66,7 +66,7 @@
                                         <img style="height: 50px; margin-right: 10px;" src="{{ getThumbnailPath($extension) }}" alt="" srcset="">
                                         <span class="mt-2">
                                             <a class="btn btn-info btn-sm mr-2" href="{{ asset('assets/images/resume/'.$cv->file) }}">{{ substr($cv->title, 0, 10) }}</a>
-                                            <a class="btn btn-danger btn-sm mr-2" onclick="return confirm(' you want to delete?');" href="{{ route('uploaded-cv-delete', $cv->id) }}">{{ __('messages.Delete') }}</a>
+                                            <form method="POST" action="{{ route('uploaded-cv-delete', $cv->id) }}" class="d-inline" onsubmit="return confirm('Delete this CV?');">@csrf @method('DELETE')<button type="submit" class="btn btn-danger btn-sm mr-2">{{ __('messages.Delete') }}</button></form>
                                         </span>
                                     </div>
                                     
@@ -142,7 +142,7 @@
                                         <img style="height: 50px; margin-right: 10px;" src="{{ getThumbnailPath($extension) }}" alt="" srcset="">
                                         <span class="mt-2">
                                             <a class="btn btn-info btn-sm mr-2" href="{{ asset('assets/images/certificate/'.$certificate->file) }}">{{ substr($certificate->title, 0, 10) }}</a>
-                                            <a class="btn btn-danger btn-sm mr-2" onclick="return confirm(' you want to delete?');" href="{{ route('delete-jobseeer-certificate', $certificate->id) }}">{{ __('messages.Delete') }}</a>
+                                            <form method="POST" action="{{ route('delete-jobseeer-certificate', $certificate->id) }}" class="d-inline" onsubmit="return confirm('Delete this certificate?');">@csrf @method('DELETE')<button type="submit" class="btn btn-danger btn-sm mr-2">{{ __('messages.Delete') }}</button></form>
                                         </span>
                                     </div>
                                     
@@ -181,7 +181,7 @@
                                         <img style="height: 50px; margin-right: 10px;" src="{{ getThumbnailPath($extension) }}" alt="" srcset="">
                                         <span class="mt-2">
                                             <a class="btn btn-info btn-sm mr-2" href="{{ asset('assets/images/document/'.$doc->file) }}">{{ substr($doc->title, 0, 10) }}</a>
-                                            <a class="btn btn-danger btn-sm mr-2" onclick="return confirm(' you want to delete?');" href="{{ route('delete-upload-document', $doc->id) }}">{{ __('messages.Delete') }}</a>
+                                            <form method="POST" action="{{ route('delete-upload-document', $doc->id) }}" class="d-inline" onsubmit="return confirm('Delete this document?');">@csrf @method('DELETE')<button type="submit" class="btn btn-danger btn-sm mr-2">{{ __('messages.Delete') }}</button></form>
                                         </span>
                                     </div>
                                     

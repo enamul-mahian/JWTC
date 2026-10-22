@@ -1,0 +1,55 @@
+name: JWTC Pre-merge Validation
+
+on:
+  push:
+    branches:
+      - 'fix/**'
+      - 'feature/**'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  laravel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, dom, fileinfo, pdo_sqlite, sqlite3, gd, zip
+          coverage: none
+      - name: Prepare Laravel writable directories
+        run: mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs
+      - name: Validate Composer metadata
+        run: composer validate --no-check-publish
+      - name: Install PHP dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Lint tracked application PHP files
+        run: find app routes config database tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Compile Blade views
+        run: php artisan view:cache
+      - name: PHPUnit regression suite
+        run: vendor/bin/phpunit --colors=never
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Install frontend dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Build frontend assets
+        run: npm run build
+      - name: Save built Vite assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: jwtc-vite-assets
+          path: public/build/
+          if-no-files-found: error
+          retention-days: 7
+      - name: Inspect web and API route registration
+        run: php artisan route:list --except-vendor

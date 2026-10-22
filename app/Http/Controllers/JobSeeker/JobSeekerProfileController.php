@@ -115,11 +115,19 @@ class JobSeekerProfileController extends Controller
         return view('jobseeker.dashboard.resume_views', compact('count'));
     }
 
-    public function delete()
+    public function delete(Request $request)
     {
-        $user = User::withTrashed()->find(Auth::id());
-        $user->delete();
+        $request->validate([
+            'current_password' => ['required', 'current_password'],
+        ]);
 
-        return redirect('/')->with('success', 'Account delete successful');
+        $user = User::findOrFail(Auth::id());
+        $user->delete(); // Existing applications/documents remain for retention.
+
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect('/')->with('success', 'Account deleted successfully');
     }
 }

@@ -452,6 +452,17 @@
 
     </form>
 
+    <div class="card mt-4">
+        <div class="card-body py-3">
+            <h5 class="card-title">Database Export</h5>
+            <p class="text-muted">Exports may contain private applicant information. Store downloads securely.</p>
+            <form method="POST" action="{{ route('database-backup') }}">
+                @csrf
+                <button type="submit" class="btn btn-outline-secondary" onclick="return confirm('Download a database export? Keep this file private.');">Download database export</button>
+            </form>
+        </div>
+    </div>
+
 </section>
 
 @endsection

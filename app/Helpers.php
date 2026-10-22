@@ -502,53 +502,31 @@ if (!function_exists("maximumAvailability")) {
 if (!function_exists("checkAvailability")) {
     function checkAvailability()
     {
-        $result = 1;
-        $total = UniqueCode::where('user_id', auth()->user()->id)->count();
-
-        if ($total > maximumAvailability()) {
-            $result = 0;
+        if (!auth()->check()) {
+            return 0;
         }
 
-
-        $canCreate = UniqueCode::where('user_id', auth()->user()->id)->where('is_used', 0)->where('code', '!=', null)->count();
-
-        if ($canCreate > 0) {
-            $result = 0;
-        }
-
-        $prevDue = UniqueCode::where('user_id', auth()->user()->id)->where('is_used', 0)->where('code', null)->count();
-
-        if ($prevDue > 0) {
-            $result = 0;
-        }
-
-        return $result;
+        // One outstanding request/approved unused code at a time.
+        // Used codes remain as history and do not prevent future requests.
+        return UniqueCode::where('user_id', auth()->id())
+            ->where('is_used', 0)
+            ->exists() ? 0 : 1;
     }
 }
-
 
 if (!function_exists("CheckApplyEligibility")) {
     function CheckApplyEligibility()
     {
-        $result = 1;
-
-        $total = UniqueCode::where('user_id', auth()->user()->id)->where('code', '!=', null)->where('is_used', 1)->count();
-
-        if ($total == maximumAvailability()) {
-            $result = 0;
+        if (!auth()->check()) {
+            return 0;
         }
 
-
-        $canApply = UniqueCode::where('user_id', auth()->user()->id)->where('is_used', 0)->where('code', '!=', null)->count();
-
-        if ($canApply == 0) {
-            $result = 0;
-        }
-
-        return $result;
+        return UniqueCode::where('user_id', auth()->id())
+            ->where('is_used', 0)
+            ->whereNotNull('code')
+            ->exists() ? 1 : 0;
     }
 }
-
 
 if (!function_exists('getJobApplicationStatuses')) {
     function getJobApplicationStatuses()

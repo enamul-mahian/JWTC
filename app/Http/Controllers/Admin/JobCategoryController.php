@@ -17,6 +17,8 @@ class JobCategoryController extends Controller
         $this->middleware(['permission:job-categories.create'])->only('create');
         $this->middleware(['permission:job-categories.edit'])->only('edit');
         $this->middleware(['permission:job-categories.delete'])->only('delete');
+        $this->middleware(['permission:job-categories.index'])->only('allUniqueCodeList', 'codeRequestList');
+        $this->middleware(['permission:job-categories.edit'])->only('updateCode');
     }
 
     /**
@@ -111,8 +113,29 @@ class JobCategoryController extends Controller
 
     public function updateCode(Request $request)
     {
-        $uniqueCode = UniqueCode::findOrFail($request->unique_code_id);
-        $uniqueCode->update(['code' => $request->code]);
+        $validated = $request->validate([
+            'unique_code_id' => ['required', 'integer', 'exists:unique_codes,id'],
+            'code' => ['required', 'string', 'min:4', 'max:100', 'unique:unique_codes,code'],
+        ]);
+
+        $updated = \Illuminate\Support\Facades\DB::transaction(function () use ($validated) {
+            $uniqueCode = UniqueCode::whereKey($validated['unique_code_id'])
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($uniqueCode->is_used || $uniqueCode->code !== null) {
+                return false;
+            }
+
+            $uniqueCode->code = $validated['code'];
+            $uniqueCode->save();
+
+            return true;
+        }, 3);
+
+        if (!$updated) {
+            return redirect()->route('code-request')->withErrors('Code request is no longer pending.');
+        }
 
         return redirect()->route('code-request')->with([
             'message' => 'Code Updated Successfully.',
