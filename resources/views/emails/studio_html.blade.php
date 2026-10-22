@@ -6,7 +6,7 @@
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600"
                    style="width:100%;max-width:600px;border-collapse:collapse;background-color:#ffffff;">
                 @if(isset($inlineImages['top']))
-                    <tr><td align="center" style="padding:0;">
+                    <tr><td align="{{ $inlineImages['top']['align'] ?? 'center' }}" style="padding:0;">
                         <img src="{{ $message->embed($inlineImages['top']['absolute_path']) }}"
                              alt="Email banner" width="{{ $inlineImages['top']['width'] }}"
                              style="display:block;width:100%;max-width:{{ $inlineImages['top']['width'] }}px;height:auto;border:0;">
