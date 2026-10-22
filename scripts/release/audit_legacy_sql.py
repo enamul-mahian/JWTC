@@ -16,7 +16,7 @@ CREATE = re.compile(
     r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?\x60([A-Za-z0-9_]+)\x60\s*"
     r"\((.*?)\)\s*ENGINE\s*=", re.I | re.S
 )
-COLUMN = re.compile(r"^\s*\x60([A-Za-z0-9_]+)\x60\s+", re.M)
+COLUMN = re.compile(r"(?:^|,)\s*\x60([A-Za-z0-9_]+)\x60\s+", re.M)
 MIGRATIONS_INSERT = re.compile(
     r"INSERT\s+INTO\s+\x60migrations\x60\s*\(([^)]*)\)\s*VALUES\s*(.*?);",
     re.I | re.S
