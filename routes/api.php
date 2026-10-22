@@ -8,6 +8,7 @@ use App\Http\Controllers\API\Jobseeker\JobApplicationController;
 use App\Http\Controllers\API\Jobseeker\OthersController;
 use App\Http\Controllers\API\Jobseeker\PrivateDocumentController;
 use App\Http\Controllers\API\Admin\PrivateDocumentReviewController;
+use App\Http\Controllers\Interview\InterviewController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -152,4 +153,17 @@ Route::middleware(['auth:sanctum', 'throttle:30,1'])->prefix('admin')->group(fun
     Route::get('private-documents/{id}', [PrivateDocumentReviewController::class, 'show']);
     Route::get('private-documents/{id}/versions/{version}', [PrivateDocumentReviewController::class, 'download']);
     Route::post('private-documents/{id}/review', [PrivateDocumentReviewController::class, 'decide']);
+});
+
+
+// All interview data is scoped by applicant ownership or authorized organizer.
+Route::middleware(['auth:sanctum', 'throttle:30,1'])->prefix('interviews')->group(function () {
+    Route::get('/my', [InterviewController::class, 'applicantIndex']);
+    Route::get('/my/{application}', [InterviewController::class, 'applicantShow']);
+    Route::post('/my/{application}/reply', [InterviewController::class, 'act']);
+
+    Route::get('/manage', [InterviewController::class, 'managerIndex']);
+    Route::get('/manage/{application}', [InterviewController::class, 'managerShow']);
+    Route::post('/manage/{application}/schedule', [InterviewController::class, 'schedule']);
+    Route::post('/manage/{application}/action', [InterviewController::class, 'act']);
 });
