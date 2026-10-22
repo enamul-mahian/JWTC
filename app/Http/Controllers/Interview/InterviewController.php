@@ -125,6 +125,10 @@ class InterviewController extends Controller
             $record, $request->user(), $data, $data['action']
         );
 
+        app(\App\Services\InterviewEmailNotifier::class)->notify(
+            $record, $current, $data['action'], $request->user()
+        );
+
         if ($this->isApi($request)) {
             return response()->json(['message' => 'Interview scheduled and audited.', 'interview' => $current],
                 $data['action'] === 'schedule' ? 201 : 200);
@@ -144,6 +148,10 @@ class InterviewController extends Controller
 
         $current = $interviews->action(
             $record, $request->user(), $data['action'], $data['reason'] ?? null
+        );
+
+        app(\App\Services\InterviewEmailNotifier::class)->notify(
+            $record, $current, $data['action'], $request->user()
         );
 
         if ($this->isApi($request)) {
