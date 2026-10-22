@@ -419,6 +419,7 @@ Route::middleware(['auth', 'admin_user'])->group(function () {
             ->name('admin-change-password');
 
         Route::post('update-admin-password', [AdminProfileController::class, 'updateAdminPassword'])
+            ->middleware('throttle:5,1')
             ->name('update-admin-password');
     });
 
