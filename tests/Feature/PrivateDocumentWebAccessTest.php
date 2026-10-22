@@ -26,6 +26,7 @@ class PrivateDocumentWebAccessTest extends TestCase
             $table->timestamps();
         });
 
+        (require database_path('migrations/2023_12_21_130613_create_permission_tables.php'))->up();
         (require database_path('migrations/2026_10_22_000004_create_private_applicant_documents_tables.php'))->up();
 
         DB::table('users')->insert([
@@ -55,7 +56,7 @@ class PrivateDocumentWebAccessTest extends TestCase
             ->assertSee('Personal Passport')
             ->assertSee('Upload a new revision')
             ->assertDontSee('maps.googleapis.com')
-            ->assertHeader('Cache-Control', 'private, no-store, max-age=0')
+            ->assertHeader('Cache-Control', 'max-age=0, no-store, private')
             ->assertHeader('Referrer-Policy', 'no-referrer')
             ->assertHeader('X-Frame-Options', 'DENY');
     }
