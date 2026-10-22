@@ -67,7 +67,7 @@ try {
     $expected = [];
     foreach ($manifest['files'] as $record) {
         $path = $record['path'];
-        if (str_contains($path, '..') || str_starts_with($path, '/') || str_contains($path, '\\')
+        if (in_array('..', explode('/', $path), true) || str_starts_with($path, '/') || str_contains($path, '\\')
             || !preg_match('#^(app/|config/|database/|resources/|routes/|public/|vendor/|artisan$|composer\.json$|composer\.lock$|bootstrap/app\.php$)#D', $path)
             || str_starts_with($path, 'public/images/') || str_starts_with($path, 'public/uploads/')
             || !is_file($unpacked.'/'.$path) || is_link($unpacked.'/'.$path)
