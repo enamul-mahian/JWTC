@@ -30,6 +30,15 @@
         </li>
     @endcan
 
+    @if (auth()->user()?->user_type === \App\Enum\UserType::JOB_SEEKER)
+        <li>
+            <a class="{{ Route::is('jobseeker.private-documents.*') ? 'active' : null }}"
+               href="{{ route('jobseeker.private-documents.index') }}">
+                Private passport &amp; documents
+            </a>
+        </li>
+    @endif
+
     {{-- TODO Something to put --}}
 
     <li>
