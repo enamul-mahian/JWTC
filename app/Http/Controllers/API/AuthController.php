@@ -30,6 +30,18 @@ class AuthController extends Controller
             ],
         ]);
 
+        if (config('security.registration_otp.enabled')) {
+            $payload = $data;
+            $payload['user_type'] = UserType::EMPLOYER;
+            $payload['job_category_id'] = $payload['job_categories_id'];
+            unset($payload['job_categories_id']);
+            $challengeId = app(\App\Services\RegistrationOtpService::class)->issue($payload);
+            return response()->json([
+                'message' => 'We sent a six-digit email code. Complete registration by verifying it.',
+                'verification_id' => $challengeId,
+            ], 202);
+        }
+
         $role = Role::where('name', 'Employer')->where('guard_name', 'web')->first();
         if (!$role) {
             return response()->json(['message' => 'Employer registration is temporarily unavailable.'], 503);
@@ -128,6 +140,25 @@ class AuthController extends Controller
         );
 
         return response()->json(['message' => 'Password changed. Sign in again.']);
+    }
+
+    public function confirmRegistration(Request $request): JsonResponse
+    {
+        abort_unless(config('security.registration_otp.enabled'), 404);
+        $data = $request->validate([
+            'verification_id' => ['required', 'uuid'],
+            'otp' => ['required', 'digits:6'],
+        ]);
+
+        $user = app(\App\Services\RegistrationOtpService::class)->confirm(
+            $data['verification_id'], $data['otp']
+        );
+
+        return response()->json([
+            'message' => 'Email verified. Registration completed.',
+            'user' => $user->only(['id', 'name', 'email', 'user_type']),
+            'token' => $user->createToken('jwtc-api')->plainTextToken,
+        ], 201);
     }
 
 }
