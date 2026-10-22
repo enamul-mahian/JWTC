@@ -134,3 +134,88 @@ jobs:
             if ($count < 55) exit(3);
             echo "PASS: ".$count." migrations installed in temporary MySQL 8\n";
           '
+
+
+  legacy-schema-upgrade:
+    name: Sanitize legacy schema → additive MariaDB upgrade
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: fixture_root_only
+          MARIADB_DATABASE: jwtc_legacy_ci_only
+          MARIADB_USER: jwtc_ci
+          MARIADB_PASSWORD: fixture_password_only
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
+    env:
+      APP_ENV: testing
+      APP_DEBUG: 'false'
+      APP_KEY: 'base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
+      APP_URL: 'https://ci.example.invalid'
+      DB_CONNECTION: mysql
+      DB_HOST: '127.0.0.1'
+      DB_PORT: '3306'
+      DB_DATABASE: jwtc_legacy_ci_only
+      DB_USERNAME: jwtc_ci
+      DB_PASSWORD: fixture_password_only
+      LOG_CHANNEL: stderr
+      CACHE_DRIVER: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      JWTC_LEGACY_IMPORT_FIXTURE: ephemeral-only
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Laravel PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, fileinfo, pdo_mysql, gd, zip
+          coverage: none
+      - name: Install dependencies and prepare runtime directories
+        run: |
+          mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs
+          composer install --prefer-dist --no-interaction --no-progress
+      - name: Verify fixture contains structural SQL only
+        run: |
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          p = Path("tests/fixtures/legacy_schema_only.sql").read_text()
+          tables = re.findall(r"^CREATE TABLE \x60([A-Za-z0-9_]+)\x60", p, re.M)
+          inserts = re.findall(r"INSERT INTO \x60([A-Za-z0-9_]+)\x60", p, re.I)
+          assert len(tables) == 46 and len(set(tables)) == 46
+          assert inserts == ["migrations"], "Fixture must never contain real applicant rows"
+          print("PASS: Schema-only DDL and migration identifiers; no applicant records")
+          PY
+      - name: Load anonymized MariaDB legacy schema without customer records
+        run: php scripts/release/load_legacy_ci_fixture.php
+      - name: Apply new migrations on top of the historical 43 records
+        run: |
+          php artisan migrate --force --no-interaction
+          php artisan migrate --force --no-interaction
+      - name: Verify 46 old tables, 15 additive migrations and core data isolation
+        run: |
+          php -r '
+            require "vendor/autoload.php";
+            $app = require "bootstrap/app.php";
+            $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+            $db = Illuminate\Support\Facades\DB::connection("mysql");
+            $schema = Illuminate\Support\Facades\Schema::connection("mysql");
+            if (($db->selectOne("SELECT DATABASE() AS name")->name ?? "") !== "jwtc_legacy_ci_only") exit(1);
+            if ($db->table("migrations")->count() !== 58) exit(2);
+            foreach (["users", "jobs", "applications", "uploaded_cvs",
+              "jobseeker_uploads", "payment_credentials", "unique_codes",
+              "application_chat_threads", "support_tickets", "email_studio_templates",
+              "applicant_private_documents"] as $table) {
+              if (!$schema->hasTable($table)) exit(3);
+            }
+            echo "PASS: Legacy MariaDB structure upgraded through 15 additional migrations\n";
+          '
