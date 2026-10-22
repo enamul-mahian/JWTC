@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Mail\InterviewUpdateMail;
 use App\Models\Application;
 use App\Models\User;
 use Illuminate\Support\Facades\Mail;
@@ -36,9 +37,9 @@ class InterviewEmailNotifier
             "If you did not expect this notice, contact site support.";
 
         try {
-            Mail::raw($body, static function ($message) use ($recipient, $subject) {
-                $message->to($recipient->email)->subject($subject);
-            });
+            Mail::to($recipient->email)->send(
+                new InterviewUpdateMail($subject, $body)
+            );
         } catch (\Throwable $exception) {
             // Production SMTP settings are not yet verified. Never log the
             // meeting URL, participant document data or authentication tokens.
