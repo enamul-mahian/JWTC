@@ -3,7 +3,7 @@
 
 @section('content')
 <section class="container py-5" style="max-width: 1100px;">
-    <a href="{{ route('applied-job') }}" class="text-primary">&larr; My applications</a>
+    <a href="{{ route('applied-jobs') }}" class="text-primary">&larr; My applications</a>
     <header class="my-4">
         <h1 class="h3">Application progress</h1>
         <p class="text-muted mb-1">{{ $application->job?->title ?? 'Job application' }}</p>
