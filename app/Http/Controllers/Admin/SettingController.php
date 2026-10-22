@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Models\User;
 use App\Mail\TestEmail;
+use App\Services\StudioSmtpProfiles;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
@@ -52,7 +53,7 @@ class SettingController extends Controller
             'mail_host' => ['required', 'string', 'max:253', 'regex:/^[a-zA-Z0-9.-]+$/'],
             'mail_port' => ['required', 'integer', 'between:1,65535'],
             'mail_username' => ['required', 'string', 'max:254'],
-            'mail_password' => ['nullable', 'string', 'max:1000'],
+            'mail_password' => ['nullable', 'string', 'max:255'],
             'mail_from_name' => ['required', 'string', 'max:180'],
             'mail_from_address' => ['required', 'email:rfc', 'max:254'],
             'mail_status' => ['required', 'in:Active,Inactive'],
@@ -106,6 +107,11 @@ class SettingController extends Controller
             return redirect()->route('email-setting')
                 ->with('error', 'Saved SMTP host, port or recipient is invalid.');
         }
+
+        // Reuse the outbound SMTP SSRF guard used by Email Studio.
+        app(StudioSmtpProfiles::class)->validateServer(
+            $host, $port, (string) ($general->mail_encryption ?? '')
+        );
 
         Config::set('mail.mailers.jwtc_legacy_test', [
             'transport' => 'smtp',
