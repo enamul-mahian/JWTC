@@ -63,6 +63,12 @@ class SupportCenterController extends Controller
         return view('support.index', [
             'tickets' => $items,
             'canManage' => $center->canManage($actor),
+            'staff' => $center->canManage($actor)
+                ? \App\Models\User::whereIn('user_type', [
+                    UserType::ADMIN, UserType::SUPER_ADMIN,
+                ])->get(['id','name'])->filter(fn ($u) => $center->canManage($u))
+                    ->values()
+                : collect(),
             'canReview' => $center->canReview($actor),
         ]);
     }
@@ -157,6 +163,21 @@ class SupportCenterController extends Controller
             ? response()->json(['status' => $ticket->status])
             : redirect()->route('support.show', $id)
                 ->with('success', 'Ticket status updated.');
+    }
+
+    public function assign(Request $request, int $id, SupportCenter $center)
+    {
+        $actor = $this->actor($request, $center);
+        abort_unless($center->canManage($actor), 403);
+        $data = $request->validate([
+            'assignee_id' => ['nullable', 'integer', 'min:1'],
+        ]);
+        $ticket = $center->assign($actor, $id, isset($data['assignee_id'])
+            ? (int) $data['assignee_id'] : null);
+        return $this->json($request)
+            ? response()->json(['assigned_to' => $ticket->assigned_to])
+            : redirect()->route('support.show', $id)
+                ->with('success', 'Ticket assignment updated.');
     }
 
     public function requestRefund(Request $request, int $id, SupportCenter $center)
