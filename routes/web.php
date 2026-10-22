@@ -1087,6 +1087,8 @@ Route::middleware(['auth', 'email.studio.headers'])
             ->whereNumber('id')->name('email-studio.smtp.destroy');
         Route::post('/smtp-profiles/{id}/default', [EmailStudioSmtpController::class, 'makeDefault'])
             ->whereNumber('id')->name('email-studio.smtp.default');
+        Route::post('/smtp-test-environment', [EmailStudioSmtpController::class, 'testEnvironment'])
+            ->middleware('throttle:3,1')->name('email-studio.smtp.test-environment');
         Route::post('/smtp-profiles/{id}/test', [EmailStudioSmtpController::class, 'test'])
             ->whereNumber('id')->middleware('throttle:3,1')->name('email-studio.smtp.test');
     });
