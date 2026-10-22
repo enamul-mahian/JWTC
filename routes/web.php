@@ -20,6 +20,7 @@ use App\Http\Controllers\Admin\JobTypeController;
 use App\Http\Controllers\Admin\LocationController;
 use App\Http\Controllers\Admin\MassmailController;
 use App\Http\Controllers\Admin\EmailStudioController;
+use App\Http\Controllers\Admin\EmailStudioSmtpController;
 use App\Http\Controllers\Admin\PaymentCredentialsController;
 use App\Http\Controllers\Admin\PlanController;
 use App\Http\Controllers\Admin\RoleController;
@@ -1066,4 +1067,26 @@ Route::middleware(['auth', 'email.studio.headers'])
         Route::post('/templates/{id}/send', [EmailStudioController::class, 'send'])
             ->whereNumber('id')->middleware(['throttle:5,1', 'throttle:25,60'])
             ->name('email-studio.send');
+
+        Route::post('/templates/{id}/duplicate', [EmailStudioController::class, 'duplicate'])
+            ->whereNumber('id')->middleware('throttle:10,1')->name('email-studio.duplicate');
+        Route::delete('/templates/{id}', [EmailStudioController::class, 'destroy'])
+            ->whereNumber('id')->name('email-studio.destroy');
+        Route::post('/templates/{id}/visual-pages', [EmailStudioController::class, 'importVisual'])
+            ->whereNumber('id')->middleware('throttle:3,1')->name('email-studio.visual.import');
+        Route::delete('/templates/{id}/visual-pages', [EmailStudioController::class, 'removeVisual'])
+            ->whereNumber('id')->name('email-studio.visual.remove');
+        Route::get('/templates/{id}/visual-pages/{page}', [EmailStudioController::class, 'visualPage'])
+            ->whereNumber('id')->whereNumber('page')->name('email-studio.visual.page');
+
+        Route::post('/smtp-profiles', [EmailStudioSmtpController::class, 'save'])
+            ->middleware('throttle:8,1')->name('email-studio.smtp.store');
+        Route::patch('/smtp-profiles/{id}', [EmailStudioSmtpController::class, 'save'])
+            ->whereNumber('id')->middleware('throttle:8,1')->name('email-studio.smtp.update');
+        Route::delete('/smtp-profiles/{id}', [EmailStudioSmtpController::class, 'remove'])
+            ->whereNumber('id')->name('email-studio.smtp.destroy');
+        Route::post('/smtp-profiles/{id}/default', [EmailStudioSmtpController::class, 'makeDefault'])
+            ->whereNumber('id')->name('email-studio.smtp.default');
+        Route::post('/smtp-profiles/{id}/test', [EmailStudioSmtpController::class, 'test'])
+            ->whereNumber('id')->middleware('throttle:3,1')->name('email-studio.smtp.test');
     });
