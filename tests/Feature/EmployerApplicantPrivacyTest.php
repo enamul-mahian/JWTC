@@ -5,7 +5,8 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Gate;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -15,7 +16,10 @@ class EmployerApplicantPrivacyTest extends TestCase
     {
         parent::setUp();
 
-        Gate::before(static fn ($user, $ability) => $ability === 'post-job' ? true : null);
+        $permissionMigration = require dirname(__DIR__, 2)
+            . '/database/migrations/2023_12_21_130613_create_permission_tables.php';
+        $permissionMigration->up();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         Schema::create('users', function (Blueprint $table) {
             $table->id();
@@ -71,6 +75,9 @@ class EmployerApplicantPrivacyTest extends TestCase
             ['id' => 3, 'name' => 'Applicant A', 'email' => 'applicant-a@example.invalid', 'user_type' => 'job_seeker'],
             ['id' => 4, 'name' => 'Applicant B', 'email' => 'applicant-b@example.invalid', 'user_type' => 'job_seeker'],
         ]);
+        $postJob = Permission::findOrCreate('post-job', 'web');
+        User::findOrFail(1)->givePermissionTo($postJob);
+        User::findOrFail(2)->givePermissionTo($postJob);
         DB::table('companies')->insert([
             ['id' => 11, 'user_id' => 1, 'company_name' => 'Tenant A'],
             ['id' => 22, 'user_id' => 2, 'company_name' => 'Tenant B'],
