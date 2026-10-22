@@ -10,6 +10,9 @@
                 <div class="card">
                     <div class="card-header d-flex justify-content-between">
                         <h5> @yield('title') </h5>
+                        @can('active-job')
+                            <a href="{{ route('admin.application-statuses.index') }}" class="btn btn-outline-primary btn-sm">Configure workflow stages</a>
+                        @endcan
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
@@ -36,37 +39,13 @@
                                             <td>{{ $item->job?->job_category?->name }}</td>
                                             <td>{{ $item->job?->title }}</td>
                                             <td>{{ $item->user?->name }}</td>
-                                            @php
-                                        $statuses = [
-                                            ['id' => 1, 'name' => 'File Under Process of Decision Making', 'progress' => 0],
-                                            ['id' => 2, 'name' => 'File Under Process of Assessment', 'progress' => 20],
-                                            ['id' => 3, 'name' => 'File Under Process of Acceptance', 'progress' => 30],
-                                            ['id' => 4, 'name' => 'File Under Process of Approval', 'progress' => 40],
-                                            ['id' => 5, 'name' => 'Agreement on Board', 'progress' => 50],
-                                            ['id' => 6, 'name' => 'Police/Criminal Clearance Certificate Received', 'progress' => 55],
-                                            ['id' => 7, 'name' => 'Medical Test Report Received', 'progress' => 60],
-                                            ['id' => 8, 'name' => 'COS Letter Processed', 'progress' => 70],
-                                            ['id' => 9, 'name' => 'VFS Appointment Date Approved', 'progress' => 75],
-                                            ['id' => 10, 'name' => 'Visa Processing Complete', 'progress' => 100],
-                                            ['id' => 11, 'name' => 'Rejected / Terminated', 'progress' => 0],
-                                        ];
-
-                                        // Find the matching status
-                                        $status = array_filter($statuses, function ($status) use ($item) {
-                                        
-                                        return $status['id'] == (int)$item->status;
-                                        });
-
-                                        // Get the first matching status or null if none found
-                                        $status = reset($status) ?: null;
-                                        @endphp
-
-                                        <td>
-                                            @if ($status)
-                                            {{ $status['name'] }} - {{ $status['progress'] }}%
-                                            @else
-                                            Unknown Status
-                                            @endif
+                                            @php $status = getJobApplicationStatus((int) $item->status); @endphp
+                                            <td>
+                                                @if ($status)
+                                                    {{ $status['name'] }} — {{ $status['progress'] }}%
+                                                @else
+                                                    Unknown status
+                                                @endif
                                         </td>
                                             @can('active-job')<!---->
                                                 <td>
@@ -106,9 +85,16 @@
                             <label for="code">Status</label>
                             <select name="status" id="status" class="form-control">
                                 @foreach($stats as $stat)
-                                    <option value="{{$stat['id']}}">{{$stat['name']}}</option>
+                                    @if($stat['is_active'])
+                                        <option value="{{ $stat['id'] }}">{{ $stat['name'] }} ({{ $stat['progress'] }}%)</option>
+                                    @endif
                                 @endforeach
                             </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="status-note">Update note (visible to applicant)</label>
+                            <textarea id="status-note" name="note" maxlength="1000" class="form-control" rows="3"
+                                placeholder="Optional reason or next step"></textarea>
                         </div>
                     </div>
                     
