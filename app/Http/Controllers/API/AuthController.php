@@ -100,6 +100,17 @@ class AuthController extends Controller
         ]);
 
         $user = $request->user();
+
+        if (config('security.password_change_otp.enabled')) {
+            app(\App\Services\PasswordOtpService::class)->issue(
+                $user, Hash::make($data['password'])
+            );
+            return response()->json([
+                'message' => 'Enter the six-digit code sent to your account email to complete the change.',
+                'otp_required' => true,
+            ], 202);
+        }
+
         $user->forceFill(['password' => Hash::make($data['password'])])->save();
         $user->tokens()->delete();
 
@@ -107,4 +118,16 @@ class AuthController extends Controller
             'message' => 'Password updated. Please sign in again.',
         ]);
     }
+    public function confirmPasswordOtp(Request $request): JsonResponse
+    {
+        abort_unless(config('security.password_change_otp.enabled'), 404);
+        $data = $request->validate(['otp' => ['required', 'digits:6']]);
+
+        app(\App\Services\PasswordOtpService::class)->confirm(
+            $request->user(), $data['otp']
+        );
+
+        return response()->json(['message' => 'Password changed. Sign in again.']);
+    }
+
 }
