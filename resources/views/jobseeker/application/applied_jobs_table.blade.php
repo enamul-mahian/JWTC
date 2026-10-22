@@ -48,7 +48,7 @@
                     <!-- Progress Bar Section -->
                     <div class="mt-3">
                         @php
-                            $application = getApplication($item->id);
+                            $application = $item->applications->first();
                             $applicationStatus = $application
                                 ? getJobApplicationStatus((int) $application->status) : null;
                         @endphp
