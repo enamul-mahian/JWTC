@@ -109,7 +109,10 @@ class JobApplicationController extends Controller
 
     public function getAppliedJob()
     {
-        $jobs = Job::with(['country', 'company', 'applications'])
+        $jobs = Job::with([
+                'country', 'company',
+                'applications' => fn ($query) => $query->where('user_id', Auth::id()),
+            ])
             ->whereHas('applications', function ($query) {
                 $query->where('user_id', Auth::id());
             })
