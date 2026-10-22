@@ -1110,6 +1110,9 @@ Route::middleware(['auth', 'application.chat.headers'])
             ->name('application-chat.open');
         Route::get('/threads/{id}', [ApplicationChatController::class, 'thread'])
             ->whereNumber('id')->name('application-chat.thread');
+        Route::get('/threads/{id}/history', [ApplicationChatController::class, 'history'])
+            ->whereNumber('id')->middleware('throttle:30,1')
+            ->name('application-chat.history');
         Route::get('/threads/{id}/poll', [ApplicationChatController::class, 'poll'])
             ->whereNumber('id')->middleware('throttle:30,1')
             ->name('application-chat.poll');
