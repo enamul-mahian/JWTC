@@ -127,6 +127,20 @@ class ApplicationChatController extends Controller
         ]);
     }
 
+    public function history(Request $request, int $id, ApplicationChat $chat)
+    {
+        $actor = $this->actor($request, $chat);
+        $data = $request->validate(['before' => ['required','integer','min:1']]);
+        $thread = $chat->thread($actor, $id);
+        $messages = $chat->messages($thread, null, (int) $data['before']);
+
+        return response()->json([
+            'messages' => $messages,
+            'has_more' => $messages->count() === 40,
+            'oldest_id' => $messages->first()['id'] ?? null,
+        ]);
+    }
+
     public function send(Request $request, int $id, ApplicationChat $chat)
     {
         $actor = $this->actor($request, $chat);
