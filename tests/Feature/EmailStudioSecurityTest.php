@@ -191,4 +191,37 @@ class EmailStudioSecurityTest extends TestCase
         $this->actingAs(User::findOrFail(2))
             ->get(route('email-studio.image',[1,'top']))->assertForbidden();
     }
+    public function test_legacy_html_table_structure_keeps_safe_gmail_spacing_but_strips_trackers(): void
+    {
+        $import = '<table role="presentation" width="600" cellpadding="0" cellspacing="0" ' .
+            'style="border-collapse:collapse;width:100%;max-width:600px" onmouseover="evil()">' .
+            '<tr><td align="center" valign="top" colspan="2" ' .
+            'style="padding:20px 12px;text-align:center;background-color:#f3f6fa">' .
+            '<strong>Welcome</strong><img src="https://tracker.example.invalid/a.png">' .
+            '</td></tr></table>';
+
+        $safe = app(EmailStudioHtml::class)->sanitize($import);
+
+        $this->assertStringContainsString('width="600"', $safe);
+        $this->assertStringContainsString('cellpadding="0"', $safe);
+        $this->assertStringContainsString('align="center"', $safe);
+        $this->assertStringContainsString('colspan="2"', $safe);
+        $this->assertStringContainsString('border-collapse:collapse', $safe);
+        $this->assertStringContainsString('padding:20px 12px', $safe);
+        $this->assertStringNotContainsString('tracker.example.invalid', $safe);
+        $this->assertStringNotContainsString('onmouseover', $safe);
+        $this->assertStringNotContainsString('<img', $safe);
+    }
+
+    public function test_authorized_editor_exposes_local_html_import_without_remote_scripts(): void
+    {
+        $this->actingAs(User::findOrFail(1))
+            ->get(route('email-studio.create'))
+            ->assertOk()
+            ->assertSee('studio-import-html')
+            ->assertSee('studio-import-mode')
+            ->assertSee('email-studio/editor.js')
+            ->assertHeader('X-Frame-Options', 'DENY');
+    }
+
 }
