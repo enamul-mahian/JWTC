@@ -6,6 +6,8 @@ use App\Http\Controllers\API\Employer\JobController;
 use App\Http\Controllers\API\EmployerInformationController;
 use App\Http\Controllers\API\Jobseeker\JobApplicationController;
 use App\Http\Controllers\API\Jobseeker\OthersController;
+use App\Http\Controllers\API\Jobseeker\PrivateDocumentController;
+use App\Http\Controllers\API\Admin\PrivateDocumentReviewController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -66,6 +68,15 @@ Route::group(['prefix' => 'employer', 'middleware' => 'auth:sanctum'], function 
 });
 
 Route::group(['prefix' => 'jobseeker', 'middleware' => 'auth:sanctum'], function () {
+    // New versioned, private document workflow; legacy CV URLs stay unchanged.
+    Route::get('private-documents', [PrivateDocumentController::class, 'index']);
+    Route::post('private-documents', [PrivateDocumentController::class, 'upload'])
+        ->middleware('throttle:10,1');
+    Route::post('private-documents/{id}/revisions', [PrivateDocumentController::class, 'revise'])
+        ->middleware('throttle:10,1');
+    Route::get('private-documents/{id}/history', [PrivateDocumentController::class, 'history']);
+    Route::get('private-documents/{id}/versions/{version}', [PrivateDocumentController::class, 'download']);
+
     Route::get('resume-views', [JobApplicationController::class, 'resumeViewd']);
     Route::post('apply-job', [JobApplicationController::class, 'applyJob']);
     Route::get('job-details/{id}', [JobApplicationController::class, 'jobDetails']);
@@ -135,4 +146,10 @@ Route::group(['middleware' => 'auth:sanctum'], function () {
     Route::get('industry-type', [CommonController::class,  'getIndustryType']);
     Route::post('contact-submit', [CommonController::class,  'contactStore']);
     Route::get('category-wise-skills', [CommonController::class,  'categoryWiseSkills']);
+});
+
+Route::middleware(['auth:sanctum', 'throttle:30,1'])->prefix('admin')->group(function () {
+    Route::get('private-documents/{id}', [PrivateDocumentReviewController::class, 'show']);
+    Route::get('private-documents/{id}/versions/{version}', [PrivateDocumentReviewController::class, 'download']);
+    Route::post('private-documents/{id}/review', [PrivateDocumentReviewController::class, 'decide']);
 });
