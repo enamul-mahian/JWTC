@@ -38,8 +38,10 @@
                         <div class="row mb-3">
                             <label for="inputPassword" class="col-sm-2 col-form-label">Mail Password </label>
                             <div class="col-sm-10">
-                                <input type="text" class="form-control" required name="mail_password"
-                                    value="{{ $general->mail_password }}" placeholder="Mail Password">
+                                <input type="password" class="form-control" name="mail_password"
+                                    autocomplete="new-password" value=""
+                                    placeholder="Leave empty to keep existing password">
+                                <small class="text-muted">For security, the stored password is never displayed.</small>
                             </div>
                         </div>
                         <div class="row mb-3">
@@ -83,7 +85,7 @@
                         </div>
                         <div class="row mb-3 justify-content-end">
                             <div class="col-auto">
-                                <a href="{{ route('send-test-email') }}" class="btn btn-info me-2">Send Test EMail</a>
+                                <button type="submit" form="jwtc-smtp-test" class="btn btn-info me-2">Send SMTP Test Email</button>
                             </div>
                             <div class="col-auto">
                                 <a href="{{ route('admin.dashboard') }}" class="btn btn-secondary me-2">Back</a>
@@ -98,6 +100,10 @@
             </div>
         </div>
     </form>
+    <form id="jwtc-smtp-test" method="POST" action="{{ route('send-test-email') }}">
+        @csrf
+    </form>
+    <p class="text-muted">SMTP settings are saved in the application database. The hosting .env file is never rewritten. Use Email Studio for independently configured SMTP profiles.</p>
 </section>
 
 @endsection
@@ -105,7 +111,7 @@
 @push('custom-script')
 <script>
 @foreach($errors->all() as $error)
-toastr.error("{{ $error }}");
+toastr.error(@json($error));
 @endforeach
 </script>
 @endpush
