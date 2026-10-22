@@ -107,11 +107,17 @@ class AuthController extends Controller
     public function updatePassword(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'current_password' => ['required', 'current_password'],
+            'current_password' => ['required', 'string'],
             'password' => ['required', 'confirmed', Password::min(8)],
         ]);
 
         $user = $request->user();
+        if (!Hash::check($data['current_password'], (string) $user->password)) {
+            return response()->json([
+                'message' => 'Current password is incorrect.',
+                'errors' => ['current_password' => ['Current password is incorrect.']],
+            ], 422);
+        }
 
         if (config('security.password_change_otp.enabled')) {
             app(\App\Services\PasswordOtpService::class)->issue(
