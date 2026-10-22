@@ -8,8 +8,8 @@
         <a class="button secondary" href="{{ route('admin.dashboard') }}">Back to dashboard</a>
     </div>
     <div class="alert" role="note"><strong>SMTP sender:</strong>
-        {{ config('mail.from.address') }} ·
-        SMTP connection: {{ config('mail.mailers.smtp.host') ? 'configured in server environment' : 'not configured' }}.
+        {{ config('email_studio.from_address') }} ·
+        Studio SMTP connection: {{ config('mail.mailers.studio_smtp.host') ? 'configured in server environment' : 'not configured' }}.
         Credentials never appear in this editor.
     </div>
     <section class="card">
