@@ -302,4 +302,41 @@ class SupportCenterTest extends TestCase
         config()->set('support_center.enabled',false);
         $this->get(route('support.index'))->assertNotFound();
     }
+    public function test_refund_review_staff_cannot_browse_unrelated_complaints(): void
+    {
+        $complaint=$this->create(1,'complaint');
+        $payment=$this->create(1,'payment');
+        $reviewer=User::findOrFail(6);
+
+        $this->actingAs($reviewer)
+            ->get(route('support.show',$complaint->id))->assertNotFound();
+        $this->get(route('support.show',$payment->id))->assertNotFound();
+
+        app(SupportCenter::class)->requestRefund(
+            User::findOrFail(1),$payment->id,$this->refundData()
+        );
+
+        $this->get(route('support.show',$payment->id))->assertOk();
+        $this->get(route('support.index'))
+            ->assertOk()
+            ->assertSee($payment->ticket_number)
+            ->assertDontSee($complaint->ticket_number);
+    }
+
+    public function test_refund_reviewer_cannot_read_internal_support_agent_note(): void
+    {
+        $ticket=$this->create(1,'refund');
+        app(SupportCenter::class)->requestRefund(
+            User::findOrFail(1),$ticket->id,$this->refundData()
+        );
+        app(SupportCenter::class)->reply(
+            User::findOrFail(5),$ticket->id,'Private staff notes',true
+        );
+
+        $this->actingAs(User::findOrFail(6))
+            ->get(route('support.show',$ticket->id))
+            ->assertOk()
+            ->assertDontSee('Private staff notes');
+    }
+
 }
