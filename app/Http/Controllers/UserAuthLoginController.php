@@ -13,6 +13,15 @@ class UserAuthLoginController extends Controller
 {
     public function userLogin(Request $request)
     {
+        $request->validate([
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string'],
+            'h-captcha-response' => [
+                \Illuminate\Validation\Rule::requiredIf((bool) config('services.hcaptcha.enabled')),
+                'nullable', 'string', 'max:8192',
+                new \App\Rules\ValidHcaptcha(),
+            ],
+        ]);
         $user = User::where('email', $request->email)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
