@@ -256,6 +256,10 @@ try {
     if (!$unlimited && (!is_numeric($remaining) || (float) $remaining < max(1073741824, $bytes * 4))) {
         echo "STOP: account quota is insufficient or cannot be verified; no snapshot created\n";
         echo 'QUOTA_FIELD_NAMES '.implode(',', array_keys($quota))."\n";
+        echo 'QUOTA_SPACE '.json_encode(array_intersect_key($quota, array_flip([
+            'megabyte_limit', 'megabytes_used', 'megabytes_remain',
+            'under_megabyte_limit', 'under_quota_overall',
+        ])), JSON_THROW_ON_ERROR)."\n";
         exit(2);
     }
     $home = realpath(getenv('HOME') ?: '');
