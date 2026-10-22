@@ -23,20 +23,20 @@ class JobApplicationController extends Controller
 
     public function getAllJobs()
     {
-        $jobs = Job::with('country')->paginate(5);
+        $jobs = Job::with('country')->where('is_publish', 1)->paginate(5);
         return view('jobseeker.application.jobs_table', compact('jobs'));
     }
 
     public function getApplicationForm($id)
     {
-        $job = Job::findOrFail($id);
+        $job = Job::where('is_publish', 1)->findOrFail($id);
 
         return view('jobseeker.application.application_form', compact('job'));
     }
 
     public function jobDetails($id)
     {
-        $job = Job::with(['company', 'job_category', 'degree_level', 'degree_name', 'country'])->where('id', $id)->first();
+        $job = Job::with(['company', 'job_category', 'degree_level', 'degree_name', 'country'])->where('is_publish', 1)->findOrFail($id);
         
         return view('jobseeker.application.job_details', compact('job'));
     }
@@ -58,7 +58,7 @@ class JobApplicationController extends Controller
             $query->where('country_id', $request->input('location'));
         }
 
-        $jobs = $query->where('is_publish', 1)->where('application_deadline', '>', now())->paginate(5);
+        $jobs = $query->where(function ($q) { $q->whereNull('application_deadline')->orWhereDate('application_deadline', '>=', today()); })->paginate(5);
 
         return view('jobseeker.application.jobs_table', compact('jobs'));
     }
