@@ -12,6 +12,7 @@ import unittest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import check_migration_safety as migration
 import verify_backup_archives as backups
+import compare_upload_trees as upload_trees
 
 
 def migration_php(up: str, down: str = "Schema::dropIfExists('module_events');") -> str:
@@ -72,6 +73,52 @@ class BackupReadOnlyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaises(ValueError):
                 backups.check(pathlib.Path(tmp) / "missing.sql", "db")
+
+
+class UploadPreservationTests(unittest.TestCase):
+    def test_identical_restored_upload_bytes_pass_even_with_new_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = pathlib.Path(tmp)
+            source, restored = base / "source", base / "restored"
+            for root in [source, restored]:
+                p = root / "storage/app/private"
+                p.mkdir(parents=True)
+                (p / "synthetic-file.pdf").write_bytes(os.urandom(2048))
+            original = (source / "storage/app/private/synthetic-file.pdf").read_bytes()
+            (restored / "storage/app/private/synthetic-file.pdf").write_bytes(original)
+            (restored / "storage/app/private/new-file.txt").write_text("new")
+            ok, counts = upload_trees.compare(source, restored, ["storage/app/private"])
+            self.assertTrue(ok)
+            self.assertEqual(0, counts["missing"])
+            self.assertEqual(0, counts["modified"])
+            self.assertEqual(1, counts["added"])
+
+    def test_missing_and_modified_files_block_release(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = pathlib.Path(tmp)
+            source, restored = base / "source", base / "restored"
+            for root in [source, restored]:
+                (root / "uploads").mkdir(parents=True)
+            (source / "uploads/a.pdf").write_bytes(b"unchanged-baseline")
+            (source / "uploads/b.pdf").write_bytes(b"should-be-preserved")
+            (restored / "uploads/a.pdf").write_bytes(b"changed-restoration")
+            ok, counts = upload_trees.compare(source, restored, ["uploads"])
+            self.assertFalse(ok)
+            self.assertEqual(1, counts["missing"])
+            self.assertEqual(1, counts["modified"])
+
+    def test_symlinked_directory_and_traversal_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = pathlib.Path(tmp)
+            source, restored = base / "source", base / "restored"
+            for root in [source, restored]:
+                (root / "uploads").mkdir(parents=True)
+            with self.assertRaises(upload_trees.UnsafeTreeError):
+                upload_trees.inspect_path(source, "../private")
+            (source / "uploads/linked").symlink_to(restored / "uploads",
+                                                  target_is_directory=True)
+            with self.assertRaises(upload_trees.UnsafeTreeError):
+                upload_trees.inventory(source, "uploads")
 
 
 if __name__ == "__main__":
