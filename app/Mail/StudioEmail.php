@@ -33,7 +33,10 @@ class StudioEmail extends Mailable
             }
         }
 
-        $this->subject($this->subjectLine)
+        $this->from(
+            (string) config('email_studio.from_address'),
+            (string) config('email_studio.from_name')
+        )->subject($this->subjectLine)
             ->view('emails.studio_html', ['inlineImages' => $inline])
             ->text('emails.studio_text');
 
