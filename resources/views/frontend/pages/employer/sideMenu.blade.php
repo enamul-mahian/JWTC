@@ -52,6 +52,10 @@
             </li>
         @endif
 
+        @if(config('support_center.enabled') && auth()->user()?->user_type === \App\Enum\UserType::EMPLOYER)
+            <li><a href="{{ route('support.index') }}" class="{{ Route::is('support.*') ? 'active' : '' }}">Support &amp; Refunds</a></li>
+        @endif
+
         {{-- TODO Something to add --}}
 
         <li>
