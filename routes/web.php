@@ -1093,3 +1093,33 @@ Route::middleware(['auth', 'email.studio.headers'])
         Route::post('/smtp-profiles/{id}/test', [EmailStudioSmtpController::class, 'test'])
             ->whereNumber('id')->middleware('throttle:3,1')->name('email-studio.smtp.test');
     });
+
+
+/*
+|--------------------------------------------------------------------------
+| PRIVATE APPLICATION CHAT (no additional WebSocket service required)
+|--------------------------------------------------------------------------
+| Session/CSRF web routes, account scoping and private response headers.
+*/
+Route::middleware(['auth', 'application.chat.headers'])
+    ->prefix('messages')->group(function () {
+        Route::get('/', [ApplicationChatController::class, 'index'])
+            ->name('application-chat.index');
+        Route::post('/applications/{application}', [ApplicationChatController::class, 'open'])
+            ->whereNumber('application')->middleware('throttle:8,1')
+            ->name('application-chat.open');
+        Route::get('/threads/{id}', [ApplicationChatController::class, 'thread'])
+            ->whereNumber('id')->name('application-chat.thread');
+        Route::get('/threads/{id}/poll', [ApplicationChatController::class, 'poll'])
+            ->whereNumber('id')->middleware('throttle:30,1')
+            ->name('application-chat.poll');
+        Route::post('/threads/{id}/messages', [ApplicationChatController::class, 'send'])
+            ->whereNumber('id')->middleware(['throttle:12,1', 'throttle:100,60'])
+            ->name('application-chat.send');
+        Route::post('/threads/{id}/read', [ApplicationChatController::class, 'read'])
+            ->whereNumber('id')->middleware('throttle:30,1')
+            ->name('application-chat.read');
+        Route::post('/threads/{id}/status', [ApplicationChatController::class, 'status'])
+            ->whereNumber('id')->middleware('throttle:12,1')
+            ->name('application-chat.status');
+    });
