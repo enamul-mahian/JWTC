@@ -197,10 +197,14 @@ jobs:
           PY
       - name: Load anonymized MariaDB legacy schema without customer records
         run: php scripts/release/load_legacy_ci_fixture.php
+      - name: Seed fake applicant, employer, document, payment and SEO records
+        run: php scripts/release/test_legacy_mariadb_preservation.php seed
       - name: Apply new migrations on top of the historical 43 records
         run: |
           php artisan migrate --force --no-interaction
           php artisan migrate --force --no-interaction
+      - name: Verify all synthetic historical rows unchanged after migration
+        run: php scripts/release/test_legacy_mariadb_preservation.php verify
       - name: Verify 46 old tables, 15 additive migrations and core data isolation
         run: |
           php -r '
