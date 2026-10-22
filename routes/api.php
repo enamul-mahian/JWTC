@@ -168,3 +168,17 @@ Route::middleware(['auth:sanctum', 'throttle:30,1'])->prefix('interviews')->grou
     Route::post('/manage/{application}/schedule', [InterviewController::class, 'schedule']);
     Route::post('/manage/{application}/action', [InterviewController::class, 'act']);
 });
+
+
+Route::middleware(['auth:sanctum','throttle:60,1'])
+    ->prefix('application-messages')->group(function () {
+        Route::get('/', [ApplicationChatController::class, 'index']);
+        Route::post('/applications/{application}', [ApplicationChatController::class, 'open'])
+            ->middleware('throttle:8,1');
+        Route::get('/threads/{id}', [ApplicationChatController::class, 'thread']);
+        Route::get('/threads/{id}/poll', [ApplicationChatController::class, 'poll']);
+        Route::post('/threads/{id}/messages', [ApplicationChatController::class, 'send'])
+            ->middleware('throttle:12,1');
+        Route::post('/threads/{id}/read', [ApplicationChatController::class, 'read']);
+        Route::post('/threads/{id}/status', [ApplicationChatController::class, 'status']);
+    });
