@@ -8,7 +8,7 @@ Do not wipe or reseed production. Keep the live MySQL database, user IDs, applic
 
 Read **[Data Preservation & Rebuild Policy](docs/DATA_PRESERVATION_REBUILD_POLICY.md)** before rebuilding, merging, running migrations or deploying. This policy requires consistent private/offsite backups, checksum evidence, **an actual isolated restoration**, comparison of old data and uploads, and an explicitly approved cutover. CI checks alone do **not** prove zero data loss.
 
-New migrations are screened by `scripts/release/check_migration_safety.py`; backup archives can be inspected read-only with `scripts/release/verify_backup_archives.py`. Neither tool creates a backup, performs a restore, or changes production.
+New migrations are screened by `scripts/release/check_migration_safety.py`; backup archives can be inspected read-only with `scripts/release/verify_backup_archives.py`. A restored staging server can use the protected `php artisan jwtc:staging-preflight` command to verify actual MySQL/staging-root identity, encryption-key fingerprint, uploaded folders and schema. A byte-for-byte upload comparison is available via `scripts/release/compare_upload_trees.py`. See [Staging Integration Precheck](docs/STAGING_INTEGRATION_PRECHECK.md). None of these checks creates a backup, performs a restore, or changes production.
 
 ### Developer validation
 
