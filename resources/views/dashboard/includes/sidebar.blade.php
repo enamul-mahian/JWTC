@@ -27,7 +27,7 @@
             </li>
             <!-- =================== -->
 
-            @if (in_array(auth()->user()?->user_type, [\App\Enum\UserType::ADMIN, \App\Enum\UserType::SUPER_ADMIN], true) && auth()->user()->can('active-job'))
+            @if (in_array(auth()->user()?->user_type, [\App\Enum\UserType::ADMIN, \App\Enum\UserType::SUPER_ADMIN], true) && auth()->user()->can('review-private-documents'))
                 <li class="sidebar-item">
                     <a href="{{ route('admin.private-documents.index') }}" class="sidebar-link">
                         <span><i class="ti ti-file-lock"></i></span>
@@ -38,7 +38,7 @@
 
             {{-- TODO Something to put --}}
 
-            @if (auth()->user()->can('job-categories.index') || auth()->user()->can('active-job') || auth()->user()->can('inactive-job'))
+            @if (auth()->user()->can('job-categories.index') || auth()->user()->can('review-private-documents') || auth()->user()->can('inactive-job'))
                 <li class="sidebar-item">
                     <a class="sidebar-link has-arrow" href="#" aria-expanded="false">
                         <span class="d-flex">
@@ -49,7 +49,7 @@
                     <ul aria-expanded="false" class="collapse first-level">
                         {{-- TODO Something to put --}}
 
-                        @can('active-job')
+                        @can('review-private-documents')
                             <li class="sidebar-item">
                                 <a href="{{ route('active.job') }}" class="sidebar-link">
                                     <div class="round-16 d-flex align-items-center justify-content-center">
