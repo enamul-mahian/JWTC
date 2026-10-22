@@ -17,7 +17,7 @@ Development branch, Draft PR #3. Not merged, enabled or deployed to production.
 - Attachments are disabled until malware scanning, secure file review and retention have been implemented.
 - Polling is near-real-time, not instant socket push. No native push notification, typing indicator, voice/video or message attachments.
 - Decrypted message history depends on protecting the Laravel APP_KEY and encrypted backups. Rotating APP_KEY without migration makes old ciphertext unreadable.
-- Only the most recent 40 messages render in the first thread view; pagination for older history remains needed.
+- The most recent 40 messages render first; users can click Load older messages, retrieving up to 40 older records per authenticated cursor request.
 - Retention/privacy notice, DSAR/export, deletion schedule, abuse reporting and backup policies need approval before handling real client conversations.
 
 ## Staging release gates
