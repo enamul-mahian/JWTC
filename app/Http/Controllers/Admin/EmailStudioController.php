@@ -94,6 +94,7 @@ class EmailStudioController extends Controller
             $rules['image_' . $slot] = ['nullable', 'image', 'mimes:jpeg,jpg,png,webp',
                 'max:' . config('email_studio.max_image_kb', 2048)];
             $rules['width_' . $slot] = ['required', 'integer', 'between:80,600'];
+            $rules['align_' . $slot] = ['required', Rule::in(['left','center','right'])];
             $rules['delete_' . $slot] = ['nullable', 'boolean'];
         }
 
@@ -131,6 +132,7 @@ class EmailStudioController extends Controller
         $oldPaths = [];
         foreach (self::SLOTS as $slot) {
             $width = (int) $data['width_' . $slot];
+            $align = $data['align_' . $slot];
             $previous = $images[$slot]['path'] ?? null;
 
             if ($request->boolean('delete_' . $slot)) {
@@ -150,12 +152,13 @@ class EmailStudioController extends Controller
                         'image_' . $slot => 'Could not store image.',
                     ]);
                 }
-                $images[$slot] = ['path' => $newPath, 'width' => $width];
+                $images[$slot] = ['path' => $newPath, 'width' => $width, 'align' => $align];
                 if ($previous) {
                     $oldPaths[] = $previous;
                 }
             } elseif (isset($images[$slot])) {
                 $images[$slot]['width'] = $width;
+                $images[$slot]['align'] = $align;
             }
         }
 
@@ -196,6 +199,7 @@ class EmailStudioController extends Controller
         $this->authorizeStudio($request);
         $data = $request->validate([
             'recipient' => ['required', 'email:rfc', 'max:254'],
+            'send_subject' => ['nullable', 'string', 'max:250'],
             'client_name' => ['nullable', 'string', 'max:180'],
             'reference' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', 'string', 'max:150'],
@@ -228,6 +232,10 @@ class EmailStudioController extends Controller
         $subject = str_replace(["\r", "\n"], ' ', $formatter->personalize(
             $template->subject, $values, false
         ));
+        if (!empty($data['send_subject'])) {
+            $subject = str_replace(["\r", "\n"], ' ',
+                $formatter->personalize($data['send_subject'], $values, false));
+        }
         $footer = $formatter->personalize($template->footer ?: '', $values, false);
         $images = json_decode($template->images ?: '{}', true) ?: [];
         $pdfBytes = null;
@@ -331,7 +339,11 @@ class EmailStudioController extends Controller
                         throw new \RuntimeException('Image copy failed.');
                     }
                     $stored[] = $newPath;
-                    $copies[$slot] = ['path' => $newPath, 'width' => $img['width'] ?? 250];
+                    $copies[$slot] = [
+                        'path' => $newPath,
+                        'width' => $img['width'] ?? 250,
+                        'align' => $img['align'] ?? 'center',
+                    ];
                 }
                 DB::table('email_studio_templates')->where('id', $newId)
                     ->update(['images' => json_encode($copies, JSON_THROW_ON_ERROR)]);
