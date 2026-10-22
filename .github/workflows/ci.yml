@@ -223,3 +223,56 @@ jobs:
             }
             echo "PASS: Legacy MariaDB structure upgraded through 15 additional migrations\n";
           '
+
+
+  release-candidate:
+    name: Production dependency and candidate package check
+    needs: [laravel, mysql-schema, legacy-schema-upgrade]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      APP_ENV: production
+      APP_DEBUG: 'false'
+      APP_KEY: 'base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
+      APP_URL: 'https://candidate.example.invalid'
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ':memory:'
+      CACHE_DRIVER: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, fileinfo, pdo_mysql, pdo_sqlite, gd, zip
+          coverage: none
+      - name: Prepare candidate-only runtime directories
+        run: mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs
+      - name: Install locked production dependencies
+        run: composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader --no-scripts --no-plugins
+      - name: Verify production platform and Laravel boot
+        run: |
+          composer check-platform-reqs --no-dev
+          php artisan package:discover --ansi
+          php artisan route:list --except-vendor
+          php artisan view:cache
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Build candidate frontend
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+      - name: Package only runtime code and production dependencies
+        run: |
+          python3 scripts/release/package_candidate.py --root . --output "$RUNNER_TEMP/jwtc-candidate" --commit "$(git rev-parse HEAD)"
+      - name: Retain candidate and SHA-256 manifest for staging
+        uses: actions/upload-artifact@v4
+        with:
+          name: jwtc-application-candidate
+          path: ${{ runner.temp }}/jwtc-candidate/
+          if-no-files-found: error
+          retention-days: 7
