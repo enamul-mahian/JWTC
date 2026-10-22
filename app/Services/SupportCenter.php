@@ -234,6 +234,46 @@ class SupportCenter
         }, 3);
     }
 
+    public function assign(User $actor, int $id, ?int $assigneeId): object
+    {
+        $this->ticket($actor, $id);
+        abort_unless($this->canManage($actor), 403);
+
+        if ($assigneeId !== null) {
+            $staff = User::findOrFail($assigneeId);
+            if (!in_array($staff->user_type,
+                [UserType::ADMIN, UserType::SUPER_ADMIN], true)
+                || !$this->canManage($staff)) {
+                throw ValidationException::withMessages([
+                    'assignee_id' => 'Assign only approved support administrators.',
+                ]);
+            }
+        }
+
+        return DB::transaction(function () use ($actor, $id, $assigneeId) {
+            $ticket = DB::table('support_tickets')->where('id', $id)
+                ->lockForUpdate()->first();
+            abort_unless($ticket, 404);
+            if ($ticket->assigned_to === $assigneeId
+                || ($ticket->assigned_to !== null
+                    && $assigneeId !== null
+                    && (int) $ticket->assigned_to === $assigneeId)) {
+                return $ticket;
+            }
+            DB::table('support_tickets')->where('id', $id)->update([
+                'assigned_to' => $assigneeId, 'updated_at' => now(),
+            ]);
+            DB::table('support_ticket_events')->insert([
+                'ticket_id' => $id, 'actor_id' => $actor->id,
+                'related_user_id' => $assigneeId,
+                'action' => $assigneeId === null ? 'unassigned' : 'assigned',
+                'old_status' => $ticket->status, 'new_status' => $ticket->status,
+                'created_at' => now(),
+            ]);
+            return DB::table('support_tickets')->where('id', $id)->first();
+        }, 3);
+    }
+
     public function requestRefund(User $actor, int $ticketId, array $input): object
     {
         $ticket = $this->ticket($actor, $ticketId);
