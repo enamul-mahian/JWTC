@@ -22,6 +22,7 @@ use App\Http\Controllers\Admin\MassmailController;
 use App\Http\Controllers\Admin\EmailStudioController;
 use App\Http\Controllers\Admin\EmailStudioSmtpController;
 use App\Http\Controllers\Chat\ApplicationChatController;
+use App\Http\Controllers\Support\SupportCenterController;
 use App\Http\Controllers\Admin\PaymentCredentialsController;
 use App\Http\Controllers\Admin\PlanController;
 use App\Http\Controllers\Admin\RoleController;
