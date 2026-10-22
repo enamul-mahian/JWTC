@@ -2,7 +2,7 @@
 // A private staging-only upgrade rehearsal. Never connect using live credentials.
 ini_set('display_errors', '0');
 ini_set('log_errors', '0');
-set_error_handler(static function ($severity, $message, $file, $line) { echo 'SAFE_WARNING_LINE '.(int)$line.' TYPE '.(int)$severity."\n"; throw new RuntimeException('Operation failed'); });
+set_error_handler(static function ($severity, $message, $file, $line) { echo 'SAFE_WARNING_LINE '.(int)$line.' TYPE '.(int)$severity."\n"; foreach (['Permission denied','File exists','Disk quota exceeded','No space left on device','No such file or directory','Too many open files'] as $reason) if (str_contains($message, $reason)) echo 'SAFE_WARNING_REASON '.$reason."\n"; throw new RuntimeException('Operation failed'); });
 $phase = 'identity';
 try {
     $liveRoot = realpath('.');
@@ -79,6 +79,7 @@ try {
     if (is_dir($unpacked) && !is_link($unpacked) && !is_file($unpacked.'/.extraction-complete')) {
         if (!rename($unpacked, $unpacked.'-incomplete-'.gmdate('YmdHis'))) throw new RuntimeException('Cannot retain incomplete extraction');
     }
+    clearstatcache(true, $unpacked);
     if (is_link($unpacked)) throw new RuntimeException('Candidate destination exists');
     if (!is_dir($unpacked)) {
         if (!mkdir($unpacked, 0700)) throw new RuntimeException('Candidate destination exists');
