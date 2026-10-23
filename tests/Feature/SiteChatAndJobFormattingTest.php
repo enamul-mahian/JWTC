@@ -33,6 +33,14 @@ class SiteChatAndJobFormattingTest extends TestCase
         $this->assertStringNotContainsString('poster',$hidden);
         $this->assertStringNotContainsString('mailto:',$hidden);
     }
+    public function test_employment_type_ids_are_readable_and_polling_does_not_use_message_rate_allowance(): void
+    {
+        DB::table('job_types')->insert(['id'=>701,'name'=>'Full Time','status'=>1]);
+        $job=new \App\Models\Job(['employment_status'=>'[701,"remote"]']);
+        $this->assertSame('["Full Time","remote"]',$job->publicEmploymentLabels());
+        for($i=0;$i<6;$i++) $this->getJson('/site-chat/state')->assertOk();
+        $this->postJson('/site-chat/threads',['name'=>'Fixture','email'=>'fixture@example.test','body'=>'Hello'])->assertCreated();
+    }
     public function test_visitor_chat_is_private_encrypted_and_session_bound(): void
     {
         $this->postJson('/site-chat/threads',['name'=>'Visitor','email'=>'guest@example.test','body'=>'Private hello'])->assertCreated();
