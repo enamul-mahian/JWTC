@@ -76,12 +76,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gh api repos/enamul-mahian/JWTC/actions/runs/39948985699 > "$RUNNER_TEMP/candidate-run.json"
-          python3 -c 'import json,os; r=json.load(open(os.environ["RUNNER_TEMP"]+"/candidate-run.json")); assert r["conclusion"]=="success" and r["head_sha"]=="a194def1928e82bea1ba43823756322611fd9c6d"'
+          gh api repos/enamul-mahian/JWTC/actions/runs/39949558253 > "$RUNNER_TEMP/candidate-run.json"
+          python3 -c 'import json,os; r=json.load(open(os.environ["RUNNER_TEMP"]+"/candidate-run.json")); assert r["conclusion"]=="success" and r["head_sha"]=="865055ab3bb73184e2814cf3eca69eb039d574d6"'
       - uses: actions/download-artifact@v4
         with:
           name: jwtc-application-candidate
-          run-id: 39948985699
+          run-id: 39949558253
           github-token: ${{ github.token }}
           path: ${{ runner.temp }}/approved-candidate
       - name: Transfer candidate and verify private staging upgrade
@@ -90,7 +90,7 @@ jobs:
           set -euo pipefail
           cd "$RUNNER_TEMP/approved-candidate"
           sha256sum -c SHA256SUMS
-          target='/home/dropoqux/jwtc-private-staging/20261022-215145-f92ca979/candidate-input-pwa'
+          target='/home/dropoqux/jwtc-private-staging/20261022-215145-f92ca979/candidate-input-pwa-final'
           ssh_options=(-p "$SSH_PORT" -i "$RUNNER_TEMP/jwtc-stage-ssh/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/jwtc-stage-ssh/known_hosts" -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=2)
           ssh -T "${ssh_options[@]}" "$SSH_USER@$SSH_HOST" "test ! -L '$target' && umask 077 && mkdir -p '$target'"
           scp -P "$SSH_PORT" -i "$RUNNER_TEMP/jwtc-stage-ssh/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/jwtc-stage-ssh/known_hosts" ./*.tar.gz release-manifest.json "$SSH_USER@$SSH_HOST:$target/"

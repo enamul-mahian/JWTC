@@ -10,14 +10,14 @@ try {
     $home = realpath(getenv('HOME'));
     $base = $home.'/jwtc-private-staging/20261022-215145-f92ca979';
     $root = $base.'/application';
-    foreach ([$base, $root, $base.'/candidate-input-pwa'] as $path) {
+    foreach ([$base, $root, $base.'/candidate-input-pwa-final'] as $path) {
         if (is_link($path) || realpath($path) !== $path || str_starts_with($path, $liveRoot.'/')) throw new RuntimeException('Unsafe staging path');
     }
     $report = json_decode(file_get_contents($base.'/restore-report.json'), true, 16, JSON_THROW_ON_ERROR);
     if (($report['sql_reexport_verified'] ?? false) !== true) throw new RuntimeException('Unexpected restore state');
-    if (is_file($base.'/candidate-pwa-verification.json')) {
-        $done = json_decode(file_get_contents($base.'/candidate-pwa-verification.json'), true, 32, JSON_THROW_ON_ERROR);
-        $retained = json_decode(file_get_contents($base.'/candidate-input-pwa/release-manifest.json'), true, 64, JSON_THROW_ON_ERROR);
+    if (is_file($base.'/candidate-pwa-final-verification.json')) {
+        $done = json_decode(file_get_contents($base.'/candidate-pwa-final-verification.json'), true, 32, JSON_THROW_ON_ERROR);
+        $retained = json_decode(file_get_contents($base.'/candidate-input-pwa-final/release-manifest.json'), true, 64, JSON_THROW_ON_ERROR);
         if (($done['candidate_commit'] ?? '') !== ($retained['commit'] ?? null)) throw new RuntimeException('Retained release mismatch');
         foreach ($retained['files'] as $record) {
             if (!hash_equals($record['sha256'], hash_file('sha256', $root.'/'.$record['path']))) throw new RuntimeException('Retained staging code changed');
@@ -53,7 +53,7 @@ try {
     };
     $phase = 'before-snapshot';
     $before = $snapshot($pdo);
-    if (count($before) < 46 || (int) $pdo->query('SELECT COUNT(*) FROM migrations')->fetchColumn() !== 61) throw new RuntimeException('Unexpected baseline schema');
+    if (count($before) < 46 || (int) $pdo->query('SELECT COUNT(*) FROM migrations')->fetchColumn() !== 62) throw new RuntimeException('Unexpected baseline schema');
     $run = static function (array $args, ?string $cwd = null, array $environment = [], int $timeout = 300): string {
         $process = new Symfony\Component\Process\Process($args, $cwd, $environment);
         $process->setTimeout($timeout);
@@ -66,7 +66,7 @@ try {
         return $process->getOutput();
     };
     $phase = 'candidate-hashes';
-    $input = $base.'/candidate-input-pwa';
+    $input = $base.'/candidate-input-pwa-final';
     $manifest = json_decode(file_get_contents($input.'/release-manifest.json'), true, 64, JSON_THROW_ON_ERROR);
     if (!preg_match('/^jwtc-[a-f0-9]{40}\.tar\.gz$/D', $manifest['package'] ?? '')
         || !hash_equals($manifest['sha256'], hash_file('sha256', $input.'/'.$manifest['package']))) throw new RuntimeException('Candidate hash mismatch');
@@ -75,7 +75,7 @@ try {
     $phase = 'extractor-prepare';
     $guard = str_replace('except Exception:', 'except Exception as error:', $guard);
     $guard = str_replace("print('Restore guard failed; private details suppressed', file=sys.stderr)", "print('GUARD_ERROR ' + type(error).__name__ + ' ' + str(getattr(error, 'errno', None)), file=sys.stderr)", $guard);
-    $unpacked = $base.'/candidate-unpacked-pwa';
+    $unpacked = $base.'/candidate-unpacked-pwa-final';
     if (is_dir($unpacked) && !is_link($unpacked) && !is_file($unpacked.'/.extraction-complete')) {
         if (!rename($unpacked, $unpacked.'-incomplete-'.gmdate('YmdHis'))) throw new RuntimeException('Cannot retain incomplete extraction');
     }
@@ -173,10 +173,10 @@ try {
     $run([PHP_BINARY, 'artisan', 'view:cache'], $root, $isolated);
     $run([PHP_BINARY, 'artisan', 'view:clear'], $root, $isolated);
     $result = ['verified_at_utc' => gmdate('c'), 'candidate_commit' => $manifest['commit'],
-        'artifact_run' => 39948985699, 'migrations' => $migrations, 'historical_tables_verified' => count($before),
+        'artifact_run' => 39949558253, 'migrations' => $migrations, 'historical_tables_verified' => count($before),
         'untouched_files_verified' => count($assets), 'production_modified' => false,
         'browser_acceptance_verified' => false, 'smtp_delivery_verified' => false];
-    file_put_contents($base.'/candidate-pwa-verification.json', json_encode($result, JSON_PRETTY_PRINT|JSON_THROW_ON_ERROR)."\n");
+    file_put_contents($base.'/candidate-pwa-final-verification.json', json_encode($result, JSON_PRETTY_PRINT|JSON_THROW_ON_ERROR)."\n");
     echo "PASS: candidate production dependencies, platform, Laravel boot, routes and Blade templates\n";
     echo "PASS: supported runtime upgrade; migrations idempotent; 62 migration records\n";
     echo "PASS: all original rows in existing tables preserved; original grants, keys, uploads and environment retained\n";

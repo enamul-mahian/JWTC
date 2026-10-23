@@ -38,10 +38,10 @@ try {
     $home = realpath(getenv('HOME'));
     if ($root !== $home.'/joingallagher.uk' || is_link($root)) throw new RuntimeException('Wrong live root');
     $base = $home.'/jwtc-private-staging/20261022-215145-f92ca979';
-    $gate = json_decode(file_get_contents($base.'/pwa-predeploy-gate.json'), true, 32, JSON_THROW_ON_ERROR);
-    $stageReport = json_decode(file_get_contents($base.'/candidate-pwa-verification.json'), true, 32, JSON_THROW_ON_ERROR);
-    $release = $base.'/candidate-unpacked-pwa';
-    $manifest = json_decode(file_get_contents($base.'/candidate-input-pwa/release-manifest.json'), true, 64, JSON_THROW_ON_ERROR);
+    $gate = json_decode(file_get_contents($base.'/pwa-final-predeploy-gate.json'), true, 32, JSON_THROW_ON_ERROR);
+    $stageReport = json_decode(file_get_contents($base.'/candidate-pwa-final-verification.json'), true, 32, JSON_THROW_ON_ERROR);
+    $release = $base.'/candidate-unpacked-pwa-final';
+    $manifest = json_decode(file_get_contents($base.'/candidate-input-pwa-final/release-manifest.json'), true, 64, JSON_THROW_ON_ERROR);
     if (($gate['http_smoke'] ?? false) !== true || ($gate['audit'] ?? null) !== []
         || ($stageReport['migrations'] ?? 0) !== 62 || $gate['candidate_commit'] !== $manifest['commit']
         || $stageReport['candidate_commit'] !== $manifest['commit']
@@ -237,7 +237,7 @@ try {
         if ((int) $status !== $expected) throw new RuntimeException('Public HTTP failed');
     }
     $homepage = $command(['/usr/bin/curl', '--silent', '--show-error', '--fail', '--max-time', '20', '--header', 'Cache-Control: no-cache', 'https://joingallagher.uk/'], $root);
-    if (!str_contains($homepage, 'Find Your Next Opportunity') || !str_contains($homepage, 'theme/approved.css') || !str_contains($homepage, 'site-chat/widget.js') || !str_contains($homepage, 'theme/portal-pwa.js') || !str_contains($homepage, 'data-hero-slides') || !str_contains($homepage, 'pwa/install.js') || !str_contains($homepage, 'site.webmanifest') || str_contains($homepage, 'commons.wikimedia.org') || str_contains($homepage, 'tawk.to')) throw new RuntimeException('Approved homepage missing');
+    if (!str_contains($homepage, 'Find Your Next Opportunity') || !str_contains($homepage, 'theme/approved.css') || !str_contains($homepage, 'site-chat/widget.js') || !str_contains($homepage, 'theme/portal-motion.js') || !str_contains($homepage, 'data-hero-slides') || !str_contains($homepage, 'pwa/install.js') || !str_contains($homepage, 'site.webmanifest') || str_contains($homepage, 'commons.wikimedia.org') || str_contains($homepage, 'tawk.to')) throw new RuntimeException('Approved homepage missing');
     foreach (['/sw.js','/site.webmanifest','/pwa/offline.html','/pwa/icon-192.png','/pwa/icon-512.png','/theme/hero-london.webp','/theme/hero-tower-bridge.webp'] as $assetPath) {
         $status=trim($command(['/usr/bin/curl','--silent','--show-error','--max-time','20','--output','/dev/null','--write-out','%{http_code}','https://joingallagher.uk'.$assetPath],$root));
         echo 'LIVE_ASSET '.$assetPath.' '.$status."\n";

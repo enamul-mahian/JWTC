@@ -9,7 +9,7 @@ try {
     $home = realpath(getenv('HOME'));
     $base = $home.'/jwtc-private-staging/20261022-215145-f92ca979';
     $stage = $base.'/application';
-    $report = json_decode(file_get_contents($base.'/candidate-pwa-verification.json'), true, 16, JSON_THROW_ON_ERROR);
+    $report = json_decode(file_get_contents($base.'/candidate-pwa-final-verification.json'), true, 16, JSON_THROW_ON_ERROR);
     if (($report['migrations'] ?? 0) !== 62 || ($report['historical_tables_verified'] ?? 0) < 46) throw new RuntimeException('Unverified candidate');
     $run = static function (array $args, ?string $cwd = null, array $env = []): string {
         $p = new Symfony\Component\Process\Process($args, $cwd, $env);
@@ -66,7 +66,7 @@ try {
         if ((int) $status !== $expected) throw new RuntimeException('HTTP smoke failed');
     }
     $homepage = $run(['/usr/bin/curl', '--silent', '--show-error', '--fail', '--max-time', '20', '--header', 'Host: joingallagher.uk', 'http://'.$address.'/']);
-    if (!str_contains($homepage, 'Find Your Next Opportunity') || !str_contains($homepage, 'theme/approved.css') || !str_contains($homepage, 'site-chat/widget.js') || !str_contains($homepage, 'theme/portal-pwa.js') || !str_contains($homepage, 'data-hero-slides') || !str_contains($homepage, 'pwa/install.js') || !str_contains($homepage, 'site.webmanifest') || str_contains($homepage, 'commons.wikimedia.org') || str_contains($homepage, 'tawk.to')) throw new RuntimeException('Approved homepage missing');
+    if (!str_contains($homepage, 'Find Your Next Opportunity') || !str_contains($homepage, 'theme/approved.css') || !str_contains($homepage, 'site-chat/widget.js') || !str_contains($homepage, 'theme/portal-motion.js') || !str_contains($homepage, 'data-hero-slides') || !str_contains($homepage, 'pwa/install.js') || !str_contains($homepage, 'site.webmanifest') || str_contains($homepage, 'commons.wikimedia.org') || str_contains($homepage, 'tawk.to')) throw new RuntimeException('Approved homepage missing');
     $server->stop(1);
     $server = null;
     $phase = 'dependency-audit';
@@ -85,7 +85,7 @@ try {
     }
     echo 'DEPENDENCY_AUDIT '.json_encode($counts)."\n";
     if (!empty($counts['critical']) || !empty($counts['high']) || !empty($counts['unknown'])) throw new RuntimeException('Dependency advisories require review');
-    file_put_contents($base.'/pwa-predeploy-gate.json', json_encode(['passed_at_utc' => gmdate('c'), 'document_root' => $roots[0], 'candidate_commit' => $report['candidate_commit'], 'http_smoke' => true, 'audit' => $counts], JSON_PRETTY_PRINT|JSON_THROW_ON_ERROR));
+    file_put_contents($base.'/pwa-final-predeploy-gate.json', json_encode(['passed_at_utc' => gmdate('c'), 'document_root' => $roots[0], 'candidate_commit' => $report['candidate_commit'], 'http_smoke' => true, 'audit' => $counts], JSON_PRETTY_PRINT|JSON_THROW_ON_ERROR));
     echo "PASS: predeployment HTTP and platform gates\n";
 } catch (Throwable $e) {
     if (in_array($e->getMessage(), ['UAPI unavailable', 'Unsupported web root', 'Gate command failed'], true)) fwrite(STDERR, 'REASON: '.$e->getMessage()."\n");

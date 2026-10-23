@@ -15,7 +15,7 @@ try {
         $expected = [];
         foreach ($manifest['files'] as $record) $expected[$record['path']] = $record['sha256'];
         $unpacked = str_replace('/candidate-input', '/candidate-unpacked', $input);
-        $targets = $input === $base.'/candidate-input-pwa' ? glob($unpacked.'-incomplete-*', GLOB_ONLYDIR) : [$unpacked];
+        $targets = $input === $base.'/candidate-input-pwa-final' ? glob($unpacked.'-incomplete-*', GLOB_ONLYDIR) : [$unpacked];
         foreach ($targets as $target) {
             if (!is_dir($target)) continue;
             if (is_link($target) || realpath($target) !== $target || !str_starts_with($target, $base.'/candidate-unpacked')) throw new RuntimeException('Unsafe generated directory');
@@ -44,7 +44,7 @@ try {
     $vendor = $home.'/joingallagher.uk/vendor';
     $targets = glob($home.'/jwtc-private-deployments/*/previous/vendor', GLOB_ONLYDIR);
     $targets[] = $base.'/application/vendor';
-    $targets[] = $base.'/candidate-unpacked-pwa/vendor';
+    $targets[] = $base.'/candidate-unpacked-pwa-final/vendor';
     foreach ($targets as $target) {
         if (!is_dir($target)) continue;
         if (is_link($target) || realpath($target) !== $target) throw new RuntimeException('Unsafe dependency directory');
@@ -56,7 +56,7 @@ try {
             $source = $vendor.'/'.$relative;
             if (!is_file($source) || is_link($source) || realpath($source) !== $source) continue;
             $current = stat($source);
-            if (in_array($target, [$base.'/application/vendor', $base.'/candidate-unpacked-pwa/vendor'], true)) { chmod($entry->getPathname(), $current['mode'] & 0777); clearstatcache(true, $entry->getPathname()); }
+            if (in_array($target, [$base.'/application/vendor', $base.'/candidate-unpacked-pwa-final/vendor'], true)) { chmod($entry->getPathname(), $current['mode'] & 0777); clearstatcache(true, $entry->getPathname()); }
             $old = stat($entry->getPathname());
             if ($old['uid'] !== $current['uid'] || $old['gid'] !== $current['gid'] || $old['dev'] !== $current['dev'] || $old['ino'] === $current['ino'] || $old['mode'] !== $current['mode'] || $old['size'] !== $current['size']) continue;
             $hash = hash_file('sha256', $source);
