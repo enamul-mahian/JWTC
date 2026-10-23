@@ -3,8 +3,17 @@
 require __DIR__.'/../../vendor/autoload.php';
 $app=require __DIR__.'/../../bootstrap/app.php';
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
-set_exception_handler(function(\Throwable $e){fwrite(STDERR,(string)$e);exit(1);});
-(require database_path('migrations/2023_12_21_130613_create_permission_tables.php'))->up();
+set_exception_handler(function(\Throwable $e){fwrite(STDERR,app()->environment('testing')?(string)$e:'Synthetic live view verification failed: '.get_class($e));exit(1);});
+$readonly=null;
+if(!app()->environment('testing')){
+    $readonly=Illuminate\Support\Facades\DB::connection();
+    if($readonly->getDriverName()!=='mysql')throw new RuntimeException('Expected live MySQL');
+    $readonly->statement('SET TRANSACTION READ ONLY');$readonly->beginTransaction();
+}
+if(!Illuminate\Support\Facades\Schema::hasTable('permissions')){
+    if(!app()->environment('testing'))throw new RuntimeException('Permission schema unavailable');
+    (require database_path('migrations/2023_12_21_130613_create_permission_tables.php'))->up();
+}
 config(['session.driver'=>'array','cache.default'=>'array','mail.default'=>'array']);
 Illuminate\Support\Facades\Gate::before(fn()=>true);
 Illuminate\Support\Facades\URL::forceRootUrl('http://127.0.0.1:8765');
@@ -48,3 +57,5 @@ $headers[$path]=$response->headers->all();
 echo 'UI_FIXTURE '.$name." OK\n";
 }
 file_put_contents($out.'/headers.json',json_encode($headers,JSON_THROW_ON_ERROR));
+
+if($readonly)$readonly->rollBack();
