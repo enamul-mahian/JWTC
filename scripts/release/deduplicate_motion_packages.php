@@ -44,6 +44,7 @@ try {
     $vendor = $home.'/joingallagher.uk/vendor';
     $targets = glob($home.'/jwtc-private-deployments/*/previous/vendor', GLOB_ONLYDIR);
     $targets[] = $base.'/application/vendor';
+    $targets[] = $base.'/candidate-unpacked-motion/vendor';
     foreach ($targets as $target) {
         if (!is_dir($target)) continue;
         if (is_link($target) || realpath($target) !== $target) throw new RuntimeException('Unsafe dependency directory');
@@ -54,7 +55,9 @@ try {
             if (str_starts_with($relative, 'bin/')) continue;
             $source = $vendor.'/'.$relative;
             if (!is_file($source) || is_link($source) || realpath($source) !== $source) continue;
-            $old = stat($entry->getPathname()); $current = stat($source);
+            $current = stat($source);
+            if ($target === $base.'/candidate-unpacked-motion/vendor') { chmod($entry->getPathname(), $current['mode'] & 0777); clearstatcache(true, $entry->getPathname()); }
+            $old = stat($entry->getPathname());
             if ($old['uid'] !== $current['uid'] || $old['gid'] !== $current['gid'] || $old['dev'] !== $current['dev'] || $old['ino'] === $current['ino'] || $old['mode'] !== $current['mode'] || $old['size'] !== $current['size']) continue;
             $hash = hash_file('sha256', $source);
             if (!hash_equals($hash, hash_file('sha256', $entry->getPathname()))) continue;

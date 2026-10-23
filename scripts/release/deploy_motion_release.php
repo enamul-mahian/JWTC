@@ -114,7 +114,9 @@ try {
     $groups = ['app', 'config', 'database', 'resources', 'routes', 'vendor'];
     foreach ($groups as $group) {
         $phase = 'prepare-'.$group;
-        $command(['/bin/cp', '-a', $release.'/'.$group, $rollback.'/prepared/'.$group], $root);
+        // Link verified immutable build bytes into the private prepared tree;
+        // the original compressed artifact remains the independent source.
+        $command(['/bin/cp', '-al', $release.'/'.$group, $rollback.'/prepared/'.$group], $root);
         $entries = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($rollback.'/prepared/'.$group, FilesystemIterator::SKIP_DOTS), RecursiveIteratorIterator::SELF_FIRST);
         chmod($rollback.'/prepared/'.$group, 0755);
         foreach ($entries as $entry) {
