@@ -158,7 +158,7 @@ class SupportCenterController extends Controller
         $actor=$this->actor($request,$center);abort_unless($center->canManage($actor),403);
         $delivery=DB::table('support_mail_deliveries')->where('id',$id)->first();abort_unless($delivery,404);$center->ticket($actor,$delivery->ticket_id);
         $status=app(\App\Services\SupportNotifications::class)->deliver($id);
-        return back()->with($status==='failed'?'warning':'success',$status==='failed'?'Email not sent. Check the default SMTP profile in Email Studio.':'Email accepted by the SMTP server.');
+        return back()->with($status==='accepted'?'success':'warning',match($status){'accepted'=>'Email accepted by the SMTP server.','sending'=>'Email notification is already being sent.',default=>'Email not sent. Check the default SMTP profile in Email Studio.'});
     }
 
     public function status(Request $request, int $id, SupportCenter $center)
