@@ -3,6 +3,7 @@
 @section('title', 'General Setting')
 
 @section('content')
+<p><a class="btn btn-outline-primary" href="{{ route('admin.hero-slides') }}">Homepage slides</a></p>
 <p><a class="btn btn-outline-primary" href="{{ route('admin.news-ticker') }}">News ticker &amp; scrolling speed</a></p>
 
 <section class="section dashboard">

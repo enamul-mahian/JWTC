@@ -16,6 +16,7 @@
         <ul id="sidebarnav">
             @if(in_array(strtolower((string)auth()->user()?->user_type), ['admin','super_admin'], true) && auth()->user()->can('application-setting'))
             <li class="sidebar-item"><a class="sidebar-link" href="{{ route('admin.news-ticker') }}"><span><i class="ti ti-news"></i></span><span class="hide-menu">News Ticker</span></a></li>
+            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('admin.hero-slides') }}"><span><i class="ti ti-photo"></i></span><span class="hide-menu">Homepage Slides</span></a></li>
             @endif
             @if(in_array(strtolower((string)auth()->user()?->user_type), ['admin','super_admin'], true) && auth()->user()->can('manage-application-chat'))
             <li class="sidebar-item"><a class="sidebar-link" href="{{ route('admin.site-chat') }}"><span><i class="ti ti-message-circle"></i></span><span class="hide-menu">Visitor Chat Inbox</span></a></li>

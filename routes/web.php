@@ -1194,3 +1194,8 @@ Route::prefix('admin/news-ticker')->middleware(['auth','admin_user'])->group(fun
     Route::get('/', [\App\Http\Controllers\Admin\SiteNoticeController::class,'index'])->name('admin.news-ticker');
     Route::post('/', [\App\Http\Controllers\Admin\SiteNoticeController::class,'update'])->middleware('throttle:12,1,news-ticker-settings:')->name('admin.news-ticker.update');
 });
+
+Route::prefix('admin/hero-slides')->middleware(['auth','admin_user'])->group(function () {
+    Route::get('/', [\App\Http\Controllers\Admin\SiteHeroController::class,'index'])->name('admin.hero-slides');
+    Route::post('/', [\App\Http\Controllers\Admin\SiteHeroController::class,'update'])->middleware('throttle:12,1,hero-slide-settings:')->name('admin.hero-slides.update');
+});
