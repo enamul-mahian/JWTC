@@ -16,5 +16,6 @@
   "resources/views/jobseeker/application/applied_jobs_table.blade.php",
   "resources/views/frontend/layout/frontMaster.blade.php",
   "public/theme/workspace.js",
-  "public/theme/workspace.css"
+  "public/theme/workspace.css",
+  "public/theme/approved.css"
 ]

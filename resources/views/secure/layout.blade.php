@@ -27,7 +27,7 @@
       footer{border-top:1px solid var(--line);padding:1rem 0;text-align:center;color:var(--muted);font-size:.82rem}
       @media(max-width:600px){main{margin:1rem auto} .card{padding:1rem}header.top .wrap{flex-wrap:wrap}}
     </style>
-<link rel="stylesheet" href="{{ asset('theme/approved.css') }}?v=20261023-7"><link rel="stylesheet" href="{{ asset('theme/workspace.css') }}?v=20261024-2">
+<link rel="stylesheet" href="{{ asset('theme/approved.css') }}?v=20261024-2"><link rel="stylesheet" href="{{ asset('theme/workspace.css') }}?v=20261024-2">
 </head>
 <body class="jg-site">
     @include('frontend.includes.approved_nav')
