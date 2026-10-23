@@ -1,4 +1,4 @@
-@php($jgModern=request()->routeIs('home','search-jobs','public.job','register','login','jobseeker.login','company.login','company.register','company.approval','admin.login','jobs.create','jobs.edit','find-jobs','jobseeker.application.timeline','registration.otp.*'))
+@php($jgModern=request()->routeIs('home','search-jobs','public.job','register','login','jobseeker.login','company.login','company.register','company.approval','admin.login','jobs.create','jobs.edit','find-jobs','applied-jobs','unique_codes','jobseeker.application.timeline','registration.otp.*'))
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="csrf-token" content="{{ csrf_token() }}"><title>@yield('title', 'JoinGallagher.uk')</title><meta name="description" content="@yield('meta_description', 'Browse job opportunities and manage your recruitment applications.')">
 @if(!empty($setting?->favicon))<link rel="icon" href="{{ asset('assets/images/setting/'.$setting->favicon) }}">@endif
@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="{{ asset('pwa/install.css') }}?v=1">
 @stack('style')
 <link rel="stylesheet" href="{{ asset('theme/portal-motion.css') }}?v=20261023-1">
-<link rel="stylesheet" href="{{ asset('theme/workspace.css') }}?v=20261023-1">
+<link rel="stylesheet" href="{{ asset('theme/workspace.css') }}?v=20261024-2">
 </head><body class="jg-site"><a href="#jg-main" class="jg-skip">Skip to main content</a>
 @include('frontend.includes.approved_nav')
 @include('frontend.includes.news_ticker')
@@ -36,4 +36,5 @@ jgWideScreen.addEventListener('change', jgSyncNavigation);
 @stack('scripts')
 <script defer src="{{ asset('theme/portal-motion.js') }}?v=20261023-1"></script>
 <script defer src="{{ asset('pwa/install.js') }}?v=1"></script><script defer src="{{ asset('theme/hero-slides.js') }}?v=1"></script>
+<script defer src="{{ asset('theme/workspace.js') }}?v=20261024-2"></script>
 </body></html>

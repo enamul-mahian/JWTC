@@ -1,91 +1,29 @@
-<div class="col-md-12">
-    @forelse ($jobs as $item)
-
-        <a class="job-listings-featured" href="{{ route('job-details', $item->id) }}">
-            <div class="row">
-                <div class="col-lg-6 col-md-6 col-xs-12">
-                    <div class="job-company-logo">
-                        @if (isset($item->company->photo))
-                            <img src="{{ asset('assets/images/profilephoto/' . $item->company->photo) }}" alt="">
-                        @endif
-                    </div>
-                    <div class="job-details">
-                        <h3>{{ $item->title }}</h3>
-                        <span class="company-neme">{{ $item->company->company_name }}</span>
-                        <div class="tags">
-                            <span><i class="lni-map-marker"></i> {{ $item->location ? $item->location->name : 'N/A' }}
-                            </span>
-                            <span><i class="lni-user"></i>{{ $item->vacancies }}</span>
-                            <span><i class="lni-wallet"></i>{{ $item->maximum_salary }}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-6 col-md-6 col-xs-12 text-right">
-                    <div class="tag-type">
-
-                        @if (($status = getJobStatus($item->id)) === 0)
-                            <span class="heart-icon">
-                                <img src="{{ asset('assets/images/placeholder/checkmark.svg') }}" height="10"
-                                    width="10">
-                            </span>
-                        @endif
-
-                        <span class="part-time">
-                            <ul class="text-left">
-                                @forelse (employee_status($item->employment_status) as  $value)
-                                    <li>{{ ucwords(str_replace('_', ' ', $value->name)) }}
-                                        @if (!$loop->last)
-                                            
-                                        @endif
-                                    </li>
-                                @empty
-                                    <li>{{ __('messages.NA') }}</li>
-                                @endforelse
-                            </ul>
-                        </span>
-                    </div>
-                    
-                    <!-- Progress Bar Section -->
-                    <div class="mt-3">
-                        @php
-                            $application = $item->applications->first();
-                            $applicationStatus = $application
-                                ? getJobApplicationStatus((int) $application->status) : null;
-                        @endphp
-
-                        @if ($applicationStatus)
-                         
-                            <!-- Status Name -->
-                            <p class="mb-1"><strong>Status:</strong> {{ $applicationStatus['name'] }}</p>
-
-                            <!-- Progress Bar -->
-                            <div class="progress" style="height: 20px;">
-                                <div class="progress-bar" role="progressbar" 
-                                    style="width: {{ $applicationStatus['progress'] }}%;" 
-                                    aria-valuenow="{{ $applicationStatus['progress'] }}" 
-                                    aria-valuemin="0" 
-                                    aria-valuemax="100">
-                                    {{ $applicationStatus['progress'] }}%
-                                </div>
-                            </div>
-                        @else
-                            <p class="text-danger">{{ __('Status not available') }}</p>
-                        @endif
-                    </div>
-                </div>
-            </div>
-        </a>
-        @if ($application)
-            <div class="mb-3 mt-1 d-flex justify-content-end">
-                <a href="{{ route('jobseeker.application.timeline', $application->id) }}"
-                   class="btn btn-sm btn-outline-primary">View progress &amp; status history</a>
-            </div>
-        @endif
-    @empty
-        <span class="job-listings-featured">{{ __('messages.Nodatafound') }}</span>
-    @endforelse
-    <div>
-        {{ $jobs->links() }}
-    </div>
-
+<div class="jg-application-list">
+@forelse ($jobs as $item)
+@php
+$application = $item->applications->first();
+$applicationStatus = $application ? getJobApplicationStatus((int) $application->status) : null;
+$progress = max(0, min(100, (int) ($applicationStatus['progress'] ?? 0)));
+@endphp
+<article class="jg-profile-card jg-application-card">
+<div class="jg-application-summary">
+@if(\App\Services\JobPresentation::logo($item))
+<img class="jg-job-logo" src="{{ \App\Services\JobPresentation::logo($item) }}" alt="{{ $item->company?->company_name }} logo">
+@else
+<span class="jg-company-monogram" aria-hidden="true">{{ mb_substr($item->company?->company_name ?? 'J', 0, 1) }}</span>
+@endif
+<div><h2><a href="{{ route('public.job', $item->id) }}">{{ $item->title }}</a></h2>
+<p>{{ $item->company?->company_name ?? 'Hiring employer' }}</p>
+<div class="jg-job-meta"><span>{{ $item->country?->name ?? 'See job details' }}</span>
+@if($item->minimum_salary || $item->maximum_salary)<span>{{ gs()?->currency_symbol }}{{ $item->minimum_salary }} – {{ gs()?->currency_symbol }}{{ $item->maximum_salary }} {{ $item->salary_type }}</span>@endif</div>
+</div></div>
+@if($applicationStatus)
+<div class="jg-application-status"><p><strong>Status:</strong> {{ $applicationStatus['name'] }}</p>
+<div class="jg-application-meter"><progress max="100" value="{{ $progress }}" aria-label="Application progress">{{ $progress }}%</progress><strong>{{ $progress }}%</strong></div></div>
+@else<p>Status not available</p>@endif
+@if($application)<a class="jg-button" href="{{ route('jobseeker.application.timeline', $application->id) }}">View progress &amp; status history</a>@endif
+</article>
+@empty<div class="jg-empty">You have not applied for any jobs yet. <a href="{{ route('find-jobs') }}">Find jobs</a></div>
+@endforelse
 </div>
+<div class="jg-pagination">{{ $jobs->withQueryString()->links('shared.pagination') }}</div>

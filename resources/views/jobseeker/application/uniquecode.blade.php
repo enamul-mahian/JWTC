@@ -1,42 +1,14 @@
-@extends('frontend.layout.frontMaster')
-@Section('title', 'Unique Code')
-    @Section('content')
-
-        <div class="page-header">
-            <div class="container">
-                <div class="row">
-                    <div class="col-lg-12">
-                        <div class="inner-header">
-                            <h3>Unique Code</h3>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="content">
-            <div class="container">
-                <div class="row">
-                    <div class="col-lg-4 col-md-4 col-xs-12">
-                        <div class="right-sideabr">
-                            <h4>Unique Code</h4>
-                            @include('jobseeker.partials.sidenav')
-                        </div>
-                    </div>
-                    <div class="col-lg-8 col-md-8 col-xs-12">
-                        <div class="card">
-                            <div class="card-body">
-<p>Each approved code allows one job application. Request another code to apply for more jobs. An administrator can approve multiple codes or reject your request.</p>
-                                <div>
-                                    @if ($canCreate > 0)
-                                        <form method="POST" action="{{ route('request-code') }}" onsubmit="return confirm('Are you sure you want to send request?');">
-                                            @csrf
-                                            <button type="submit" class="btn btn-primary">Request New Code</button>
-                                        </form>
-                                    @endif
-                                </div>
-                                <div class="row mt-3"> 
-                                    <table class="table datatable">
+@extends('jobseeker.layout.workspace')
+@section('title', 'Unique Application Codes')
+@section('workspace_title', 'Unique Application Codes')
+@section('workspace_description', 'Use one approved code for each job application.')
+@section('workspace_content')
+<section class="jg-profile-card">
+<p>Request another code to apply for more jobs. An administrator can approve multiple codes or reject your request.</p>
+@if ($canCreate > 0)
+<form method="POST" action="{{ route('request-code') }}">@csrf<button type="submit" class="jg-button">Request New Code</button></form>
+@else<p class="jg-notice">Your code request is pending administrator review.</p>@endif
+<div class="table-wrap"><table class="table">
                                         <thead>
                                             <tr>
                                                 <th>#</th>
@@ -57,32 +29,6 @@
                                                 </tr>
                                             @endforeach
                                         </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        @endsection
-
-        {{-- @push('script')
-            <script>
-            $(document).ready(function () {
-                function getAppliedJobs(page) {
-                    $.ajax({
-                        url: "/job_seeker/get-all-applied-jobs?page=" + page,
-                        type: "get",
-                        datatype: "html",
-                        success: function (data) {
-                            $("#applied_jobs_table").html(data);
-                        },
-                    });
-                }
-                getAppliedJobs(1);
-
-                
-            });
-            </script>
-        @endpush --}}
+                                    </table></div>
+</section>
+@endsection
