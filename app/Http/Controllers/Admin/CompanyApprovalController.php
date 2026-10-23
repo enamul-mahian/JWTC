@@ -27,7 +27,7 @@ class CompanyApprovalController extends Controller
         if ($filter === 'approved') $query->whereNotNull('employer_approved_at')->where('status', 1);
         return response()->view('admin.companies.approvals', [
             'companies' => $query->latest('id')->paginate(30)->withQueryString(),
-            'filter' => $filter, 'pendingCount' => $pendingCount,
+            'filter' => $filter, 'pendingCount' => $pendingCount, 'setting' => gs(),
         ])->header('Cache-Control', 'private, no-store');
     }
     public function decide(Request $request, int $user)
