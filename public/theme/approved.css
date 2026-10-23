@@ -7,3 +7,5 @@
 @media(max-width:900px){.jg-stats.jg-wrap{gap:22px}.jg-job-grid .jg-job-body h3{min-height:0}.jg-job-grid .jg-job-meta{min-height:0}.jg-job-grid .jg-job-summary{min-height:0}}
 @media(max-width:600px){.jg-ticker-inner{padding-left:20px;padding-right:20px}.jg-stats.jg-wrap{gap:20px 16px}.jg-stats strong{font-size:19px}.jg-stats span{font-size:11px}.jg-job-bottom{align-items:center;gap:8px}.jg-job-bottom time{font-size:10px}.jg-section-heading{gap:14px;flex-wrap:wrap}.jg-job-card{gap:12px}.jg-company-monogram{flex-shrink:0}.jg-job-meta{row-gap:6px}.jg-hero-controls{justify-content:center}.jg-footer{padding-left:20px;padding-right:20px;justify-content:center}.jg-hero{padding-bottom:22px}}
 @media(prefers-reduced-motion:reduce){.jg-hero-slide{transition:none}}
+
+.jg-site .jg-ticker-inner{max-width:var(--jg-container);padding-left:28px;padding-right:28px}@media(max-width:600px){.jg-site .jg-ticker-inner{padding-left:20px;padding-right:20px}}
