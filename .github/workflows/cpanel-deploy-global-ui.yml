@@ -1,9 +1,6 @@
 name: cPanel Global Workspace and Support Release
 
 on:
-  push:
-    branches: [main]
-    paths: [.github/workflows/cpanel-deploy-global-ui.yml]
   workflow_dispatch:
 
 permissions:
@@ -166,5 +163,3 @@ jobs:
 # Retry with private view diagnostic status only.
 
 # Preserve public rollback code snapshots while compacting.
-
-# Recovery attempt: preserve private environment outside code archive
