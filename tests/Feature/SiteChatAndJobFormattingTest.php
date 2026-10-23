@@ -41,6 +41,15 @@ class SiteChatAndJobFormattingTest extends TestCase
         for($i=0;$i<6;$i++) $this->getJson('/site-chat/state')->assertOk();
         $this->postJson('/site-chat/threads',['name'=>'Fixture','email'=>'fixture@example.test','body'=>'Hello'])->assertCreated();
     }
+    public function test_job_api_keeps_original_rich_text_and_benefit_json_while_redacting_encoded_email(): void
+    {
+        DB::table('application_settings')->insert(['show_poster_email'=>false]);
+        $job = new \App\Models\Job(['resume_receiving_email'=>'poster@example.test','job_context'=>'<p>Paragraph</p><ul><li>One</li></ul>','other_benefits'=>'["medical","mobile_bill"]','apply_procedure'=>'<p>poster&#64;example.test or poster%40example.test</p>']);
+        $values=$job->toArray();
+        $this->assertSame('<p>Paragraph</p><ul><li>One</li></ul>',$values['job_context']);
+        $this->assertSame('["medical","mobile_bill"]',$values['other_benefits']);
+        $this->assertSame('<p>[contact hidden] or [contact hidden]</p>',$values['apply_procedure']);
+    }
     public function test_visitor_chat_is_private_encrypted_and_session_bound(): void
     {
         $this->postJson('/site-chat/threads',['name'=>'Visitor','email'=>'guest@example.test','body'=>'Private hello'])->assertCreated();

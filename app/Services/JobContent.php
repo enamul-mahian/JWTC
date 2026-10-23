@@ -3,6 +3,23 @@ namespace App\Services;
 class JobContent
 {
     private const ALLOWED = ['p','div','br','ul','ol','li','strong','b','em','i','u','h2','h3','h4','blockquote','a'];
+    public function redact(string $value, array $emails): string
+    {
+        $entities = get_html_translation_table(HTML_ENTITIES, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        foreach ($emails as $email) {
+            if (!is_string($email) || $email === '') continue;
+            $parts = [];
+            foreach (mb_str_split($email) as $character) {
+                $code = mb_ord($character, 'UTF-8');
+                $alternatives = [preg_quote($character, '~'), '&#0*'.$code.';?', '&#x0*'.dechex($code).';?', preg_quote(rawurlencode($character), '~')];
+                if (isset($entities[$character])) $alternatives[] = preg_quote($entities[$character], '~');
+                $parts[] = '(?:'.implode('|', array_unique($alternatives)).')';
+            }
+            $value = preg_replace('~'.implode('', $parts).'~iu', '[contact hidden]', $value);
+        }
+        return $value;
+    }
+
     public function render(?string $value, array $hiddenEmails = []): string
     {
         $value = $value ?? '';
