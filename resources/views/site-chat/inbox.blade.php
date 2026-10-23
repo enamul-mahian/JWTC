@@ -19,6 +19,6 @@
 @else<p>Select a conversation to read messages and reply.</p>@endif
 </div></div></div></div></section>
 @endsection
-@push('js')
+@push('script')
 <script defer src="{{ asset('site-chat/admin.js') }}?v=20261023"></script>
 @endpush

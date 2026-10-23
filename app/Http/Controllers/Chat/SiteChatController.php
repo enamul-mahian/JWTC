@@ -78,7 +78,7 @@ class SiteChatController extends Controller
             $messages=$this->messages($selected,(int)$request->integer('after',0));
             if ($request->expectsJson()) return response()->json(['messages'=>$messages,'status'=>$selected->status])->header('Cache-Control','no-store, private');
         }
-        return response()->view('site-chat.inbox',compact('threads','selected','messages','settings'))->header('Cache-Control','no-store, private');
+        return response()->view('site-chat.inbox',array_merge(compact('threads','selected','messages','settings'), ['setting'=>gs()]))->header('Cache-Control','no-store, private');
     }
     public function reply(Request $request, string $id)
     {
