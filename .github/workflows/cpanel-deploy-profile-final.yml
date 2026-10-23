@@ -1,0 +1,115 @@
+name: Deploy approved profile and private workspace styling
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/cpanel-deploy-profile-final.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: cpanel-staging-operations
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      SOURCE_SHA: 9ef1703372278c0d8ae9e38d9086fdd9864f6b75
+      SSH_HOST: ${{ secrets.CPANEL_SSH_HOST }}
+      SSH_PORT: ${{ secrets.CPANEL_SSH_PORT }}
+      SSH_USER: ${{ secrets.CPANEL_SSH_USER }}
+      SSH_KEY: ${{ secrets.CPANEL_SSH_PRIVATE_KEY }}
+      KNOWN_HOSTS: ${{ secrets.CPANEL_SSH_KNOWN_HOSTS }}
+      APP_PATH: ${{ secrets.CPANEL_APP_PATH }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - name: Require successful complete CI for the exact application revision
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/enamul-mahian/JWTC/actions/runs?head_sha=$SOURCE_SHA&per_page=30" > "$RUNNER_TEMP/source-runs.json"
+          python3 - <<'PY'
+          import json,os
+          runs=json.load(open(os.environ['RUNNER_TEMP']+'/source-runs.json'))['workflow_runs']
+          assert any(r['name']=='JWTC Pre-merge Validation' and r['head_sha']==os.environ['SOURCE_SHA'] and r['conclusion']=='success' for r in runs), 'Exact source CI has not passed'
+          PY
+          php -l scripts/release/deploy_workspace_patch.php
+          php -l scripts/release/verify_workspace_patch.php
+      - name: Build a hash-verified code-only patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64,hashlib,json,os,pathlib
+          paths=json.loads(pathlib.Path('scripts/release/workspace_patch_paths.json').read_text())
+          files={}
+          for name in paths:
+              p=pathlib.Path(name)
+              assert p.is_file() and not p.is_symlink() and '..' not in p.parts
+              data=p.read_bytes()
+              files[name]={'content':base64.b64encode(data).decode(),'sha256':hashlib.sha256(data).hexdigest()}
+          verify=pathlib.Path('scripts/release/verify_workspace_patch.php').read_bytes()
+          generator=pathlib.Path('scripts/release/render_workspace_fixtures.php').read_bytes()
+          bundle={'fixture_generator':base64.b64encode(generator).decode(),'fixture_generator_sha256':hashlib.sha256(generator).hexdigest(),'commit':os.environ['SOURCE_SHA'],'files':files,'verification':base64.b64encode(verify).decode(),'verification_sha256':hashlib.sha256(verify).hexdigest()}
+          pathlib.Path(os.environ['RUNNER_TEMP']+'/workspace-patch.json').write_text(json.dumps(bundle))
+          PY
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Prepare browser verification tools before promotion
+        run: |
+          npm install --prefix "$RUNNER_TEMP/workspace-browser" --no-audit --no-fund playwright@1.62.1
+          "$RUNNER_TEMP/workspace-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Prepare temporary deployment identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in SSH_HOST SSH_PORT SSH_USER SSH_KEY KNOWN_HOSTS APP_PATH; do
+            [[ -n "${!name}" ]] || { echo "::error::Missing configuration $name"; exit 1; }
+          done
+          [[ "$SSH_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]]
+          [[ "$SSH_USER" =~ ^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$ ]]
+          [[ "$SSH_PORT" =~ ^[0-9]{1,5}$ ]]
+          (( 10#$SSH_PORT > 0 && 10#$SSH_PORT < 65536 ))
+          [[ "$APP_PATH" =~ ^/home/[a-zA-Z0-9_.-]+(/[a-zA-Z0-9_.-]+)+$ ]]
+          [[ "$APP_PATH" != *'/../'* && "$APP_PATH" != */.. ]]
+          umask 077
+          mkdir -p "$RUNNER_TEMP/workspace-ssh"
+          printf '%s\n' "$SSH_KEY" > "$RUNNER_TEMP/workspace-ssh/key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$RUNNER_TEMP/workspace-ssh/known_hosts"
+          ssh-keygen -y -P '' -f "$RUNNER_TEMP/workspace-ssh/key" >/dev/null
+      - name: Promote reversible patch and verify live applicant pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          script_base64="$(base64 -w0 scripts/release/deploy_workspace_patch.php)"
+          ssh -T -p "$SSH_PORT" -i "$RUNNER_TEMP/workspace-ssh/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/workspace-ssh/known_hosts" -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=2 "$SSH_USER@$SSH_HOST" "cd '$APP_PATH' && php -r 'eval(\"?>\".base64_decode(\"$script_base64\"));'" < "$RUNNER_TEMP/workspace-patch.json" | tee "$RUNNER_TEMP/workspace-deploy-result.txt"
+          release_id="$(sed -n 's/^DEPLOYMENT_ID //p' "$RUNNER_TEMP/workspace-deploy-result.txt")"
+          [[ "$release_id" =~ ^[0-9]{8}-[0-9]{6}-workspace-[a-f0-9]{8}$ ]]
+          scp -r -P "$SSH_PORT" -i "$RUNNER_TEMP/workspace-ssh/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/workspace-ssh/known_hosts" "$SSH_USER@$SSH_HOST:jwtc-private-deployments/$release_id/ui-fixtures" "$RUNNER_TEMP/live-workspace-fixtures"
+      - name: Check live-code desktop and mobile screenshots
+        run: |
+          export NODE_PATH="$RUNNER_TEMP/workspace-browser/node_modules"
+          export JWTC_UI_FIXTURES="$RUNNER_TEMP/live-workspace-fixtures"
+          node scripts/release/check_workspace_browser.cjs
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: live-applicant-workspace-screenshots
+          path: ${{ runner.temp }}/live-workspace-fixtures/*.png
+          retention-days: 7
+          if-no-files-found: ignore
+      - name: Remove temporary identity and payload
+        if: always()
+        shell: bash
+        run: rm -f -- "$RUNNER_TEMP/workspace-ssh/key" "$RUNNER_TEMP/workspace-ssh/known_hosts" "$RUNNER_TEMP/workspace-patch.json"
