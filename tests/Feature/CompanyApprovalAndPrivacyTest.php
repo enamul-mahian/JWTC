@@ -82,6 +82,18 @@ class CompanyApprovalAndPrivacyTest extends TestCase
         $this->assertDatabaseCount('employer_review_events', 2);
         $this->actingAs($company->fresh())->get('/employer/dashboard')->assertRedirect(route('company.approval'));
     }
+    public function test_pending_approval_screen_and_menu_are_available_to_authorized_admin(): void
+    {
+        $admin=$this->account(UserType::ADMIN);
+        $admin->givePermissionTo(Permission::findOrCreate('employer-list','web'));
+        $pending=$this->account(UserType::EMPLOYER);
+        $approved=$this->account(UserType::EMPLOYER,true);
+        $this->actingAs($admin)->get('/admin/company-approvals')->assertOk()->assertSee('Company Approvals')->assertSee('Pending approval')->assertSee($pending->email)->assertDontSee($approved->email);
+        $this->get('/admin/company-approvals?status=approved')->assertOk()->assertSee($approved->email)->assertDontSee($pending->email);
+        $this->get('/admin/company-approvals?status=all')->assertOk()->assertSee($approved->email)->assertSee($pending->email);
+        $this->actingAs($this->account(UserType::ADMIN))->get('/admin/company-approvals')->assertForbidden();
+        $this->actingAs($this->account(UserType::JOB_SEEKER))->get('/admin/company-approvals')->assertForbidden();
+    }
     public function test_company_contact_email_serialization_is_controlled_by_admin_setting(): void
     {
         $company = new Company(['company_name' => 'Privacy fixture', 'contact_per_email' => 'poster-private@example.test']);

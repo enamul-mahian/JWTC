@@ -3,6 +3,7 @@
 @section('content')
 <section class="jg-auth"><div class="jg-auth-card"><span class="jg-pill">For job seekers</span><h1>Create Your Account</h1><p>Jobs are visible to everyone. Enter your registration code to create a job seeker account.</p>
 
+    @if($errors->any())<div class="jg-form-errors" role="alert"><strong>Please check the following:</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
     <form method="POST" action="{{ route('register') }}">
         @csrf
 
@@ -61,7 +62,6 @@
         </div>
 
 
-        @if (config('security.registration_otp.enabled'))
             <div class="mt-4">
                 <x-input-label for="job_category_id" value="Preferred Job Category" />
                 <select id="job_category_id" name="job_category_id" class="block mt-1 w-full border rounded"
@@ -75,7 +75,6 @@
                 </select>
                 <x-input-error :messages="$errors->get('job_category_id')" class="mt-2" />
             </div>
-        @endif
 
         <!-- Referral Code -->
         <div class="mt-4">
