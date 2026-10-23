@@ -1189,3 +1189,8 @@ Route::prefix('admin/site-chat')->middleware(['auth','admin_user','application.c
     Route::post('/settings', [\App\Http\Controllers\Chat\SiteChatController::class,'configure'])->middleware('throttle:6,1,site-chat-configure:')->name('admin.site-chat.settings');
     Route::post('/{id}/reply', [\App\Http\Controllers\Chat\SiteChatController::class,'reply'])->whereUuid('id')->middleware('throttle:15,1,site-chat-reply:')->name('admin.site-chat.reply');
 });
+
+Route::prefix('admin/news-ticker')->middleware(['auth','admin_user'])->group(function () {
+    Route::get('/', [\App\Http\Controllers\Admin\SiteNoticeController::class,'index'])->name('admin.news-ticker');
+    Route::post('/', [\App\Http\Controllers\Admin\SiteNoticeController::class,'update'])->middleware('throttle:12,1,news-ticker-settings:')->name('admin.news-ticker.update');
+});
