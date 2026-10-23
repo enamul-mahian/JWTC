@@ -39,13 +39,28 @@ class Job extends Model
         return app(\App\Services\JobContent::class)->render($value, $this->hiddenPosterEmails());
     }
 
+    public function publicEmploymentLabels(): ?string
+    {
+        $items = json_decode($this->employment_status ?? '[]', true);
+        if (!is_array($items)) return $this->employment_status;
+        $ids = array_values(array_filter($items, static fn($item) => is_scalar($item) && ctype_digit((string)$item)));
+        $names = $ids ? \Illuminate\Support\Facades\DB::table('job_types')->whereIn('id',$ids)->pluck('name','id')->all() : [];
+        $labels = [];
+        foreach ($items as $item) {
+            if (!is_scalar($item)) continue;
+            if (ctype_digit((string)$item)) { if (isset($names[$item])) $labels[] = $names[$item]; }
+            else $labels[] = (string)$item;
+        }
+        return $labels ? json_encode($labels, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) : null;
+    }
+
     public function toArray()
     {
         $values = parent::toArray();
         if (!app(\App\Services\PosterEmailVisibility::class)->enabled()) {
             unset($values['resume_receiving_email']);
             foreach (['job_context', 'job_responsibilities', 'additional_requirements', 'other_benefits', 'apply_procedure', 'additional_salary_info'] as $field) {
-                if (isset($values[$field])) $values[$field] = $this->publicDescriptionHtml($values[$field]);
+                if (isset($values[$field])) $values[$field] = app(\App\Services\JobContent::class)->redact($values[$field], $this->hiddenPosterEmails());
             }
         }
         return $values;

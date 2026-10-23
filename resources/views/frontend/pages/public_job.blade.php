@@ -15,7 +15,7 @@
 @if($job->festival_bonus)<div><dt>Festival bonus</dt><dd>{{ $job->festival_bonus }}</dd></div>@endif
 @if($job->lunch_facilities)<div><dt>Lunch facilities</dt><dd>{{ ucwords(str_replace('_',' ',$job->lunch_facilities)) }}</dd></div>@endif
 </dl></section>
-@foreach(['Job Description'  => $job->job_context, 'Key Responsibilities' => $job->job_responsibilities, 'Requirements' => $job->additional_requirements, 'Workplace' => $job->work_place, 'Employment Type' => $job->employment_status, 'Job Level' => $job->job_level, 'Benefits' => $job->other_benefits, 'Additional Salary Information' => $job->additional_salary_info, 'How to Apply' => $job->apply_procedure] as $heading => $text)
+@foreach(['Job Description'  => $job->job_context, 'Key Responsibilities' => $job->job_responsibilities, 'Requirements' => $job->additional_requirements, 'Workplace' => $job->work_place, 'Employment Type' => $job->publicEmploymentLabels(), 'Job Level' => $job->job_level, 'Benefits' => $job->other_benefits, 'Additional Salary Information' => $job->additional_salary_info, 'How to Apply' => $job->apply_procedure] as $heading => $text)
 @if($text)<section class="jg-job-copy"><h2>{{ $heading }}</h2><div class="jg-rich-copy">{!! $job->publicDescriptionHtml($text) !!}</div></section>@endif
 @endforeach
 @if($job->application_deadline)<p class="jg-helper">Application deadline: {{ \Illuminate\Support\Carbon::parse($job->application_deadline)->format('d M Y') }}</p>@endif
