@@ -1,6 +1,6 @@
 @extends('dashboard.layout.dasboardMaster')
 @section('title','Application Progress')
-@push('style')<link rel="stylesheet" href="{{ asset('theme/approved.css') }}?v=20261023-6">@endpush
+@push('style')<link rel="stylesheet" href="{{ asset('theme/approved.css') }}?v=20261023-7">@endpush
 @section('content')
 <div class="card"><div class="card-body"><h1 class="h4">Manage application #APP-{{ $application->id }}</h1>
 @if(session('success'))<p class="alert alert-success">{{ session('success') }}</p>@endif

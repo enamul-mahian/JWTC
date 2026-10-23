@@ -1,6 +1,7 @@
 <div class="right-sideabr">
     <h4>{{ __('Manage Account') }}</h4>
     <ul class="list-item">
+@if(config('support_center.enabled'))<li><a href="{{ route('support.index') }}">Support Inbox &amp; Refunds</a></li>@endif
 
         @can('employer-dashboard')
             <li>

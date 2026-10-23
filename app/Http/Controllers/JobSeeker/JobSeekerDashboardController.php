@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Auth;
 class JobSeekerDashboardController extends Controller
 {
     public function dashboard(){
-        return view('jobseeker.dashboard.index');
+        return redirect()->route('job-seeker-profile');
     }
     
     public function profileData(){

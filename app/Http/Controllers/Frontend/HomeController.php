@@ -50,40 +50,9 @@ class HomeController extends Controller
 
     public function searchJobs(Request $request)
     {
-
-        $title = $request->input('title');
-        $country_id = $request->input('country_id');
-        $category_id = $request->input('category_id');
-
-        $request->validate(['title' => ['nullable','string','max:120'], 'country_id' => ['nullable','integer'], 'category_id' => ['nullable','integer'], 'salary_type' => ['nullable','in:hourly,monthly,yearly']]);
-        $query = Job::query();
-
-        if ($request->filled('title')) {
-            $title = $request->input('title');
-
-            $query->where(function ($query) use ($title) {
-                $query->where('title', 'like', '%' . $title . '%')
-                    ->orWhere('job_responsibilities', 'like', '%' . $title . '%')
-                    ->orWhere('job_context', 'like', '%' . $title . '%')
-                    ->orWhereHas('company', fn ($company) => $company->where('company_name', 'like', '%'.$title.'%'));
-            });
-        }
-
-        if ($country_id) {
-            $query->where('country_id', $country_id);
-        }
-
-        if ($category_id) {
-            $query->where('job_category_id', $category_id);
-        }
-
-        if ($request->filled('salary_type')) $query->where('salary_type', $request->input('salary_type'));
-        $jobs = $query->where('is_publish', 1)->with(['country', 'company', 'job_category'])->latest()->paginate(10);
-
-        $locations = Country::whereIn('id',\Illuminate\Support\Facades\DB::table('job_location_options')->where('enabled',true)->select('country_id'))->orderBy('name')->get(['id','name']);
-        $job_categories = JobCategory::whereStatus(1)->get();
-
-        return view('frontend.pages.jobs', compact('jobs', 'locations', 'job_categories', 'title', 'country_id', 'category_id'));
+        $data=app(\App\Services\JobSearch::class)->data($request);
+        if($data['jobs']->currentPage()>$data['jobs']->lastPage())return redirect()->route('search-jobs',array_merge($request->except('page'),['page'=>1]));
+        return view('frontend.pages.jobs',$data);
     }
 
     public function getPageData($url)

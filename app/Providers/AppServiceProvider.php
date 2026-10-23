@@ -27,7 +27,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Paginator::useBootstrapFive();
+        Paginator::defaultView('shared.pagination');
+        Paginator::defaultSimpleView('shared.pagination');
 
         // Artisan, Composer and migration commands must bootstrap without an
         // existing database connection or an initialized application schema.

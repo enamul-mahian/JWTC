@@ -1,29 +1,7 @@
-@extends('frontend.layout.frontMaster')
-@Section('title', 'Jobseeker Dashbaord')
-@Section('content')
-
-<div class="page-header">
-    <div class="container">
-        <div class="row">
-            <div class="col-lg-12">
-                <div class="inner-header">
-                    <h3>{{ __('messages.ManageProfile') }}</h3>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div id="content">
-    <div class="container">
-        <div class="row">
-            <div class="col-lg-4 col-md-4 col-xs-12">
-                <div class="right-sideabr">
-                    <h4>{{ __('messages.Profile') }}</h4>
-                    @include('jobseeker.partials.sidenav')
-                </div>
-            </div>
-            <div class="col-lg-8 col-md-8 col-xs-12">
+@extends('jobseeker.layout.workspace')
+@section('title','View Profile')
+@section('workspace_title','View Profile')
+@section('workspace_content')<section class="jg-profile-card">
                 @if($user->personal_info)
                 <table class="table">
                     <tr>
@@ -209,12 +187,4 @@
                     </tbody>
                 </table>
                 @endif
-            </div>
-        </div>
-    </div>
-</div>
-@endsection
-
-@push('script')
-    <script src="{{ asset('frontend/assets/script/job_seeker.js') }}"></script>
-@endpush
+</section>@endsection

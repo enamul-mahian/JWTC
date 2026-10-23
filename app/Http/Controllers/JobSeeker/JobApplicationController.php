@@ -15,16 +15,16 @@ use Illuminate\Support\Facades\Auth;
 
 class JobApplicationController extends Controller
 {
-    public function findJobs()
+    public function findJobs(Request $request)
     {
-        $locations = Country::whereStatus(1)->get();
-        return view('jobseeker.application.find-job', compact('locations'));
+        abort_unless($request->user()?->user_type===\App\Enum\UserType::JOB_SEEKER,403);
+        $data=app(\App\Services\JobSearch::class)->data($request);
+        if($data['jobs']->currentPage()>$data['jobs']->lastPage())return redirect()->route('find-jobs',array_merge($request->except('page'),['page'=>1]));
+        return view('jobseeker.application.find-job',$data);
     }
-
-    public function getAllJobs()
+    public function getAllJobs(Request $request)
     {
-        $jobs = Job::with('country')->where('is_publish', 1)->paginate(5);
-        return view('jobseeker.application.jobs_table', compact('jobs'));
+        return view('jobseeker.application.jobs_table',app(\App\Services\JobSearch::class)->data($request));
     }
 
     public function getApplicationForm($id)
@@ -43,26 +43,8 @@ class JobApplicationController extends Controller
 
     public function search(Request $request)
     {
-        $query = Job::where('is_publish', 1);
-
-        if ($request->filled('title')) {
-            $title = $request->input('title');
-            $query->where(function ($query) use ($title) {
-                $query->where('title', 'like', '%' . $title . '%')
-                    ->orWhere('job_responsibilities', 'like', '%' . $title . '%')
-                    ->orWhere('job_context', 'like', '%' . $title . '%');
-            });
-        }
-
-        if ($request->filled('location')) {
-            $query->where('country_id', $request->input('location'));
-        }
-
-        $jobs = $query->where(function ($q) { $q->whereNull('application_deadline')->orWhereDate('application_deadline', '>=', today()); })->paginate(5);
-
-        return view('jobseeker.application.jobs_table', compact('jobs'));
+        return view('jobseeker.application.jobs_table',app(\App\Services\JobSearch::class)->data($request));
     }
-
 
     public function savePost(Request $request)
     {

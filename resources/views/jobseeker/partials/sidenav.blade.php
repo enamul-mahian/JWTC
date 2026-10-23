@@ -50,7 +50,7 @@
     @endif
 
     @if(config('support_center.enabled') && auth()->user()?->user_type === \App\Enum\UserType::JOB_SEEKER)
-        <li><a href="{{ route('support.index') }}" class="{{ Route::is('support.*') ? 'active' : '' }}">Support &amp; Refunds</a></li>
+        <li><a href="{{ route('support.index') }}" class="{{ Route::is('support.*') ? 'active' : '' }}">Support Inbox &amp; Refunds</a></li>
     @endif
 
     {{-- TODO Something to put --}}
@@ -74,25 +74,5 @@
     </li>
 </ul>
 
-@push('js')
-    <script>
-        $(document).ready(function() {
-            $('.autoRecvEmail').on('change', function() {
-                let value = this.checked ? 1 : 0;
-                $(this).val(value);
 
-                axios.get('/auto-email-receive/' + value)
-                    .then(function(res) {
-                        if (res.status === 1) {
-                            toastr.success("Auto email receive active success");
-                        } else {
-                            toastr.success("Auto email receive inactive success");
-                        }
-                    })
-                    .catch(function(error) {
-                        toastr.error("There was an error processing your request.");
-                    });
-            });
-        });
-    </script>
-@endpush
+@push('js')<script>document.querySelectorAll('.autoRecvEmail').forEach(el=>el.addEventListener('change',()=>{const value=el.checked?1:0;el.value=value;fetch('/auto-email-receive/'+value,{credentials:'same-origin'}).catch(()=>{el.checked=!el.checked;});}));</script>@endpush

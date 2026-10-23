@@ -36,7 +36,7 @@ class SupportCenter
     public function canManage(User $actor): bool
     {
         return $this->isPrivileged($actor)
-            && $actor->can('manage-support-tickets');
+            && ($actor->can('manage-support-tickets') || $actor->hasAnyRole(['Admin','Super Admin']));
     }
 
     public function canReview(User $actor): bool
@@ -51,10 +51,17 @@ class SupportCenter
             && $actor->can('confirm-refund-settlement');
     }
 
+    public function companyRecipient(User $actor,object $ticket): bool
+    {
+        return $actor->user_type===UserType::EMPLOYER && !empty($ticket->recipient_company_id)
+            && DB::table('companies')->where('id',$ticket->recipient_company_id)->where('user_id',$actor->id)->exists();
+    }
+
     public function canSee(User $actor, object $ticket): bool
     {
         return (int) $ticket->requester_id === (int) $actor->id
             || $this->canManage($actor)
+            || $this->companyRecipient($actor,$ticket)
             || (($this->canReview($actor) || $this->canSettle($actor))
                 && DB::table('support_refund_requests')
                     ->where('ticket_id', $ticket->id)->exists());
@@ -79,7 +86,7 @@ class SupportCenter
             // Finance-only staff cannot browse unrelated account complaints.
             $q->whereIn('id', DB::table('support_refund_requests')->select('ticket_id'));
         } else {
-            $q->where('requester_id', $actor->id);
+            if($actor->user_type===UserType::EMPLOYER && Schema::hasColumn('support_tickets','recipient_company_id'))$q->where(fn($q)=>$q->where('requester_id',$actor->id)->orWhereIn('recipient_company_id',DB::table('companies')->where('user_id',$actor->id)->select('id')));else $q->where('requester_id', $actor->id);
         }
         if ($status && in_array($status,
             ['open', 'in_progress', 'pending_customer', 'resolved', 'closed'], true)) {
@@ -91,8 +98,11 @@ class SupportCenter
     public function create(User $actor, array $input): object
     {
         $this->requireReady();
-        abort_unless(in_array($actor->user_type,
-            [UserType::JOB_SEEKER, UserType::EMPLOYER], true), 403);
+        abort_unless(in_array($actor->user_type,[UserType::JOB_SEEKER,UserType::EMPLOYER],true),403);
+        if(!empty($input['recipient_company_id'])){
+            $available=DB::table('companies')->where('id',$input['recipient_company_id'])->whereIn('id',DB::table('jobs')->where('is_publish',1)->whereNull('deleted_at')->select('company_id'))->exists();
+            if(!$available)throw ValidationException::withMessages(['recipient_company_id'=>'Choose a company with a published vacancy.']);
+        }
 
         return DB::transaction(function () use ($actor, $input) {
             // Serialize new requests per account, even on parallel POSTs.
@@ -107,7 +117,7 @@ class SupportCenter
             }
 
             $now = now();
-            $id = DB::table('support_tickets')->insertGetId([
+            $ticketFields=[
                 'ticket_number' => 'JW-' . strtoupper(Str::random(14)),
                 'requester_id' => $actor->id,
                 'category' => $input['category'],
@@ -115,7 +125,9 @@ class SupportCenter
                 'subject' => trim($input['subject']),
                 'description_encrypted' => Crypt::encryptString(trim($input['description'])),
                 'status' => 'open', 'created_at' => $now, 'updated_at' => $now,
-            ]);
+            ];
+            if(!empty($input['recipient_company_id']))$ticketFields['recipient_company_id']=(int)$input['recipient_company_id'];
+            $id=DB::table('support_tickets')->insertGetId($ticketFields);
             $this->ticketEvent($id, $actor->id, 'created', null, 'open');
             return DB::table('support_tickets')->where('id', $id)->first();
         }, 3);
@@ -154,7 +166,7 @@ class SupportCenter
     {
         $ticket = $this->ticket($actor, $id);
         $manager = $this->canManage($actor);
-        abort_unless($manager || (int) $ticket->requester_id === (int) $actor->id, 403);
+        abort_unless($manager || $this->companyRecipient($actor,$ticket) || (int) $ticket->requester_id === (int) $actor->id, 403);
         abort_if($internal && !$manager, 403);
         $body = trim($body);
         if ($body === '' || mb_strlen($body) > config('support_center.max_reply_length', 5000)) {

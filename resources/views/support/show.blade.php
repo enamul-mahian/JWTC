@@ -4,6 +4,9 @@
     <a href="{{ route('support.index') }}" class="back">&larr; All support tickets</a>
     <h1>{{ $ticket->ticket_number }}</h1>
     <p class="muted">{{ $ticket->subject }} · {{ ucfirst($ticket->category) }} · <strong>{{ ucfirst(str_replace('_',' ',$ticket->status)) }}</strong> · {{ ucfirst($ticket->priority) }} priority</p>
+    @if(session('warning'))<p class="alert" role="status">{{ session('warning') }}</p>@endif
+    <p class="muted">Recipient: {{ !empty($ticket->recipient_company_id)?\Illuminate\Support\Facades\DB::table('companies')->where('id',$ticket->recipient_company_id)->value('company_name'):'JoinGallagher support' }}</p>
+    @if(isset($deliveries) && $deliveries->isNotEmpty())<section class="card"><h2>Email delivery</h2>@foreach($deliveries as $delivery)<p>Notification: {{ $delivery->status==='accepted'?'Accepted by SMTP server':ucfirst($delivery->status) }} · Attempts: {{ $delivery->attempts }}</p>@if($canManage && $delivery->status==='failed')<form method="POST" action="{{ route('support.notification.retry',$delivery->id) }}">@csrf<button>Retry email notification</button></form>@endif @endforeach</section>@endif
     <section class="card">
         <h2>Original request</h2>
         <p style="white-space:pre-wrap;overflow-wrap:anywhere">{{ $description }}</p>

@@ -1,0 +1,2 @@
+@extends('frontend.layout.frontMaster')
+@section('content')<section class="jg-wrap jg-profile-workspace"><header class="jg-workspace-title"><span class="jg-pill">Applicant workspace</span><h1>@yield('workspace_title','My Dashboard')</h1><p>@yield('workspace_description','Manage your profile, applications and documents.')</p></header><div class="jg-profile-grid"><aside class="jg-profile-nav"><h2>My account</h2>@include('jobseeker.partials.sidenav')</aside><div class="jg-profile-main">@yield('workspace_content')</div></div></section>@endsection

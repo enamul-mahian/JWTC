@@ -23,6 +23,7 @@
     @endif
     @stack('style')
 <link rel="stylesheet" href="{{ asset('theme/portal-motion.css') }}?v=20261023-1">
+<link rel="stylesheet" href="{{ asset('theme/workspace.css') }}?v=20261023-1">
 </head>
 
 <body @if(config('jwtc_design.enabled'))class="jwtc-redesign"@endif>

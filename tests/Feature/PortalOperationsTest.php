@@ -144,4 +144,38 @@ class PortalOperationsTest extends TestCase
         $this->get('/admin/security-settings')->assertOk()->assertDontSee('synthetic-secret');
         $this->actingAs($this->employer)->get('/admin/security-settings')->assertForbidden();
     }
+
+    public function test_public_and_applicant_filters_share_rules_period_normalization_and_pagination(): void
+    {
+        $job=$this->job();$job->update(['title'=>'Needle original','salary_type'=>' Monthly ','application_deadline'=>'2020-01-01']);
+        for($i=1;$i<=11;$i++){$copy=$job->replicate();$copy->slug='needle-'.$i;$copy->title='Needle '.$i;$copy->save();}
+        $query=['title'=>'nEeDlE','country_id'=>806,'category_id'=>806,'salary_type'=>'monthly'];
+        $url='/search-jobs?'.http_build_query($query);
+        $this->get($url)->assertOk()->assertViewHas('jobs',fn($j)=>$j->total()===12 && $j->count()===10)->assertSee('jg-page-nav',false)->assertDontSee('pagination-sm',false)->assertSee('Reset filters');
+        $this->get($url.'&page=2')->assertOk()->assertViewHas('jobs',fn($j)=>$j->count()===2)->assertSee('country_id=806',false);
+        $this->get($url.'&page=99')->assertRedirect();
+        $this->get('/search-jobs?salary_type=weekly')->assertOk()->assertViewHas('jobs',fn($j)=>$j->total()===0);
+        $applicant=$this->actor('job_seeker','global-applicant');$this->actingAs($applicant)->get('/job_seeker/find-jobs?'.http_build_query($query))->assertOk()->assertViewHas('jobs',fn($j)=>$j->total()===12)->assertSee('jg-profile-nav',false)->assertDontSee('application.js',false);
+        $this->get('/job_seeker/jobseeker-change-password')->assertOk()->assertSee('Account security')->assertSee('jg-profile-nav',false)->assertDontSee('class="page-header"',false);
+    }
+    public function test_company_support_recipient_is_scoped_and_email_acceptance_is_recorded_without_losing_ticket(): void
+    {
+        config(['support_center.enabled'=>true,'mail.mailers.studio_smtp'=>['transport'=>'smtp','host'=>'smtp.example.test','username'=>'synthetic'],'email_studio.from_address'=>'sender@example.test','email_studio.from_name'=>'JoinGallagher']);
+        \Illuminate\Support\Facades\Mail::fake();$this->job();$applicant=$this->actor('job_seeker','support-applicant');$center=app(\App\Services\SupportCenter::class);
+        $ticket=$center->create($applicant,['category'=>'refund','subject'=>'Please review payment','description'=>'Private example request.','recipient_company_id'=>$this->company->id]);
+        $this->assertTrue($center->canSee($this->employer,$ticket));
+        Role::findOrCreate('Admin','web');$this->admin->assignRole('Admin');$center->reply($this->admin,$ticket->id,'Internal review note.',true);
+        $this->assertFalse($center->replies($this->employer,$ticket)->getCollection()->contains('body','Internal review note.'));
+        config(['email_studio.enabled'=>true]);$this->actingAs($this->admin)->get('/admin/email-studio')->assertOk();
+        $other=$this->actor('employer','unrelated-company');$other->forceFill(['employer_approved_at'=>now()])->save();$this->assertFalse($center->canSee($other,$ticket));
+        $reply=$center->reply($this->employer,$ticket->id,'We have received your request.',false);$this->assertNotNull($reply->id);
+        $status=app(\App\Services\SupportNotifications::class)->notify($applicant,$ticket,'Private example request.','test:'.$ticket->id);$this->assertSame('accepted',$status);
+        \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\SupportMessage::class,fn($m)=>$m->hasTo($this->employer->email));
+        $this->assertDatabaseHas('support_mail_deliveries',['ticket_id'=>$ticket->id,'status'=>'accepted','attempts'=>1]);
+        $delivery=DB::table('support_mail_deliveries')->where('ticket_id',$ticket->id)->first();$this->assertNotSame('Private example request.',$delivery->message_encrypted);
+        $this->actingAs($applicant)->get('/support-center/tickets/'.$ticket->id)->assertOk();
+        $this->actingAs($other)->get('/support-center/tickets/'.$ticket->id)->assertNotFound();
+        config(['mail.mailers.studio_smtp'=>null]);
+        $status=app(\App\Services\SupportNotifications::class)->notify($applicant,$ticket,'Still retained in the inbox.','failed:'.$ticket->id);$this->assertSame('failed',$status);$this->assertDatabaseHas('support_tickets',['id'=>$ticket->id]);
+    }
 }
