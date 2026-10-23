@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Preserve older immutable rollback code in verified private archives."""
 import hashlib,json,os,pathlib,subprocess,sys,tarfile
-ALLOWED={'app','config','database','resources','routes','vendor','bootstrap','composer.json','composer.lock','artisan'}
-def compact(previous):
+ALLOWED={'app','config','database','resources','routes','vendor','public','bootstrap','composer.json','composer.lock','artisan'}
+def compact(previous,reusable_inode=None):
  previous=pathlib.Path(previous)
  if previous.is_symlink() or previous.resolve()!=previous or not previous.is_dir():raise ValueError('unsafe previous')
  expected={};directories=[]
@@ -15,6 +15,8 @@ def compact(previous):
  archive=previous.parent/'previous-code-verified.tar.gz';temp=previous.parent/'previous-code-verified.tar.gz.part'
  if archive.exists() or temp.exists():raise ValueError('archive already exists')
  try:
+  if reusable_inode is not None and reusable_inode.is_file() and reusable_inode.read_bytes()==b'verified extraction':
+   os.rename(str(reusable_inode),str(temp));os.chmod(str(temp),0o600)
   with tarfile.open(str(temp),'w:gz',dereference=True) as tar:
    for directory in sorted(directories):tar.add(str(directory),arcname=directory.relative_to(previous).as_posix(),recursive=False)
    for relative in sorted(expected):tar.add(str(previous/relative),arcname=relative,recursive=False)
@@ -48,7 +50,7 @@ if __name__=='__main__':
   previous=sorted([p for p in parent.glob('*/previous') if p.is_dir()],key=lambda p:p.parent.name,reverse=True)
   counts=[0,0,0]
   for p in previous[2:]:
-   n,d,b=compact(p);counts=[counts[0]+n,counts[1]+d,counts[2]+b]
+   n,d,b=compact(p,home/'jwtc-private-staging/20261022-215145-f92ca979/candidate-unpacked-portal-global-ui/.extraction-complete');counts=[counts[0]+n,counts[1]+d,counts[2]+b]
   print('VERIFIED_ROLLBACK_ARCHIVES',json.dumps({'files_preserved':counts[0],'directories_compacted':counts[1],'compressed_bytes':counts[2],'latest_full_rollbacks_retained':min(2,len(previous))}))
   uapi=next((p for p in ['/usr/bin/uapi','/usr/local/cpanel/bin/uapi','/bin/uapi'] if os.path.isfile(p)),None)
   if uapi:
@@ -56,4 +58,4 @@ if __name__=='__main__':
    quota=result.get('result',{}).get('data',{})
    print('SAFE_ACCOUNT_QUOTA',json.dumps({k:v for k,v in quota.items() if k in ['megabyte_limit','megabytes_used','under_megabyte_limit','under_quota_overall','under_inode_limit','inode_limit','inodes_used','inodes_remain']}))
  except Exception as e:
-  print('FAIL: rollback compaction stopped; verified archives and original bytes retained',type(e).__name__);sys.exit(1)
+  print('FAIL: rollback compaction stopped; verified archives and original bytes retained',type(e).__name__,str(e) if isinstance(e,ValueError) else getattr(e,'errno',None));sys.exit(1)
