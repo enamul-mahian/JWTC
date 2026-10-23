@@ -1,6 +1,9 @@
 name: cPanel Read-only Registration Diagnostics
 
 on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/cpanel-inspect-registration.yml, scripts/release/inspect_registration.php]
   workflow_dispatch:
 
 permissions:

@@ -18,14 +18,19 @@ try {
             if(str_contains($line,'.ERROR:')) {
                 $event=['registration'=>str_contains($line,'RegisteredUserController'),'sqlstate'=>null,'category'=>'other'];
                 if(preg_match('/SQLSTATE\[([A-Z0-9]{5})\]/',$line,$match))$event['sqlstate']=$match[1];
-                foreach(['job_category_id','personal_information','Route [','RoleDoesNotExist','PermissionDoesNotExist','doesn\'t have a default value','cannot be null','Duplicate entry','Data too long','Mailer','SMTP','Unique constraint','Class "','Undefined'] as $category)if(str_contains($line,$category))$event['category']=$category;
+                foreach(['Form','foreach()','in_array()','json_decode()','Undefined variable','Attempt to read property','job_category_id','personal_information','Route [','RoleDoesNotExist','PermissionDoesNotExist','doesn\'t have a default value','cannot be null','Duplicate entry','Data too long','Mailer','SMTP','Unique constraint','Class "','Undefined'] as $category)if(str_contains($line,$category))$event['category']=$category;
                 $events[]=$event;
-            } elseif($events && preg_match('#/(app/Http/Controllers/Auth/RegisteredUserController.php|app/Services/RegistrationOtpService.php|app/Http/Middleware/[A-Za-z]+.php)\((\d+)\)#',$line,$match)) {
+            } elseif($events && preg_match('#/(app/[A-Za-z0-9_/]+.php|resources/views/[A-Za-z0-9_./-]+.blade.php)\((\d+)\)#',$line,$match)) {
                 $index=array_key_last($events);$events[$index]['frames'][]=$match[1].':'.$match[2];
                 if(str_contains($match[1],'RegisteredUserController'))$events[$index]['registration']=true;
             }
         }
-        foreach(array_slice($events,-12) as $event) echo 'SAFE_ERROR '.json_encode($event)."\n";
+        foreach(array_slice($events,-20) as $event) echo 'SAFE_ERROR '.json_encode($event)."\n";
+    }
+    $views=new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root.'/resources/views',FilesystemIterator::SKIP_DOTS));
+    foreach($views as $view) if($view->isFile() && str_ends_with($view->getFilename(),'.blade.php')) {
+        $source=file_get_contents($view->getPathname());
+        if(preg_match_all('/Form::([A-Za-z]+)/',$source,$methods))echo 'LEGACY_FORM '.json_encode(['path'=>substr($view->getPathname(),strlen($root)+1),'methods'=>array_values(array_unique($methods[1]))])."\n";
     }
     echo "PASS: read-only filtered diagnostics complete\n";
 } catch(Throwable $error) {echo 'SAFE_DIAGNOSTIC_FAILURE '.get_class($error)."\n";exit(1);}
