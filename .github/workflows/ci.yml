@@ -240,7 +240,7 @@ jobs:
 
   release-candidate:
     name: Production dependency and candidate package check
-    needs: [laravel, mysql-schema, legacy-schema-upgrade]
+    needs: [laravel, mysql-schema, legacy-schema-upgrade, workspace-browser]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -289,3 +289,50 @@ jobs:
           path: ${{ runner.temp }}/jwtc-candidate/
           if-no-files-found: error
           retention-days: 7
+
+  workspace-browser:
+    name: Applicant desktop/mobile appearance and CSP
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      APP_ENV: testing
+      APP_DEBUG: 'false'
+      APP_KEY: 'base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
+      APP_URL: 'http://127.0.0.1:8765'
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ':memory:'
+      SESSION_DRIVER: array
+      CACHE_DRIVER: array
+      MAIL_MAILER: array
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, fileinfo, pdo_sqlite, sqlite3, gd, zip
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Prepare isolated synthetic views
+        run: |
+          mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs
+          composer install --prefer-dist --no-interaction --no-progress
+          export JWTC_UI_FIXTURES="$RUNNER_TEMP/workspace-fixtures"
+          php scripts/release/render_workspace_fixtures.php
+      - name: Install isolated browser test tools
+        run: |
+          npm install --prefix "$RUNNER_TEMP/workspace-browser" --no-audit --no-fund playwright@1.62.1
+          "$RUNNER_TEMP/workspace-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Verify three pages at desktop and phone widths
+        run: |
+          export NODE_PATH="$RUNNER_TEMP/workspace-browser/node_modules"
+          export JWTC_UI_FIXTURES="$RUNNER_TEMP/workspace-fixtures"
+          node scripts/release/check_workspace_browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: applicant-workspace-screenshots
+          path: ${{ runner.temp }}/workspace-fixtures/*.png
+          retention-days: 7
+          if-no-files-found: ignore

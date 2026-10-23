@@ -4,29 +4,29 @@
 
     @can('job-apply')
         <li><a class="{{ Route::is('find-jobs') ? 'active' : null }}" href="{{ route('find-jobs') }}"
-                >Find Jobs </a></li>
+                >@include('jobseeker.partials.icon',['icon'=>'search']) Find Jobs </a></li>
     @endcan
 
     @can('view-profile')
         <li><a class="{{ Route::is('view-jobseeker-profile') ? 'active' : null }}"
-                href="{{ route('view-jobseeker-profile') }}">View Profile </a></li>
+                href="{{ route('view-jobseeker-profile') }}">@include('jobseeker.partials.icon',['icon'=>'user']) View Profile </a></li>
     @endcan
 
     @can('manage-profile')
         <li><a class="{{ Route::is('jobseeker.dashboard') || Route::is('job-seeker-profile') ? 'active' : null }}"
-                href="{{ route('job-seeker-profile') }}">Manage Profile </a></li>
+                href="{{ route('job-seeker-profile') }}">@include('jobseeker.partials.icon',['icon'=>'edit']) Manage Profile </a></li>
     @endcan
 
 
     @can('job-applied')
         <li><a href="{{ route('applied-jobs') }}"
-                class="{{ Route::is('applied-jobs', 'jobseeker.application.timeline') ? 'active' : null }}">Applied Jobs
+                class="{{ Route::is('applied-jobs', 'jobseeker.application.timeline') ? 'active' : null }}">@include('jobseeker.partials.icon',['icon'=>'file']) Applied Jobs
             </a></li>
     @endcan
     
     @can('job-applied')
         <li>
-            <a href="{{ route('unique_codes') }}" class="{{ Route::is('unique_codes') ? 'active' : null }}">Unique Code </a>
+            <a href="{{ route('unique_codes') }}" class="{{ Route::is('unique_codes') ? 'active' : null }}">@include('jobseeker.partials.icon',['icon'=>'code']) Unique Code </a>
         </li>
     @endcan
 
@@ -34,14 +34,14 @@
         <li>
             <a class="{{ Route::is('jobseeker.private-documents.*') ? 'active' : null }}"
                href="{{ route('jobseeker.private-documents.index') }}">
-                Private passport &amp; documents
+                @include('jobseeker.partials.icon',['icon'=>'lock']) Private passport &amp; documents
             </a>
         </li>
     @endif
 
     @if (auth()->user()?->user_type === \App\Enum\UserType::JOB_SEEKER)
         <li><a class="{{ Route::is('interviews.applicant.*') ? 'active' : null }}"
-            href="{{ route('interviews.applicant.index') }}">My online interviews</a></li>
+            href="{{ route('interviews.applicant.index') }}">@include('jobseeker.partials.icon',['icon'=>'calendar']) My online interviews</a></li>
     @endif
 
     @if(config('application_chat.enabled') && auth()->user()?->user_type === \App\Enum\UserType::JOB_SEEKER)
@@ -50,14 +50,14 @@
     @endif
 
     @if(config('support_center.enabled') && auth()->user()?->user_type === \App\Enum\UserType::JOB_SEEKER)
-        <li><a href="{{ route('support.index') }}" class="{{ Route::is('support.*') ? 'active' : '' }}">Support Inbox &amp; Refunds</a></li>
+        <li><a href="{{ route('support.index') }}" class="{{ Route::is('support.*') ? 'active' : '' }}">@include('jobseeker.partials.icon',['icon'=>'support']) Support Inbox &amp; Refunds</a></li>
     @endif
 
     {{-- TODO Something to put --}}
 
     <li>
         <a class="{{ Route::is('jobseeker-change-password') ? 'active' : null }}"
-            href="{{ route('jobseeker-change-password') }}">Change Password</a>
+            href="{{ route('jobseeker-change-password') }}">@include('jobseeker.partials.icon',['icon'=>'lock']) Change Password</a>
     </li>
 
     {{-- <li>

@@ -18,10 +18,14 @@ class PrivateDocumentResponseHeaders
         $response->headers->set('Referrer-Policy', 'no-referrer');
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('X-Frame-Options', 'DENY');
-        $response->headers->set('Content-Security-Policy',
-            "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; " .
-            "form-action 'self'; base-uri 'none'; frame-ancestors 'none'"
-        );
+        $html = str_starts_with(strtolower($response->headers->get('Content-Type', '')), 'text/html');
+        // Only our own UI assets may load in HTML workspaces. Downloads keep
+        // their original deny-by-default policy and cannot execute scripts.
+        $policy = $html
+            ? "default-src 'none'; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self'; img-src 'self' data:; form-action 'self'; base-uri 'none'; frame-ancestors 'none'; object-src 'none'"
+            : "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; form-action 'self'; base-uri 'none'; frame-ancestors 'none'";
+        $response->headers->set('Content-Security-Policy', $policy);
+
 
         return $response;
     }
