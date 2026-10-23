@@ -59,7 +59,7 @@ class Job extends Model
         $values = parent::toArray();
         if (!app(\App\Services\PosterEmailVisibility::class)->enabled()) {
             unset($values['resume_receiving_email']);
-            foreach (['job_context', 'job_responsibilities', 'additional_requirements', 'other_benefits', 'apply_procedure', 'additional_salary_info'] as $field) {
+            foreach (['job_context', 'job_responsibilities', 'additional_requirements', 'other_benefits', 'apply_procedure', 'additional_salary_info', 'faqs'] as $field) {
                 if (isset($values[$field])) $values[$field] = app(\App\Services\JobContent::class)->redact($values[$field], $this->hiddenPosterEmails());
             }
         }

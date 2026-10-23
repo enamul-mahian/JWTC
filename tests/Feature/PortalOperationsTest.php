@@ -96,11 +96,12 @@ class PortalOperationsTest extends TestCase
     public function test_new_editor_uses_checkbox_choices_rich_text_and_accepts_logo_and_faq(): void
     {
         $this->actingAs($this->employer)->get('/jobs/create')->assertOk()->assertSee('type="checkbox"',false)->assertSee('contenteditable="true"',false)->assertDontSee('multiple required',false)->assertSee('Job / company logo');
-        $data=$this->payload()+['logo'=>\Illuminate\Http\UploadedFile::fake()->image('logo.png',80,80),'faq_question'=>['Can I apply?'],'faq_answer'=>['Apply through your account.']];
+        $data=$this->payload()+['logo'=>\Illuminate\Http\UploadedFile::fake()->image('logo.png',80,80),'faq_question'=>['Can I apply?'],'faq_answer'=>['Apply through your account. jobs@example.test']];
         $this->post('/jobs',$data)->assertRedirect()->assertSessionHasNoErrors();
         $job=Job::where('title',$data['title'])->firstOrFail();$this->assertStringContainsString('job-logos/',$job->logo_path);
         $this->assertFileExists(public_path('assets/images/'.$job->logo_path));
         $this->assertSame('Can I apply?',json_decode($job->faqs,true)[0]['question']);
+        $this->assertStringNotContainsString('jobs@example.test',$job->toArray()['faqs']);
         $this->assertSame($this->employer->id,(int)$job->user_id);
         @unlink(public_path('assets/images/'.$job->logo_path));
         $data['logo']=\Illuminate\Http\UploadedFile::fake()->create('unsafe.svg',1,'image/svg+xml');
