@@ -14,6 +14,9 @@
     <!-- Sidebar navigation-->
     <nav class="sidebar-nav scroll-sidebar" data-simplebar>
         <ul id="sidebarnav">
+            @if(in_array(strtolower((string)auth()->user()?->user_type), ['admin','super_admin'], true) && auth()->user()->can('employer-list'))
+            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('admin.company-approvals.index') }}"><span><i class="ti ti-user-check"></i></span><span class="hide-menu">Company Approvals</span></a></li>
+            @endif
             @if(in_array(strtolower((string)auth()->user()?->user_type), ['admin','super_admin'], true) && auth()->user()->can('application-setting'))
             <li class="sidebar-item"><a class="sidebar-link" href="{{ route('admin.news-ticker') }}"><span><i class="ti ti-news"></i></span><span class="hide-menu">News Ticker</span></a></li>
             <li class="sidebar-item"><a class="sidebar-link" href="{{ route('admin.hero-slides') }}"><span><i class="ti ti-photo"></i></span><span class="hide-menu">Homepage Slides</span></a></li>

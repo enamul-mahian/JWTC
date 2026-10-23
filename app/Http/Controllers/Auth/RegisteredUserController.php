@@ -50,13 +50,12 @@ class RegisteredUserController extends Controller
             'phone' => [
                 'required',
                 'string',
-                'max:30',
+                'max:20',
                 'unique:users,phone',
             ],
 
             'job_category_id' => [
-                \Illuminate\Validation\Rule::requiredIf((bool) config('security.registration_otp.enabled')),
-                'nullable', 'integer', 'exists:job_categories,id',
+                'required', 'integer', 'exists:job_categories,id',
             ],
             'referral_code' => [
                 'required',
@@ -72,7 +71,6 @@ class RegisteredUserController extends Controller
             'password' => [
                 'required',
                 'confirmed',
-                'min:4',
                 Rules\Password::defaults(),
             ],
         ]);
@@ -129,21 +127,31 @@ class RegisteredUserController extends Controller
             return redirect()->route('registration.otp.show');
         }
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'phone' => $request->phone,
-
-            'user_type' => UserType::JOB_SEEKER,
-
-            'status' => StatusType::ACTIVE,
-
-            'password' => Hash::make($request->password),
-        ]);
+        $role = \Spatie\Permission\Models\Role::where('name', \App\Enum\RoleType::JOB_SEEKER)
+            ->where('guard_name', 'web')->first();
+        if (!$role) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'registration' => 'Account registration is temporarily unavailable. Please contact support.',
+            ]);
+        }
+        $user = \Illuminate\Support\Facades\DB::transaction(function () use ($request, $role) {
+            $user = User::create([
+                'name' => $request->name, 'email' => $request->email,
+                'phone' => $request->phone, 'job_category_id' => (int) $request->job_category_id,
+                'user_type' => UserType::JOB_SEEKER, 'status' => StatusType::ACTIVE,
+                'password' => Hash::make($request->password),
+            ]);
+            $user->assignRole($role);
+            \App\Models\PersonalInformation::create([
+                'user_id' => $user->id, 'first_name' => $request->name, 'last_name' => '',
+            ]);
+            return $user;
+        }, 3);
 
         event(new Registered($user));
 
         Auth::login($user);
+        $request->session()->regenerate();
 
         return redirect()->route('home');
     }
