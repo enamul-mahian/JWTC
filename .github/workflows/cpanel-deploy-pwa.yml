@@ -1,11 +1,6 @@
 name: cPanel Deploy Mobile PWA and Homepage Slides
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - .github/workflows/cpanel-deploy-pwa.yml
-      - scripts/release/*pwa*.php
   workflow_dispatch:
 
 permissions:
