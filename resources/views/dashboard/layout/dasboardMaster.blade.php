@@ -22,6 +22,7 @@
         <link rel="stylesheet" href="{{ asset('theme/jwtc.css') }}">
     @endif
     @stack('style')
+<link rel="stylesheet" href="{{ asset('theme/portal-motion.css') }}?v=20261023-1">
 </head>
 
 <body @if(config('jwtc_design.enabled'))class="jwtc-redesign"@endif>
@@ -154,6 +155,7 @@
 
     @include('dashboard.includes.script')
     @stack('script')
+<script defer src="{{ asset('theme/portal-motion.js') }}?v=20261023-1"></script>
 </body>
 
 </html>

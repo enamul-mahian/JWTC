@@ -209,7 +209,7 @@ jobs:
           php artisan migrate --force --no-interaction
       - name: Verify all synthetic historical rows unchanged after migration
         run: php scripts/release/test_legacy_mariadb_preservation.php verify
-      - name: Verify 46 old tables, 17 additive migrations and core data isolation
+      - name: Verify 46 old tables, 18 additive migrations and core data isolation
         run: |
           php -r '
             require "vendor/autoload.php";
@@ -218,14 +218,14 @@ jobs:
             $db = Illuminate\Support\Facades\DB::connection("mysql");
             $schema = Illuminate\Support\Facades\Schema::connection("mysql");
             if (($db->selectOne("SELECT DATABASE() AS name")->name ?? "") !== "jwtc_legacy_ci_only") exit(1);
-            if ($db->table("migrations")->count() !== 60) exit(2);
+            if ($db->table("migrations")->count() !== 61) exit(2);
             foreach (["users", "jobs", "applications", "uploaded_cvs",
               "jobseeker_uploads", "payment_credentials", "unique_codes",
               "application_chat_threads", "support_tickets", "email_studio_templates",
               "applicant_private_documents"] as $table) {
               if (!$schema->hasTable($table)) exit(3);
             }
-            echo "PASS: Legacy MariaDB structure upgraded through 17 additional migrations\n";
+            echo "PASS: Legacy MariaDB structure upgraded through 18 additional migrations\n";
           '
 
 

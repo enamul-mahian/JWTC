@@ -4,8 +4,10 @@
 @include('frontend.includes.style')
 <link rel="stylesheet" href="{{ asset('theme/approved.css') }}?v=20261023">
 @stack('style')
+<link rel="stylesheet" href="{{ asset('theme/portal-motion.css') }}?v=20261023-1">
 </head><body class="jg-site"><a href="#jg-main" class="jg-skip">Skip to main content</a>
 @include('frontend.includes.approved_nav')
+@include('frontend.includes.news_ticker')
 <main id="jg-main">@yield('content')</main>
 <footer class="jg-footer"><span>© {{ date('Y') }} JoinGallagher.uk</span><a href="{{ route('contact') }}">Contact</a><a href="{{ route('search-jobs') }}">Browse jobs</a><a href="{{ route('company.login') }}">Company sign in</a></footer>
 @include('frontend.includes.script')
@@ -25,4 +27,5 @@ jgWideScreen.addEventListener('change', jgSyncNavigation);
 @stack('script')
 @include('site-chat.widget')
 @stack('scripts')
+<script defer src="{{ asset('theme/portal-motion.js') }}?v=20261023-1"></script>
 </body></html>

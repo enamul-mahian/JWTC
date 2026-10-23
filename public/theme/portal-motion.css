@@ -1,0 +1,46 @@
+/* Motion enhances visible content; it never gates rendering or navigation. */
+:root{--jg-ease:cubic-bezier(.22,.68,.2,1)}
+.jg-site .jg-button,.jg-site .jg-link-button,.jwtc-redesign .btn,.jwtc-redesign .jw-button{transition:transform .2s var(--jg-ease),box-shadow .2s ease,background-color .2s ease}
+.jg-site .jg-button:active,.jwtc-redesign .btn:active{transform:translateY(1px) scale(.985)}
+.jg-site .jg-job-card,.jg-site .jg-filter,.jwtc-redesign .jw-kpi{transition:transform .28s var(--jg-ease),box-shadow .28s ease,border-color .28s ease}
+.jg-site .jg-nav-links>a:not(.jg-button){transition:color .2s ease,background-color .2s ease}
+.jg-site input,.jg-site select,.jg-site textarea{transition:border-color .2s ease,box-shadow .2s ease}
+.jg-site input:focus,.jg-site select:focus,.jg-site textarea:focus{box-shadow:0 0 0 4px #0055dc12}
+@media(prefers-reduced-motion:no-preference){
+html{scroll-behavior:smooth}
+.jg-hero h1{animation:jg-rise .65s var(--jg-ease) both}
+.jg-hero p{animation:jg-rise .65s .08s var(--jg-ease) both}
+.jg-hero .jg-search{animation:jg-rise .7s .14s var(--jg-ease) both}
+.jg-hero .jg-popular{animation:jg-rise .65s .22s var(--jg-ease) both}
+.jg-auth-card{animation:jg-rise .48s var(--jg-ease) both}
+.jg-motion-enter{animation:jg-rise .58s var(--jg-ease) both;animation-delay:var(--jg-motion-delay,0ms)}
+.jg-chat-panel:not([hidden]){animation:jg-chat-open .25s var(--jg-ease) both;transform-origin:bottom right}
+.jg-chat-launch{animation:jg-launch .55s var(--jg-ease) both}
+.jg-navigation[open]>.jg-nav-links{animation:jg-soft-in .2s ease both}
+}
+@media(hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference){
+.jg-site .jg-job-card:hover{transform:translateY(-5px);box-shadow:0 14px 28px #091e4d12;border-color:#bfd2ef}
+.jg-site .jg-button:hover,.jwtc-redesign .jw-button:hover{transform:translateY(-2px);box-shadow:0 7px 18px #0055dc27}
+.jwtc-redesign .jw-kpi:hover{transform:translateY(-3px);box-shadow:0 10px 22px #091e4d0f}
+}
+@keyframes jg-rise{from{opacity:.1;transform:translate3d(0,16px,0)}to{opacity:1;transform:translate3d(0,0,0)}}
+@keyframes jg-chat-open{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes jg-launch{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes jg-soft-in{from{opacity:.2}to{opacity:1}}
+.jg-ticker{background:linear-gradient(100deg,#0b2855,#174d87);color:#fff;border-bottom:1px solid #ffffff1c;position:relative;z-index:2}
+.jg-ticker-inner{max-width:1300px;padding:7px 28px;margin:auto;display:flex;align-items:center;gap:18px;min-height:44px}
+.jg-ticker-label{position:relative;flex:none;background:#ffc13b;color:#132748;font-size:10px;letter-spacing:1px;font-weight:800;text-transform:uppercase;padding:7px 13px;border-radius:5px;white-space:nowrap;box-shadow:0 2px 10px #ffc13b16}
+.jg-ticker-window{flex:1;min-width:0;overflow:hidden;mask-image:linear-gradient(to right,transparent,#000 14px,#000 calc(100% - 14px),transparent)}
+.jg-ticker-belt{display:flex;width:max-content;align-items:center}
+.jg-ticker-items{display:flex;align-items:center;flex-shrink:0;gap:40px;padding:0 20px;min-width:100%;white-space:nowrap}
+.jg-ticker-item{display:inline-flex;align-items:center;gap:12px;color:#fff!important;text-decoration:none;font-size:12px;font-weight:550;line-height:1.5}
+.jg-ticker-item:before{content:'';width:5px;height:5px;flex:none;border-radius:50%;background:#ffc13b;box-shadow:0 0 0 3px #ffc13b1f}
+.jg-ticker a:hover{text-decoration:underline;color:#fff}
+.jg-ticker-pause{flex:none;border:1px solid #ffffff40;border-radius:5px;background:#ffffff0a;color:#fff;font:inherit;font-size:11px;cursor:pointer;padding:5px 9px;min-width:52px}
+.jg-ticker :focus-visible{outline:3px solid #ffc13b;outline-offset:3px}
+.jg-ticker:not([data-running]) .jg-ticker-items{flex-wrap:wrap;white-space:normal;gap:10px 26px;padding:4px 8px}
+.jg-ticker:not([data-running]) .jg-ticker-belt{width:auto}
+.jg-ticker:not([data-running]) .jg-ticker-pause{display:none}
+.jg-ticker:not([data-running]) .jg-ticker-window{mask-image:none}
+@media(max-width:600px){.jg-ticker-inner{padding:6px 15px;gap:10px}.jg-ticker-label{font-size:8px;padding:7px 9px;letter-spacing:.6px}.jg-ticker-item{font-size:11px}.jg-ticker-items{gap:26px;padding:0 13px}.jg-ticker-pause{min-width:44px;font-size:10px;padding:5px 7px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto!important}.jg-motion-enter,.jg-hero h1,.jg-hero p,.jg-hero .jg-search,.jg-hero .jg-popular,.jg-auth-card,.jg-chat-panel,.jg-chat-launch,.jg-navigation>.jg-nav-links{animation:none!important;transform:none!important;opacity:1!important}.jg-site .jg-button,.jg-site .jg-job-card,.jwtc-redesign .btn,.jwtc-redesign .jw-kpi{transition:none!important}}
