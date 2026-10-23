@@ -148,3 +148,5 @@ jobs:
         if: always()
         shell: bash
         run: rm -f -- "$RUNNER_TEMP/jwtc-stage-ssh/key" "$RUNNER_TEMP/jwtc-stage-ssh/known_hosts"
+
+# Retry with shared-host Python compatibility.

@@ -2,6 +2,13 @@
 """Resume a verified CI extraction, sharing byte-identical immutable code files."""
 import hashlib, os, pathlib, sys, tarfile
 
+def inside(path,root):
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
 def extract(archive, target, ceiling, source):
     target=pathlib.Path(target);source=pathlib.Path(source)
     if target.is_symlink() or target.resolve()!=target or source.is_symlink() or source.resolve()!=source: raise ValueError('unsafe root')
@@ -23,7 +30,7 @@ def extract(archive, target, ceiling, source):
         shared=0;written=0
         for m in members:
             dst=target/m.name
-            if not dst.parent.resolve().is_relative_to(target):raise ValueError('parent escape')
+            if not inside(dst.parent.resolve(),target):raise ValueError('parent escape')
             if m.isdir():dst.mkdir(mode=0o700,parents=True,exist_ok=True);continue
             dst.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
             data=tar.extractfile(m).read()
@@ -36,7 +43,7 @@ def extract(archive, target, ceiling, source):
                 elif not data.startswith(current):raise ValueError('unknown partial bytes')
             candidate=source/m.name
             allowed=m.name.startswith(('app/','config/','database/','resources/','routes/','vendor/','public/theme/','public/pwa/','public/site-chat/','public/email-studio/','public/chat/')) or m.name in ('artisan','composer.json','composer.lock','bootstrap/app.php')
-            share=allowed and candidate.is_file() and not candidate.is_symlink() and candidate.resolve().is_relative_to(source) and candidate.stat().st_uid==os.getuid() and candidate.stat().st_size==m.size and hashlib.sha256(candidate.read_bytes()).digest()==digest
+            share=allowed and candidate.is_file() and not candidate.is_symlink() and inside(candidate.resolve(),source) and candidate.stat().st_uid==os.getuid() and candidate.stat().st_size==m.size and hashlib.sha256(candidate.read_bytes()).digest()==digest
             if share:
                 if dst.exists() and os.stat(dst).st_ino==os.stat(candidate).st_ino:continue
                 if dst.exists():dst.unlink()
