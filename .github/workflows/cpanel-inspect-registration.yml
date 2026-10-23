@@ -1,0 +1,70 @@
+name: cPanel Read-only Registration Diagnostics
+
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/cpanel-inspect-registration.yml, scripts/release/inspect_registration.php]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: cpanel-staging-operations
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production
+    env:
+      SSH_HOST: ${{ secrets.CPANEL_SSH_HOST }}
+      SSH_PORT: ${{ secrets.CPANEL_SSH_PORT }}
+      SSH_USER: ${{ secrets.CPANEL_SSH_USER }}
+      SSH_KEY: ${{ secrets.CPANEL_SSH_PRIVATE_KEY }}
+      KNOWN_HOSTS: ${{ secrets.CPANEL_SSH_KNOWN_HOSTS }}
+      APP_PATH: ${{ secrets.CPANEL_APP_PATH }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - name: Validate script syntax and required configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l scripts/release/inspect_registration.php
+          for name in SSH_HOST SSH_PORT SSH_USER SSH_KEY KNOWN_HOSTS APP_PATH; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing configuration: $name"
+              exit 1
+            fi
+          done
+          [[ "$SSH_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]]
+          [[ "$SSH_USER" =~ ^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$ ]]
+          [[ "$SSH_PORT" =~ ^[0-9]{1,5}$ ]]
+          (( 10#$SSH_PORT > 0 && 10#$SSH_PORT < 65536 ))
+          [[ "$APP_PATH" =~ ^/home/[a-zA-Z0-9_.-]+(/[a-zA-Z0-9_.-]+)+$ ]]
+          [[ "$APP_PATH" != *'/../'* && "$APP_PATH" != */.. ]]
+      - name: Prepare temporary SSH identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/jwtc-stage-ssh"
+          printf '%s\n' "$SSH_KEY" > "$RUNNER_TEMP/jwtc-stage-ssh/key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$RUNNER_TEMP/jwtc-stage-ssh/known_hosts"
+          ssh-keygen -y -P '' -f "$RUNNER_TEMP/jwtc-stage-ssh/key" >/dev/null
+      - name: Inspect filtered registration errors without changing application data
+        shell: bash
+        run: |
+          set -euo pipefail
+          script_base64="$(base64 -w0 scripts/release/inspect_registration.php)"
+          ssh -T -p "$SSH_PORT" -i "$RUNNER_TEMP/jwtc-stage-ssh/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/jwtc-stage-ssh/known_hosts" -o ConnectTimeout=20 "$SSH_USER@$SSH_HOST" "cd '$APP_PATH' && php -r 'eval(\"?>\".base64_decode(\"$script_base64\"));'"
+      - name: Remove temporary SSH identity
+        if: always()
+        shell: bash
+        run: rm -f -- "$RUNNER_TEMP/jwtc-stage-ssh/key" "$RUNNER_TEMP/jwtc-stage-ssh/known_hosts"
