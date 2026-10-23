@@ -1,0 +1,21 @@
+[
+  "app/Services/ApplicationSubmissionService.php",
+  "app/Http/Controllers/JobSeeker/JobApplicationController.php",
+  "app/Http/Controllers/API/Jobseeker/JobApplicationController.php",
+  "app/Helpers.php",
+  "app/Http/Controllers/JobSeeker/UniqueCodeController.php",
+  "app/Http/Controllers/Admin/JobCategoryController.php",
+  "resources/views/jobseeker/application/application_form.blade.php",
+  "resources/views/jobseeker/application/uniquecode.blade.php",
+  "resources/views/admin/uniquecode/request.blade.php",
+  "resources/views/jobseeker/partials/account_nav.blade.php",
+  "resources/views/jobseeker/layout/workspace.blade.php",
+  "resources/views/secure/layout.blade.php",
+  "resources/views/jobseeker/partials/sidenav.blade.php",
+  "resources/views/jobseeker/application/applied_jobs.blade.php",
+  "resources/views/jobseeker/application/applied_jobs_table.blade.php",
+  "resources/views/frontend/layout/frontMaster.blade.php",
+  "public/theme/workspace.js",
+  "public/theme/workspace.css",
+  "public/theme/approved.css"
+]

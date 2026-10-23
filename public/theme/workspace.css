@@ -4,3 +4,47 @@
 @media(max-width:850px){.jg-site #content>.container>.row:has(.right-sideabr){grid-template-columns:1fr}.jg-site .right-sideabr .list-item{display:flex;flex-wrap:wrap;gap:5px}.jg-site .right-sideabr .list-item li a{padding:10px!important}.jg-site .jg-private-shell{padding:0 18px 35px!important}.jg-site .jg-profile-grid{grid-template-columns:1fr}.jg-site .jg-filter-horizontal form{grid-template-columns:1fr}.jg-page-nav{align-items:flex-start;flex-direction:column}.jg-site .page-header h3{font-size:27px!important}}
 
 body.jwtc-redesign{font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;font-size:15px;color:#183252}.jwtc-redesign .card{border-radius:14px;border-color:#dce5f2}.jwtc-redesign .btn-primary{background:#0758df;border-color:#0758df;color:#fff;border-radius:8px;font-size:14px;font-weight:600}.jwtc-redesign .form-control,.jwtc-redesign .form-select{color:#183252;border-color:#b8cbe5;border-radius:8px;font-size:15px}
+
+/* Account navigation is shared by public and private applicant pages. */
+.jg-site .jg-profile-grid{grid-template-columns:230px minmax(0,1fr);align-items:start}
+.jg-site .jg-profile-grid>*{min-width:0;max-width:100%}
+.jg-site .jg-profile-nav{position:static;align-self:start;height:auto;padding:18px}
+.jg-site .jg-account-menu>summary{display:flex;align-items:center;justify-content:space-between;list-style:none;color:#fff;font-size:18px;font-weight:700;padding:4px 10px 16px;cursor:pointer}
+.jg-site .jg-account-menu>summary::-webkit-details-marker{display:none}
+.jg-site .jg-account-menu>summary span{display:none}
+.jg-site .jg-profile-nav .list-item{display:block!important;list-style:none;margin:0!important;padding:0!important}
+.jg-site .jg-profile-nav .list-item>li{float:none!important;display:block!important;width:auto!important;margin:0!important;padding:0!important;list-style:none;border:0!important}
+.jg-site .jg-profile-nav .list-item>li>a{display:block!important;margin:3px 0!important;padding:11px 12px!important;line-height:1.45!important;text-decoration:none!important;color:#e2ecff!important;background:transparent;border:0!important;border-radius:8px;font-size:14px!important;font-weight:500}
+.jg-site .jg-profile-nav .list-item>li>a.active,.jg-site .jg-profile-nav .list-item>li>a:hover{color:#fff!important;background:#1d4380!important}
+.jg-site .jg-profile-nav form{margin:14px 0 0!important;padding:0}
+.jg-site .jg-profile-main,.jg-site .jg-private-shell{width:100%;min-width:0}
+.jg-site .jg-profile-main{overflow-wrap:anywhere}
+.jg-site .jg-private-shell .card,.jg-site .jg-profile-card{max-width:100%;min-width:0}
+.jg-site .jg-private-shell form,.jg-site .jg-private-shell .grid{min-width:0;max-width:100%}
+.jg-site .jg-private-shell .grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr))}
+.jg-site .jg-private-shell input,.jg-site .jg-private-shell select,.jg-site .jg-private-shell textarea{display:block;max-width:100%;min-width:0;width:100%;box-sizing:border-box}
+.jg-site .jg-private-shell .table-wrap,.jg-site .jg-profile-main .table-wrap{max-width:100%;overflow-x:auto}
+.jg-site .jg-profile-main table{width:100%;border-collapse:collapse;font-size:14px}
+.jg-site .jg-profile-main th,.jg-site .jg-profile-main td{padding:12px;text-align:left;border-bottom:1px solid #dce5f2}
+.jg-site .jg-application-card{margin:0 0 18px}
+.jg-site .jg-application-summary{display:flex;gap:18px;align-items:flex-start}
+.jg-site .jg-application-summary>div{min-width:0}
+.jg-site .jg-application-summary h2{font-size:20px;margin:0 0 5px;line-height:1.4}
+.jg-site .jg-application-summary h2 a{text-decoration:none;color:#10264e}
+.jg-site .jg-application-summary p{margin:0}
+.jg-site .jg-application-status{margin:22px 0}
+.jg-site .jg-application-meter{display:flex;align-items:center;gap:12px}
+.jg-site .jg-application-meter progress{flex:1;min-width:0;width:100%;height:12px;accent-color:#0758df;border:0;border-radius:20px;overflow:hidden}
+.jg-site .jg-application-meter progress::-webkit-progress-bar{background:#e5ecf6}
+.jg-site .jg-application-meter progress::-webkit-progress-value{background:#0758df}
+.jg-site .jg-application-meter progress::-moz-progress-bar{background:#0758df}
+@media(max-width:850px){
+.jg-site .jg-profile-grid{grid-template-columns:minmax(0,1fr);gap:20px}
+.jg-site .jg-profile-nav{padding:12px;width:100%}
+.jg-site .jg-account-menu>summary{padding:8px 10px}
+.jg-site .jg-account-menu>summary span{display:inline}
+.jg-site .jg-account-menu[open]>summary{padding-bottom:14px}
+.jg-site .jg-profile-workspace{padding:24px 18px 40px}
+.jg-site .jg-private-shell{margin:24px auto!important}
+.jg-site .jg-workspace-title h1,.jg-site .jg-private-shell h1{font-size:27px}
+}

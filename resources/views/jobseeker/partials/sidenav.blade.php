@@ -1,26 +1,26 @@
-<ul class="list-item">
+<ul class="list-item" aria-label="My account">
 
 
 
     @can('job-apply')
         <li><a class="{{ Route::is('find-jobs') ? 'active' : null }}" href="{{ route('find-jobs') }}"
-                href="{{ route('find-jobs') }}">{{ __('messages.FindJobs') }} </a></li>
+                >Find Jobs </a></li>
     @endcan
 
     @can('view-profile')
-        <li><a class="{{ Route::is('view-jobseeker-profile') || Route::is('view-jobseeker-profile') ? 'active' : null }}"
-                href="{{ route('view-jobseeker-profile') }}">{{ __('messages.ViewProfile') }} </a></li>
+        <li><a class="{{ Route::is('view-jobseeker-profile') ? 'active' : null }}"
+                href="{{ route('view-jobseeker-profile') }}">View Profile </a></li>
     @endcan
 
     @can('manage-profile')
         <li><a class="{{ Route::is('jobseeker.dashboard') || Route::is('job-seeker-profile') ? 'active' : null }}"
-                href="{{ route('job-seeker-profile') }}">{{ __('messages.ManageProfile') }} </a></li>
+                href="{{ route('job-seeker-profile') }}">Manage Profile </a></li>
     @endcan
 
 
     @can('job-applied')
         <li><a href="{{ route('applied-jobs') }}"
-                class="{{ Route::is('applied-jobs') ? 'active' : null }}">{{ __('messages.AppliedJobs') }}
+                class="{{ Route::is('applied-jobs', 'jobseeker.application.timeline') ? 'active' : null }}">Applied Jobs
             </a></li>
     @endcan
     
@@ -57,7 +57,7 @@
 
     <li>
         <a class="{{ Route::is('jobseeker-change-password') ? 'active' : null }}"
-            href="{{ route('jobseeker-change-password') }}">{{ __('messages.ChangePassword') }}</a>
+            href="{{ route('jobseeker-change-password') }}">Change Password</a>
     </li>
 
     {{-- <li>
@@ -69,7 +69,7 @@
     <li>
         <form action="{{ route('logout') }}" method="post">
             @csrf
-            <button type="submit" class="btn-sm btn-danger">{{ __('messages.Logout') }} </button>
+            <button type="submit" class="btn-sm btn-danger">Logout </button>
         </form>
     </li>
 </ul>

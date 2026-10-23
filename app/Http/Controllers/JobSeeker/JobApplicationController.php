@@ -87,7 +87,12 @@ class JobApplicationController extends Controller
 
     public function appliedJob()
     {
-        return view('jobseeker.application.applied_jobs');
+        $jobs = Job::with([
+            'country', 'company',
+            'applications' => fn ($query) => $query->where('user_id', Auth::id()),
+        ])->whereHas('applications', fn ($query) => $query->where('user_id', Auth::id()))
+            ->latest('id')->paginate(5);
+        return view('jobseeker.application.applied_jobs', compact('jobs'));
     }
 
     public function getAppliedJob()
