@@ -82,7 +82,7 @@ try {
         if (in_array('..', explode('/', $path), true) || str_starts_with($path, '/') || str_contains($path, '\\')
             || !preg_match('#^(app/|config/|database/|resources/|routes/|public/|vendor/|artisan$|composer\.json$|composer\.lock$|bootstrap/app\.php$)#D', $path)
             || is_link($release.'/'.$path) || !is_file($release.'/'.$path)
-            || !hash_equals($record['sha256'], hash_file('sha256', $release.'/'.$path))) throw new RuntimeException('Candidate bytes changed');
+            || !hash_equals($record['sha256'], hash_file('sha256', $release.'/'.$path))) { echo 'CANDIDATE_VERIFY_PATH '.json_encode($path)."\n"; throw new RuntimeException('Candidate bytes changed'); }
         $records[$path] = $record['sha256'];
     }
     $phase = 'rollback-destination';
