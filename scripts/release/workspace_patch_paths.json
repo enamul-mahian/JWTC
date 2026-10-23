@@ -17,5 +17,9 @@
   "resources/views/frontend/layout/frontMaster.blade.php",
   "public/theme/workspace.js",
   "public/theme/workspace.css",
-  "public/theme/approved.css"
+  "public/theme/approved.css",
+  "app/Http/Middleware/PrivateDocumentResponseHeaders.php",
+  "app/Http/Controllers/JobSeeker/JobSeekerProfileShowController.php",
+  "resources/views/jobseeker/dashboard/profile_show.blade.php",
+  "resources/views/jobseeker/partials/icon.blade.php"
 ]
