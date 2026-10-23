@@ -1213,3 +1213,18 @@ Route::prefix('admin/applications')->middleware(['auth','admin_user'])->group(fu
     Route::get('/{application}/progress',[\App\Http\Controllers\Admin\ApplicationProgressController::class,'show'])->whereNumber('application')->name('admin.application-progress.show');
     Route::patch('/{application}/progress',[\App\Http\Controllers\Admin\ApplicationProgressController::class,'update'])->whereNumber('application')->name('admin.application-progress.update');
 });
+
+Route::middleware(['auth','private.document.headers'])->group(function(){
+ Route::patch('/job_seeker/profile/basics',[\App\Http\Controllers\JobSeeker\JobSeekerProfileController::class,'updateBasics'])->name('jobseeker.profile.basics');
+ Route::put('/job_seeker/profile/passport',[\App\Http\Controllers\JobSeeker\JobSeekerProfileController::class,'savePassport'])->name('jobseeker.profile.passport');
+});
+Route::middleware(['auth','admin'])->prefix('admin')->group(function(){
+ Route::get('/job-locations',[\App\Http\Controllers\Admin\JobLocationOptionsController::class,'index'])->name('admin.job-locations.index');
+ Route::post('/job-locations',[\App\Http\Controllers\Admin\JobLocationOptionsController::class,'store'])->name('admin.job-locations.store');
+ Route::delete('/job-locations/{id}',[\App\Http\Controllers\Admin\JobLocationOptionsController::class,'destroy'])->whereNumber('id')->name('admin.job-locations.destroy');
+});
+
+Route::middleware(['auth','admin'])->prefix('admin')->group(function(){
+ Route::get('/security-settings',[\App\Http\Controllers\Admin\SecuritySettingsController::class,'index'])->name('admin.security.index');
+ Route::put('/security-settings',[\App\Http\Controllers\Admin\SecuritySettingsController::class,'update'])->name('admin.security.update');
+});

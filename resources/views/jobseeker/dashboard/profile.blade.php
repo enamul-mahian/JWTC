@@ -1,45 +1,21 @@
 @extends('frontend.layout.frontMaster')
-@section('title', 'Profile')
-@Section('content')
-    @include('modal.common')
-    <style>
-        .profile-image {
-            max-width: 100%;
-            height: auto;
-            border-radius: 50%;
-        }
-    </style>
-    <div class="page-header">
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-12">
-                    <div class="inner-header">
-                        <h3>{{ __('messages.UpdateProfile') }}</h3>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <section id="content">
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-4 col-md-4 col-xs-12">
-                    <div class="right-sideabr">
-                        <h4>{{ __('messages.ManageAccount') }}</h4>
-                        @include('jobseeker.partials.sidenav')
-                    </div>
-                </div>
-                <div class="col-lg-8 col-md-8 col-xs-12">
-                    <div class="job-alerts-item candidates">
-                        <div id="profile-table"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+@section('title','My Profile')
+@section('content')
+@include('modal.common')
+<section class="jg-wrap jg-profile-workspace"><header class="jg-workspace-title"><span class="jg-pill">Applicant workspace</span><h1>My Dashboard</h1><p>Manage your profile, applications and documents.</p></header>
+<div class="jg-profile-grid"><aside class="jg-profile-nav"><h2>My account</h2>@include('jobseeker.partials.sidenav')</aside><div class="jg-profile-main">
+<header class="jg-profile-banner"><div><span class="jg-pill">My profile</span><h2>{{ $user->name }}</h2><p>{{ $user->email }}</p><a href="{{ route('jobseeker.private-documents.index') }}" class="jg-button-secondary">My CV / Documents →</a></div>@if($user->photo)<img src="{{ asset('assets/images/profilephoto/'.$user->photo) }}" alt="Your profile photo">@else<div class="jg-profile-avatar" aria-hidden="true">{{ mb_substr($user->name,0,1) }}</div>@endif</header>
+@if($errors->any())<div class="jg-form-errors" role="alert"><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
+<section class="jg-profile-card"><h2>Personal information</h2><p class="jg-helper">Keep your name and contact details up to date.</p><form action="{{ route('jobseeker.profile.basics') }}" method="POST">@csrf @method('PATCH')<div class="jg-form-grid">
+@foreach(['first_name'=>'First name(s)','last_name'=>'Last name(s)','dob'=>'Date of birth','phone'=>'Phone number','alternate_email'=>'Alternate email','present_address_line_1'=>'Address','present_city'=>'City','present_postal_code'=>'Postal code'] as $field=>$label)<label>{{ $label }}<input name="{{ $field }}" type="{{ $field==='dob'?'date':($field==='alternate_email'?'email':'text') }}" value="{{ old($field,$user->personal_info->{$field}) }}" @required($field==='first_name') maxlength="{{ in_array($field,['first_name','last_name','present_city'])?100:($field==='present_postal_code'||$field==='phone'?30:255) }}"></label>@endforeach
+<label>Gender<select name="gender"><option value="">Select</option>@foreach(['male'=>'Male','female'=>'Female','other'=>'Other','not_interest'=>'Prefer not to say'] as $value=>$label)<option value="{{ $value }}" @selected(old('gender',$user->personal_info->gender)===$value)>{{ $label }}</option>@endforeach</select></label>
+@foreach(['nationality'=>'Nationality','present_country'=>'Country of residence'] as $field=>$label)<label>{{ $label }}<select name="{{ $field }}"><option value="">Select a country</option>@foreach($countries as $country)<option value="{{ $country->name }}" @selected(old($field,$user->personal_info->{$field})===$country->name)>{{ $country->name }}</option>@endforeach</select></label>@endforeach
+</div><button class="jg-button jg-primary-button">Save personal information</button></form></section>
+<section class="jg-profile-card" id="passport"><div class="jg-section-title"><h2>Passport information</h2><span class="jg-pill">{{ $passportLocked?'Locked':'Private' }}</span></div><p class="jg-helper">Your passport details are private. Upload the passport scan in My CV / Documents.</p>
+@if($passport)<dl class="jg-passport-summary"><div><dt>Passport holder</dt><dd>{{ $passport->holder_name }}</dd></div><div><dt>Issuing country</dt><dd>{{ $passport->issuing_country }}</dd></div><div><dt>Passport number</dt><dd>••••••{{ substr(decrypt($passport->number_encrypted),-4) }}</dd></div><div><dt>Expires</dt><dd>{{ $passport->expiry_date }}</dd></div></dl>@endif
+@if($passportLocked)<p>Passport details are locked after application submission. Contact support for corrections.</p>@else<details @if(!$passport) open @endif><summary>{{ $passport?'Update passport information':'Add passport information' }}</summary><form method="POST" action="{{ route('jobseeker.profile.passport') }}">@csrf @method('PUT')<div class="jg-form-grid"><label>Passport holder name<input name="holder_name" required maxlength="180" value="{{ old('holder_name',$passport?->holder_name??$user->name) }}"></label><label>Passport number<input name="passport_number" required minlength="5" maxlength="30" autocomplete="off" placeholder="Enter your passport number"></label><label>Issuing country<select name="issuing_country" required><option value="">Select</option>@foreach($countries as $country)<option @selected(old('issuing_country',$passport?->issuing_country??$user->personal_info->nationality)===$country->name)>{{ $country->name }}</option>@endforeach</select></label><label>Issue date<input type="date" name="issue_date" value="{{ old('issue_date',$passport?->issue_date) }}"></label><label>Expiry date<input type="date" name="expiry_date" required value="{{ old('expiry_date',$passport?->expiry_date) }}"></label></div><button class="jg-button jg-primary-button">Save passport information</button></form></details>@endif
+<p><a href="{{ route('jobseeker.private-documents.index') }}">Upload or view passport scans and documents →</a></p></section>
+<div id="profile-table" class="jg-profile-history">@include('jobseeker.dashboard.profile_data')</div>
+</div></div></section>
 @endsection
-
-@push('script')
-    <script src="{{ asset('frontend/assets/script/job_seeker.js') }}"></script>
-@endpush
+@push('script')<script src="{{ asset('frontend/assets/script/job_seeker.js') }}"></script>@endpush

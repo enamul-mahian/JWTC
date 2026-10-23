@@ -29,6 +29,12 @@ class StoreJobRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'remove_logo' => 'nullable|boolean',
+            'faq_question' => 'nullable|array|max:12',
+            'faq_question.*' => 'nullable|string|max:250',
+            'faq_answer' => 'nullable|array|max:12',
+            'faq_answer.*' => 'nullable|string|max:2000',
             'title' => 'required|string|max:255',
             'vacancies' => 'required|integer|min:1|max:9999999999',
             'job_category_id' => 'required|integer|exists:job_categories,id',
