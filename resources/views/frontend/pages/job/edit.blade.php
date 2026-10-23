@@ -1,38 +1,10 @@
 @extends('frontend.layout.frontMaster')
-@section('title', "$title")
-
+@section('title', $title)
 @section('content')
-    <section id="latest-jobs" class="section bg-gray mt-4">
-        <div class="page-header">
-            <div class="container">
-                <div class="row">
-                    <div class="col-lg-12">
-                        <div class="inner-header">
-                            <h3>{{ __('messages.UpdateJobs') }}</h3>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <section class="section">
-            <div class="container">
-                <div class="row justify-content-center">
-                    <div class="col-lg-3 col-md-12 col-xs-12">
-                        <div class="right-sideabr">
-                            @include('frontend.pages.employer.sideMenu')
-                        </div>
-                    </div>
-                    <div class="col-lg-9 col-md-12 col-xs-12">
-                        <div class="post-job box">
-                            <h3 class="job-title">{{ __('Post a new Job') }}</h3>
-                            {!! Form::model($job, ['route' => ['jobs.update', $job], 'method' => 'put']) !!}
-                            @include('frontend.pages.job.form')
-                            <button class="btn btn-common" type="submit"> {{ __('messages.Updateyourjob') }}</button>
-                            {!! Form::close() !!}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </section>
+<section class="jg-wrap jg-editor"><div class="jg-editor-heading"><span class="jg-pill">Employer workspace</span><h1>Edit job vacancy</h1><p>Clear job details help the right candidates find your opportunity.</p></div>
+@if($errors->any())<div class="jg-form-errors" role="alert"><strong>Please check the following:</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
+<form method="POST" action="{{ route('jobs.update',$job) }}" class="jg-editor-form">@csrf
+@method('PUT')
+@include('frontend.pages.job.form')
+<div class="jg-editor-actions"><button class="jg-button" type="submit">Save changes for review</button><a href="{{ route('employer.dashboard') }}">Back to dashboard</a></div></form></section>
 @endsection

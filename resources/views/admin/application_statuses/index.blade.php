@@ -1,6 +1,7 @@
 @extends('dashboard.layout.dasboardMaster')
 @section('title', 'Application Workflow Settings')
 
+@push('style')<link rel="stylesheet" href="{{ asset('theme/approved.css') }}?v=20261023-5">@endpush
 @section('content')
 <section class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
@@ -16,6 +17,8 @@
     @if (session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
+    <div class="jg-workflow-preview mb-4"><h2 class="h5">Application progress preview</h2><p>These stages and percentages are shared with the applicant timeline.</p><ol>@foreach($statuses as $stage)@if($stage['is_active'])<li><strong>{{ $stage['name'] }}</strong><small>{{ $stage['progress'] }}% complete</small></li>@endif
+@endforeach</ol><a href="{{ route('admin.application-progress.index') }}" class="btn btn-primary btn-sm">Open application timelines</a></div>
     <div class="card mb-4">
         <div class="card-header"><strong>Current stages</strong></div>
         <div class="card-body">

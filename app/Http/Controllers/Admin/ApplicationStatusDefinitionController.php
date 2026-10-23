@@ -14,7 +14,7 @@ class ApplicationStatusDefinitionController extends Controller
 {
     private function authorizeEdit(Request $request): void
     {
-        abort_unless($request->user()?->can('active-job'), 403);
+        abort_unless(in_array(strtolower((string)$request->user()?->user_type),['admin','super_admin'],true) && $request->user()->can('active-job'), 403);
         abort_unless(Schema::hasTable('application_status_definitions'), 503,
             'Apply the additive status migration before editing statuses.');
     }
@@ -22,7 +22,7 @@ class ApplicationStatusDefinitionController extends Controller
     public function index(Request $request, ApplicationStatusCatalog $catalog)
     {
         $this->authorizeEdit($request);
-        return view('admin.application_statuses.index', ['statuses' => $catalog->all()]);
+        return view('admin.application_statuses.index', ['statuses' => $catalog->all(),'setting'=>gs()]);
     }
 
     private function rules(): array

@@ -59,7 +59,7 @@
                                             </td>
                                             @can('active-job')
                                                 <td>
-                                                    <div class="d-inline-flex">
+                                                    <div class="d-inline-flex"><a class="btn btn-primary me-2" href="{{ route('admin.jobs.edit',$item) }}" title="Edit job">Edit</a>
                                                         <a href="{{ route('job.show', $item->id) }}">
                                                             <button class="btn btn-info me-2">
                                                                 <i class="fa-regular fa-eye"></i>

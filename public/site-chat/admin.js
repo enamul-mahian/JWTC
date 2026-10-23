@@ -4,7 +4,7 @@
   if (!settings) return;
   setInterval(async () => {
     if (document.hidden || !settings.querySelector('[name="available"][type="checkbox"]').checked || !settings.querySelector('[name="enabled"][type="checkbox"]').checked) return;
-    try { await fetch(settings.action, {method:'POST',body:new FormData(settings),credentials:'same-origin',headers:{Accept:'application/json'}}); } catch { /* Availability expires without a successful heartbeat. */ }
+    try { const body=new FormData(); body.set('_token',settings.querySelector('[name="_token"]').value); body.set('available','1'); await fetch(settings.dataset.heartbeat, {method:'POST',body,credentials:'same-origin',headers:{Accept:'application/json'}}); } catch { /* Availability expires without a successful heartbeat. */ }
   }, 40000);
   const output = document.getElementById('site-chat-admin-messages');
   if (!output) return;

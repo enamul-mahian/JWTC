@@ -47,36 +47,10 @@ class JobController extends Controller
      */
     public function create(Request $request)
     {
-        $company = $this->employerCompany();
-
-        // $subscription = Subscription::with('plan')->where('subscriber_id', Auth::user()->id)->first();
-
-        // $lastDate = '';
-
-        // if (!$subscription) {
-        //     return redirect()->route('subscriptions')->withError('Please buy a subscription first.');
-        // } else if (Carbon::now()->gt($lastDate)) {
-        //     return redirect()->route('subscriptions')->withError('Your subscription has expired. Please renew.');
-        // }
-
-        // if ($subscription->plan->plan_type == SubscriptionType::MONTHLY) {
-        //     $lastDate = $subscription?->updated_at->addMonth();
-        // } else if ($subscription->plan->plan_type == SubscriptionType::HALFYEARLY) {
-        //     $lastDate = $subscription?->updated_at->addMonths(6);
-        // } else if ($subscription->plan->plan_type == SubscriptionType::YEARLY) {
-        //     $lastDate = $subscription?->updated_at->addYear();
-        // }
-
-        $job = new Job();
-        // Laravel's per-session old input replaces the unsafe global cache key.
-        $oldValue = old('title') !== null ? old() : null;
-        $title = __('Create job');
-        $jobCategory = JobCategory::where('status', StatusType::ACTIVE)->select('id', 'name')->get();
-        $degreeLevel = DegreeLavel::where('status', StatusType::ACTIVE)->select('id', 'name')->get();
-        $locations = Country::where('status', StatusType::ACTIVE)->select('id', 'name')->get();
-        $jobTypes = JobType::where('status', StatusType::ACTIVE)->select('id', 'name')->get();
-
-        return view('frontend.pages.job.create', compact('job', 'title', 'company', 'jobCategory', 'degreeLevel', 'locations', 'oldValue', 'jobTypes'));
+        abort_unless(strtolower((string)$request->user()?->user_type)===UserType::EMPLOYER && $request->user()->can('post-job'),403);
+        $company=Company::where('user_id',$request->user()->id)->first();
+        if(!$company)return redirect()->route('company.information')->with('warning','Complete your company information before posting a job.');
+        return view('frontend.pages.job.create', app(\App\Services\JobEditorData::class)->for(new Job(),$company)+['title'=>'Post a job']);
     }
 
     /**
@@ -122,11 +96,11 @@ class JobController extends Controller
         if ($jobDetails->trashed() || (int) $jobDetails->is_publish !== 1) {
             $this->requireOwnedJob($jobDetails);
         }
-        $other_benefits = json_decode($jobDetails?->other_benefits);
-        $workPlaces = json_decode($jobDetails?->work_place);
-        $employment_status = JobType::whereIn('id', json_decode($jobDetails->employment_status ?? '[]'))->select('name')->get();
-        $genders = json_decode($jobDetails->gender);
-        $skills = Skill::whereIn('id', json_decode($jobDetails->skills))->select('skill_name')->get();
+        $other_benefits = \App\Services\JobEditorData::list($jobDetails?->other_benefits);
+        $workPlaces = \App\Services\JobEditorData::list($jobDetails?->work_place);
+        $employment_status = JobType::whereIn('id', \App\Services\JobEditorData::list($jobDetails->employment_status))->select('name')->get();
+        $genders = \App\Services\JobEditorData::list($jobDetails->gender);
+        $skills = Skill::whereIn('id', \App\Services\JobEditorData::list($jobDetails->skills))->select('skill_name')->get();
 
         return view('frontend.pages.job.details', compact('jobDetails', 'other_benefits', 'workPlaces', 'employment_status', 'genders', 'skills'));
     }
@@ -143,24 +117,7 @@ class JobController extends Controller
     public function edit(Job $job)
     {
         $this->requireOwnedJob($job);
-
-        $title = __('Update job');
-        $company = Company::where('id', $job->company_id)->first();
-        $jobCategory = JobCategory::where('status', StatusType::ACTIVE)->get();
-        $degreeLevel = DegreeLavel::where('status', StatusType::ACTIVE)->select('id', 'name')->get();
-        $skills = json_decode($job->skills);
-        $locations = Country::where('status', StatusType::ACTIVE)->select('id', 'name')->get();
-        $jobTypes = JobType::where('status', StatusType::ACTIVE)->select('id', 'name')->get();
-
-        return view('frontend.pages.job.edit', compact(
-            'title',
-            'company',
-            'jobCategory',
-            'degreeLevel',
-            'job',
-            'locations',
-            'jobTypes'
-        ));
+        return view('frontend.pages.job.edit', app(\App\Services\JobEditorData::class)->for($job,$job->company)+['title'=>'Edit job']);
     }
 
     /**
@@ -220,9 +177,9 @@ class JobController extends Controller
     #Admin functions...........................
     public function getActiveJob()
     {
-        $items = Job::where('is_publish', StatusType::ACTIVE)->latest()->get();
+        $items = Job::with('job_category')->where('is_publish', StatusType::ACTIVE)->latest()->get();
 
-        return view('admin.job.index', compact('items'));
+        return view('admin.job.index', ['items'=>$items,'setting'=>gs()]);
     }
 
     public function jobStatusUpdate(Request $request)
@@ -241,28 +198,28 @@ class JobController extends Controller
 
     public function getInActiveJob()
     {
-        $items = Job::where('is_publish', StatusType::INACTIVE)->get();
+        $items = Job::with('job_category')->where('is_publish', StatusType::INACTIVE)->get();
 
-        return view('admin.job.index', compact('items'));
+        return view('admin.job.index', ['items'=>$items,'setting'=>gs()]);
     }
 
     public function viewJob($id)
     {
-        $jobDetails = Job::with('country', 'company')->whereId($id)->first();
-        $other_benefits = json_decode($jobDetails->other_benefits);
-        $workPlaces = json_decode($jobDetails->work_place);
-        $genders = json_decode($jobDetails->gender);
-        $skills = Skill::whereIn('id', json_decode($jobDetails->skills))->select('skill_name')->get();
+        $jobDetails = Job::with('country', 'company')->whereId($id)->firstOrFail();
+        $other_benefits = \App\Services\JobEditorData::list($jobDetails->other_benefits);
+        $workPlaces = \App\Services\JobEditorData::list($jobDetails->work_place);
+        $genders = \App\Services\JobEditorData::list($jobDetails->gender);
+        $skills = Skill::whereIn('id', \App\Services\JobEditorData::list($jobDetails->skills))->select('skill_name')->get();
 
-        return view('admin.job.details', compact('jobDetails', 'other_benefits', 'workPlaces', 'genders', 'skills'));
+        return view('admin.job.details', compact('jobDetails', 'other_benefits', 'workPlaces', 'genders', 'skills')+['setting'=>gs()]);
     }
 
     public function viewJobApplicants($id)
     {
-        $jobDetails = Job::with('country', 'company')->whereId($id)->first();
+        $jobDetails = Job::with('country', 'company')->whereId($id)->firstOrFail();
         $applications = Application::where('job_id', $id)->get();
 
-        return view('admin.job.applicants', compact('jobDetails', 'applications'));
+        return view('admin.job.applicants', compact('jobDetails', 'applications')+['setting'=>gs()]);
     }
 
     public function jobApplicationStatusUpdate(Request $request)

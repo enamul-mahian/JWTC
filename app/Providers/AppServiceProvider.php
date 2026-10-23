@@ -18,6 +18,8 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->scoped(\App\Services\PosterEmailVisibility::class);
+        $this->app->scoped('native.form', fn()=>new \App\Support\NativeForm());
+        \Illuminate\Foundation\AliasLoader::getInstance()->alias('Form', \App\Support\FormFacade::class);
     }
 
     /**
