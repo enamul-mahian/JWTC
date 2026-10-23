@@ -3,6 +3,8 @@
 require __DIR__.'/../../vendor/autoload.php';
 $app=require __DIR__.'/../../bootstrap/app.php';
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+set_exception_handler(function(\Throwable $e){fwrite(STDERR,(string)$e);exit(1);});
+(require database_path('migrations/2023_12_21_130613_create_permission_tables.php'))->up();
 config(['session.driver'=>'array','cache.default'=>'array','mail.default'=>'array']);
 Illuminate\Support\Facades\Gate::before(fn()=>true);
 Illuminate\Support\Facades\URL::forceRootUrl('http://127.0.0.1:8765');

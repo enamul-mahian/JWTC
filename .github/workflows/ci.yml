@@ -320,6 +320,7 @@ jobs:
           composer install --prefer-dist --no-interaction --no-progress
           export JWTC_UI_FIXTURES="$RUNNER_TEMP/workspace-fixtures"
           php scripts/release/render_workspace_fixtures.php
+          test -s "$JWTC_UI_FIXTURES/headers.json"
       - name: Install isolated browser test tools
         run: |
           npm install --prefix "$RUNNER_TEMP/workspace-browser" --no-audit --no-fund playwright@1.62.1
