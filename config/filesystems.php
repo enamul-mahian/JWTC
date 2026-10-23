@@ -29,6 +29,10 @@ return [
     */
 
     'disks' => [
+        'hero-public' => [
+            'driver' => 'local', 'root' => public_path('uploads/hero'),
+            'url' => env('APP_URL').'/uploads/hero', 'visibility' => 'public', 'throw' => true,
+        ],
 
         'local' => [
             'driver' => 'local',
