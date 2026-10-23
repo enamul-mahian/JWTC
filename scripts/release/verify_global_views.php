@@ -15,7 +15,7 @@ try {
         $phase=$label;Illuminate\Support\Facades\Auth::setUser($actor);
         $request=Illuminate\Http\Request::create('https://joingallagher.uk'.$path,'GET');$request->setUserResolver(fn()=>$actor);$request->setLaravelSession($session);
         $route=Illuminate\Support\Facades\Route::getRoutes()->match($request);$request->setRouteResolver(fn()=>$route);$app->instance('request',$request);
-        $response=$handler($request);if($response instanceof Illuminate\Contracts\View\View)$response->render();elseif($response instanceof Symfony\Component\HttpFoundation\Response){if($response->getStatusCode()>=400)throw new RuntimeException('Template response failed');$response->getContent();}
+        $phase=$label.'-controller';$response=$handler($request);$phase=$label.'-render';if($response instanceof Illuminate\Contracts\View\View)$response->render();elseif($response instanceof Symfony\Component\HttpFoundation\Response){if($response->getStatusCode()>=400)throw new RuntimeException('Template response failed');$response->getContent();}
         echo 'READONLY_VIEW '.$label." OK\n";
     };
     $admins=App\Models\User::whereRaw('LOWER(user_type) IN (?,?)',['admin','super_admin'])->get();
@@ -43,9 +43,10 @@ try {
         $render('support-compose','/support-center/new',$applicant,fn($request)=>app(App\Http\Controllers\Support\SupportCenterController::class)->create($request,app(App\Services\SupportCenter::class)));
     }
     $studioAdmin=$admins->first(fn($u)=>$u->can('manage-email-studio')||$u->hasAnyRole(['Admin','Super Admin']));
+    echo 'STUDIO_PREFLIGHT '.json_encode(['enabled'=>(bool)config('email_studio.enabled'),'tables'=>Illuminate\Support\Facades\Schema::hasTable('email_studio_templates') && Illuminate\Support\Facades\Schema::hasTable('email_studio_send_logs'),'permission'=>$studioAdmin?(bool)$studioAdmin->can('manage-email-studio'):false,'canonical'=>$studioAdmin?(bool)$studioAdmin->hasAnyRole(['Admin','Super Admin']):false])."\n";
     if($studioAdmin)$render('email-studio','/admin/email-studio',$studioAdmin,fn($request)=>app(App\Http\Controllers\Admin\EmailStudioController::class)->index($request));else echo "READONLY_SKIP no-email-administrator\n";
     echo 'SMTP_CONFIGURATION '.json_encode(['saved_profiles'=>Illuminate\Support\Facades\DB::table('email_studio_smtp_profiles')->count(),'default_profile'=>app(App\Services\StudioSmtpProfiles::class)->defaultId()!==null,'environment_host'=>(bool)config('mail.mailers.studio_smtp.host'),'environment_username'=>(bool)config('mail.mailers.studio_smtp.username'),'templates'=>Illuminate\Support\Facades\DB::table('email_studio_templates')->count()])."\n";
     $captcha=Illuminate\Support\Facades\DB::table('site_security_settings')->where('id',1)->first();
     echo 'HCAPTCHA_STATE '.json_encode(['sitekey_present'=>(bool)($captcha?->hcaptcha_sitekey?:config('services.hcaptcha.sitekey')),'secret_present'=>(bool)($captcha?->hcaptcha_secret_encrypted?:config('services.hcaptcha.secret')),'enabled'=>$captcha?(bool)$captcha->hcaptcha_enabled:(bool)(config('services.hcaptcha.sitekey')&&config('services.hcaptcha.secret'))])."\n";
     $db->rollBack();echo "PASS: authorized templates verified with read-only database and no customer writes\n";
-} catch(Throwable $error){if($db && $db->transactionLevel()>0)$db->rollBack();echo 'READONLY_VIEW_FAILURE '.$phase.' '.get_class($error).' '.basename($error->getFile()).':'.$error->getLine()."\n";exit(1);}
+} catch(Throwable $error){if($db && $db->transactionLevel()>0)$db->rollBack();echo 'READONLY_VIEW_FAILURE '.$phase.' '.get_class($error).' HTTP '.($error instanceof Symfony\Component\HttpKernel\Exception\HttpExceptionInterface?$error->getStatusCode():0).' '.basename($error->getFile()).':'.$error->getLine()."\n";exit(1);}
