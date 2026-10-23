@@ -1,14 +1,6 @@
 name: cPanel Deploy Own Chat and Post Repair
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/cpanel-deploy-chat.yml'
-      - 'scripts/release/upgrade_chat_release.php'
-      - 'scripts/release/chat_predeploy_gate.php'
-      - 'scripts/release/deploy_chat_release.php'
-      - 'scripts/release/deduplicate_chat_packages.php'
   workflow_dispatch:
 
 permissions:

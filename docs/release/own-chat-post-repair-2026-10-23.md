@@ -15,3 +15,13 @@ The owner explicitly requires the site's own chatbox. Do not restore Tawk or ano
 ## Preservation
 
 The additive chat migration creates three InnoDB tables and brings the migration count to 60. Existing users, jobs, application data, uploads and APP_KEY remain intact. Subsequent display/rate-limit fixes require no new migration. CI, private staging, verified encrypted backup and live HTTP checks precede promotion.
+
+## Verified release
+
+CI run 39900543696, source 91ec885d4e6f3307981911ce06b6353a6a953407: all four jobs passed; 149 tests / 1,040 assertions, production/frontend dependency audits clear.
+
+Production run 39900765513 succeeded. Deployment ID: 20261023-043256-287338ce. Fresh encrypted backup: 20261023-043225-2eb35092; decrypt/hash verification passed. Migration count remains 60. Original rows, uploads and APP_KEY preserved; previous code retained privately.
+
+Browser verified real post /vacancies/38: numbered responsibility list, readable benefits, GBP currency and employment label Full Time. Native visitor chat opens with offline name/email/message form; no Tawk script is present. No real visitor enquiry or admin reply was submitted during browser QA. Session isolation, encrypted storage, admin replies and visibility/presence controls passed automated tests.
+
+Visitor inbox requires the existing manage-application-chat permission. No existing role was silently granted private conversation access. Deployment workflow restored to manual-only.
