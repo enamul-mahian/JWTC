@@ -115,30 +115,47 @@ class JobCategoryController extends Controller
     {
         $validated = $request->validate([
             'unique_code_id' => ['required', 'integer', 'exists:unique_codes,id'],
-            'code' => ['required', 'string', 'min:4', 'max:100', 'unique:unique_codes,code'],
+            'action' => ['sometimes', 'in:approve,reject'],
+            'code' => ['nullable', 'required_unless:action,reject', 'string', 'min:4', 'max:100', 'unique:unique_codes,code'],
+            'quantity' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ]);
 
         $updated = \Illuminate\Support\Facades\DB::transaction(function () use ($validated) {
-            $uniqueCode = UniqueCode::whereKey($validated['unique_code_id'])
-                ->lockForUpdate()
-                ->firstOrFail();
-
+            $ownerId = UniqueCode::whereKey($validated['unique_code_id'])->value('user_id');
+            \App\Models\User::whereKey($ownerId)->lockForUpdate()->firstOrFail();
+            $uniqueCode = UniqueCode::whereKey($validated['unique_code_id'])->lockForUpdate()->firstOrFail();
             if ($uniqueCode->is_used || $uniqueCode->code !== null) {
                 return false;
+            }
+            if (($validated['action'] ?? 'approve') === 'reject') {
+                // A closed request has no code and cannot be consumed as an application code.
+                $uniqueCode->is_used = 1;
+                $uniqueCode->save();
+                return true;
             }
 
             $uniqueCode->code = $validated['code'];
             $uniqueCode->save();
-
+            for ($i = 1; $i < ($validated['quantity'] ?? 1); $i++) {
+                do {
+                    $extraCode = 'JG-' . strtoupper(bin2hex(random_bytes(12)));
+                } while (UniqueCode::where('code', $extraCode)->exists());
+                UniqueCode::create([
+                    'user_id' => $ownerId,
+                    'code' => $extraCode,
+                    'date' => now()->toDateString(),
+                    'is_used' => 0,
+                ]);
+            }
             return true;
         }, 3);
 
         if (!$updated) {
             return redirect()->route('code-request')->withErrors('Code request is no longer pending.');
         }
-
         return redirect()->route('code-request')->with([
-            'message' => 'Code Updated Successfully.',
+            'message' => ($validated['action'] ?? 'approve') === 'reject'
+                ? 'Code request rejected.' : 'Application codes approved successfully.',
             'class' => 'success',
         ]);
     }

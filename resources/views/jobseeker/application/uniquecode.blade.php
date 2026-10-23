@@ -26,6 +26,7 @@
                     <div class="col-lg-8 col-md-8 col-xs-12">
                         <div class="card">
                             <div class="card-body">
+<p>Each approved code allows one job application. Request another code to apply for more jobs. An administrator can approve multiple codes or reject your request.</p>
                                 <div>
                                     @if ($canCreate > 0)
                                         <form method="POST" action="{{ route('request-code') }}" onsubmit="return confirm('Are you sure you want to send request?');">
@@ -42,7 +43,7 @@
                                                 <th>User</th>
                                                 <th>Code</th>
                                                 <th>Date</th>
-                                                <th>Is Used</th>
+                                                <th>Status</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -52,7 +53,7 @@
                                                     <td>{{ $uniqueCode->user->name ?? 'N/A' }}</td>
                                                     <td>{{ $uniqueCode->code }}</td>
                                                     <td>{{ $uniqueCode->date }}</td>
-                                                    <td>{{ $uniqueCode->is_used ? 'Yes' : 'No' }}</td>
+                                                    <td>{{ $uniqueCode->code === null ? ($uniqueCode->is_used ? 'Rejected / Cancelled' : 'Pending approval') : ($uniqueCode->is_used ? 'Used' : 'Available') }}</td>
                                                 </tr>
                                             @endforeach
                                         </tbody>
