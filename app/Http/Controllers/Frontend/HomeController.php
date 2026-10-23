@@ -21,7 +21,7 @@ class HomeController extends Controller
 {
     public function __invoke()
     {
-        // $locations = Country::whereStatus(1)->get();
+        // $locations = Country::whereIn('id',\Illuminate\Support\Facades\DB::table('job_location_options')->where('enabled',true)->select('country_id'))->orderBy('name')->get(['id','name']);
         // $job_categories = JobCategory::whereStatus(1)->get();
         // $categoriesWithCount = JobCategory::withCount('jobs')->get();
         // $latestJobs = Job::with(['country', 'company'])->latest()->take(10)->get();
@@ -38,7 +38,7 @@ class HomeController extends Controller
         $latestJobs = Job::query()->with(['company', 'country', 'job_category'])->where('is_publish', 1)->latest()->limit(6)->get();
         $publishedJobCount = Job::where('is_publish', 1)->count();
         $hiringCompanyCount = Job::where('is_publish', 1)->distinct()->count('company_id');
-        $locations = Country::where('status', 1)->orderBy('name')->get(['id', 'name']);
+        $locations = Country::whereIn('id',\Illuminate\Support\Facades\DB::table('job_location_options')->where('enabled',true)->select('country_id'))->orderBy('name')->get(['id','name']);
         return view('frontend.index', compact('latestJobs', 'publishedJobCount', 'hiringCompanyCount', 'locations'));
     }
 
@@ -80,7 +80,7 @@ class HomeController extends Controller
         if ($request->filled('salary_type')) $query->where('salary_type', $request->input('salary_type'));
         $jobs = $query->where('is_publish', 1)->with(['country', 'company', 'job_category'])->latest()->paginate(10);
 
-        $locations = Country::whereStatus(1)->get();
+        $locations = Country::whereIn('id',\Illuminate\Support\Facades\DB::table('job_location_options')->where('enabled',true)->select('country_id'))->orderBy('name')->get(['id','name']);
         $job_categories = JobCategory::whereStatus(1)->get();
 
         return view('frontend.pages.jobs', compact('jobs', 'locations', 'job_categories', 'title', 'country_id', 'category_id'));

@@ -17,7 +17,7 @@ class JobPresentation {
   unset($data['logo'],$data['remove_logo'],$data['faq_question'],$data['faq_answer']);
   if($request->boolean('remove_logo'))$data['logo_path']=null;
   if($request->hasFile('logo')){$file=$request->file('logo');$dir=public_path('assets/images/job-logos');if(!is_dir($dir))mkdir($dir,0755,true);$name=\Illuminate\Support\Str::random(40).'.'.$file->extension();$file->move($dir,$name);$data['logo_path']='job-logos/'.$name;}
-  if($request->has('faq_question')){
+  if($request->boolean('faq_editor') || $request->has('faq_question')){
    $items=[];foreach($request->input('faq_question',[]) as $i=>$question){$answer=$request->input('faq_answer.'.$i);if(trim((string)$question)!=='' && trim((string)$answer)!=='')$items[]=['question'=>trim($question),'answer'=>trim($answer)];}
    $data['faqs']=json_encode($items,JSON_THROW_ON_ERROR);
   }else{$draft=$job?clone $job:new Job();$draft->fill($data);$draft->unsetRelation('country');$data['faqs']=json_encode(self::faqs($draft),JSON_THROW_ON_ERROR);}
