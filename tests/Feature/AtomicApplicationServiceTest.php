@@ -74,7 +74,7 @@ class AtomicApplicationServiceTest extends TestCase
     public function test_one_code_is_consumed_with_exactly_one_application(): void
     {
         $application = app(ApplicationSubmissionService::class)->submit(
-            User::findOrFail(1), Job::findOrFail(10), 1500.00
+            User::findOrFail(1), Job::findOrFail(10), 1500.00, 'SECURE-CODE-1'
         );
 
         $this->assertSame(1, (int) $application->status);
@@ -86,7 +86,7 @@ class AtomicApplicationServiceTest extends TestCase
 
         try {
             app(ApplicationSubmissionService::class)->submit(
-                User::findOrFail(1), Job::findOrFail(10), 2000.00
+                User::findOrFail(1), Job::findOrFail(10), 2000.00, 'SECURE-CODE-1'
             );
             $this->fail('Duplicate application was accepted.');
         } catch (\DomainException $e) {
@@ -101,7 +101,7 @@ class AtomicApplicationServiceTest extends TestCase
         $this->expectException(\DomainException::class);
 
         app(ApplicationSubmissionService::class)->submit(
-            User::findOrFail(2), Job::findOrFail(10), 1500.00
+            User::findOrFail(2), Job::findOrFail(10), 1500.00, 'SECURE-CODE-1'
         );
     }
 
@@ -111,7 +111,7 @@ class AtomicApplicationServiceTest extends TestCase
 
         try {
             app(ApplicationSubmissionService::class)->submit(
-                User::findOrFail(1), Job::findOrFail(10), 1500.00
+                User::findOrFail(1), Job::findOrFail(10), 1500.00, 'SECURE-CODE-1'
             );
             $this->fail('Unpublished job accepted application.');
         } catch (\DomainException $e) {
@@ -120,5 +120,36 @@ class AtomicApplicationServiceTest extends TestCase
 
         $this->assertDatabaseCount('applications', 0);
         $this->assertDatabaseHas('unique_codes', ['user_id' => 1, 'is_used' => 0]);
+    }
+
+    public function test_missing_invalid_or_other_accounts_code_does_not_consume_any_code(): void
+    {
+        DB::table('unique_codes')->insert(['user_id'=>2, 'code'=>'OTHER-ACCOUNT', 'is_used'=>0]);
+        foreach ([null, '', 'UNKNOWN', 'OTHER-ACCOUNT'] as $code) {
+            try {
+                app(ApplicationSubmissionService::class)->submit(User::findOrFail(1), Job::findOrFail(10), 1500, $code);
+                $this->fail('Invalid code was accepted.');
+            } catch (\DomainException $e) {
+                $this->assertDatabaseCount('applications', 0);
+                $this->assertSame(0, DB::table('unique_codes')->where('is_used', 1)->count());
+            }
+        }
+    }
+
+    public function test_used_code_cannot_apply_to_another_job_and_second_code_can(): void
+    {
+        DB::table('jobs')->insert(['id'=>11,'company_id'=>99,'title'=>'Second job','is_publish'=>1]);
+        DB::table('unique_codes')->insert(['user_id'=>1,'code'=>'SECOND-CODE','is_used'=>0]);
+        $service = app(ApplicationSubmissionService::class);
+        $service->submit(User::findOrFail(1), Job::findOrFail(10), 1500, 'SECOND-CODE');
+        $this->assertDatabaseHas('unique_codes', ['code'=>'SECURE-CODE-1','is_used'=>0]);
+        try {
+            $service->submit(User::findOrFail(1), Job::findOrFail(11), 1500, 'SECOND-CODE');
+            $this->fail('Used code was accepted.');
+        } catch (\DomainException $e) {
+            $this->assertDatabaseCount('applications', 1);
+        }
+        $service->submit(User::findOrFail(1), Job::findOrFail(11), 1500, 'SECURE-CODE-1');
+        $this->assertDatabaseCount('applications', 2);
     }
 }
