@@ -59,6 +59,8 @@ jobs:
           node --check public/pwa/install.js
           node --check public/theme/hero-slides.js
           node --check public/sw.js
+          node --check public/site-chat/widget.js
+          node --check public/site-chat/admin.js
           node --test tests/js/pwa-worker.test.cjs
       - name: Build frontend assets
         run: npm run build

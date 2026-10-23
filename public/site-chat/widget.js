@@ -32,7 +32,7 @@
       const entry = document.createElement('div'); entry.className = row.from === 'Support' ? 'jg-chat-message jg-chat-staff' : 'jg-chat-message';
       const label = document.createElement('strong'); label.textContent = row.from;
       const text = document.createElement('p'); text.textContent = row.body;
-      const time = document.createElement('small'); time.textContent = row.created_at + ' UTC';
+      const time = document.createElement('small'); const sentAt = new Date(row.created_at); time.textContent = Number.isNaN(sentAt.getTime()) ? row.created_at : sentAt.toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'});
       entry.append(label, text, time); messages.append(entry);
     });
     messages.scrollTop = messages.scrollHeight;
@@ -71,7 +71,7 @@
       root.hidden = !data.enabled;
       if (!data.enabled) {panel.hidden = true; return;}
       if (!initialized) {thread = data.thread; showContact(!thread); initialized = true;}
-      document.getElementById('jg-chat-presence').textContent = data.online ? 'Our team is available' : 'We are offline. Leave a message for our team.';
+      document.getElementById('jg-chat-presence').textContent = data.online ? 'Our team is available' : data.within_hours === false ? 'Outside support hours. Leave a message for our team.' : 'We are offline. Leave a message for our team.';
     } catch { /* Preserve an open conversation during a brief network failure. */ }
   }
   refreshState();

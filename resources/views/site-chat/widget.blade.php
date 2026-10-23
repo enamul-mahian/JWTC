@@ -10,5 +10,5 @@
 <button type="submit" class="jg-button">Send message</button>
 </form>
 </section></div>
-<link rel="stylesheet" href="{{ asset('site-chat/widget.css') }}?v=20261023">
-<script defer src="{{ asset('site-chat/widget.js') }}?v=20261023"></script>
+<link rel="stylesheet" href="{{ asset('site-chat/widget.css') }}?v=20261023-2">
+<script defer src="{{ asset('site-chat/widget.js') }}?v=20261023-2"></script>
