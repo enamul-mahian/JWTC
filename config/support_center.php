@@ -7,7 +7,7 @@ return [
     'max_reply_length' => 5000,
     'max_refund_reason_length' => 5000,
     'currencies' => ['USD', 'GBP', 'EUR', 'BDT'],
-    'notification_address' => env('SUPPORT_EMAIL', env('MAIL_FROM_ADDRESS')),
+    'notification_address' => env('SUPPORT_EMAIL'),
     'attachments_enabled' => false,
     // Not a payment gateway and never issues money movements automatically.
     'automatic_refunds_enabled' => false,

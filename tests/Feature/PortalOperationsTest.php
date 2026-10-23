@@ -164,7 +164,10 @@ class PortalOperationsTest extends TestCase
         \Illuminate\Support\Facades\Mail::fake();$this->job();$applicant=$this->actor('job_seeker','support-applicant');$center=app(\App\Services\SupportCenter::class);
         $ticket=$center->create($applicant,['category'=>'refund','subject'=>'Please review payment','description'=>'Private example request.','recipient_company_id'=>$this->company->id]);
         $this->assertTrue($center->canSee($this->employer,$ticket));
-        $other=$this->actor('employer','unrelated-company');$this->assertFalse($center->canSee($other,$ticket));
+        Role::findOrCreate('Admin','web');$this->admin->assignRole('Admin');$center->reply($this->admin,$ticket->id,'Internal review note.',true);
+        $this->assertFalse($center->replies($this->employer,$ticket)->getCollection()->contains('body','Internal review note.'));
+        config(['email_studio.enabled'=>true]);$this->actingAs($this->admin)->get('/admin/email-studio')->assertOk();
+        $other=$this->actor('employer','unrelated-company');$other->forceFill(['employer_approved_at'=>now()])->save();$this->assertFalse($center->canSee($other,$ticket));
         $reply=$center->reply($this->employer,$ticket->id,'We have received your request.',false);$this->assertNotNull($reply->id);
         $status=app(\App\Services\SupportNotifications::class)->notify($applicant,$ticket,'Private example request.','test:'.$ticket->id);$this->assertSame('accepted',$status);
         \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\SupportMessage::class,fn($m)=>$m->hasTo($this->employer->email));

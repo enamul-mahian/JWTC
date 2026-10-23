@@ -10,7 +10,7 @@ class SupportNotifications {
   if(!Schema::hasTable('support_mail_deliveries'))return null;
   if((int)$actor->id!==(int)$ticket->requester_id)$email=User::find($ticket->requester_id)?->email;
   elseif(!empty($ticket->recipient_company_id))$email=DB::table('companies')->join('users','users.id','=','companies.user_id')->where('companies.id',$ticket->recipient_company_id)->whereNull('users.deleted_at')->value('users.email');
-  else $email=config('support_center.notification_address');
+  else $email=config('support_center.notification_address') ?: DB::table('email_studio_smtp_profiles')->where('is_default',true)->value('from_address') ?: config('email_studio.from_address');
   $existing=DB::table('support_mail_deliveries')->where('event_key',$key)->first();if($existing)return $existing->status;
   $id=DB::table('support_mail_deliveries')->insertGetId(['ticket_id'=>$ticket->id,'event_key'=>$key,'recipient_encrypted'=>encrypt((string)$email),'message_encrypted'=>encrypt($body),'status'=>'pending','attempts'=>0,'created_at'=>now(),'updated_at'=>now()]);
   return $this->deliver($id);
