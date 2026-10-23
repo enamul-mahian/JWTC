@@ -76,16 +76,13 @@ try {
     $guard = str_replace('except Exception:', 'except Exception as error:', $guard);
     $guard = str_replace("print('Restore guard failed; private details suppressed', file=sys.stderr)", "print('GUARD_ERROR ' + type(error).__name__ + ' ' + str(getattr(error, 'errno', None)), file=sys.stderr)", $guard);
     $unpacked = $base.'/candidate-unpacked-portal-global-ui';
-    if (is_dir($unpacked) && !is_link($unpacked) && !is_file($unpacked.'/.extraction-complete')) {
-        if (!rename($unpacked, $unpacked.'-incomplete-'.gmdate('YmdHis'))) throw new RuntimeException('Cannot retain incomplete extraction');
-    }
-    clearstatcache(true, $unpacked);
-    if (is_link($unpacked)) throw new RuntimeException('Candidate destination exists');
-    if (!is_dir($unpacked)) {
-        if (!mkdir($unpacked, 0700)) throw new RuntimeException('Candidate destination exists');
-        $phase = 'extractor-run';
-        $run(['/usr/bin/python3', '-c', $guard, 'extract', $input.'/'.$manifest['package'], $unpacked, '536870912']);
-        file_put_contents($unpacked.'/.extraction-complete', 'verified extraction');
+    clearstatcache(true,$unpacked);
+    if(is_link($unpacked))throw new RuntimeException('Candidate destination exists');
+    if(!is_dir($unpacked))mkdir($unpacked,0700);
+    if(!is_file($unpacked.'/.extraction-complete')){
+        $phase='extractor-run';
+        $run(['/usr/bin/python3','-c',$guard,'extract',$input.'/'.$manifest['package'],$unpacked,'536870912']);
+        file_put_contents($unpacked.'/.extraction-complete','verified extraction');
     }
     $phase = 'extracted-hashes';
     $expected = [];

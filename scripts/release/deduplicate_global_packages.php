@@ -69,6 +69,30 @@ try {
             $linked++;
         }
     }
+    $sourceShared=0;
+    foreach(glob($home.'/jwtc-private-deployments/*/previous',GLOB_ONLYDIR) as $previous){
+        if(is_link($previous)||realpath($previous)!==$previous)throw new RuntimeException('Unsafe previous code');
+        foreach(['app','config','database','resources','routes'] as $group){
+            $target=$previous.'/'.$group;if(!is_dir($target)||is_link($target))continue;
+            foreach(new RecursiveIteratorIterator(new RecursiveDirectoryIterator($target,FilesystemIterator::SKIP_DOTS)) as $entry){
+                if(!$entry->isFile()||$entry->isLink())continue;
+                $relative=substr($entry->getPathname(),strlen($previous)+1);$source=$home.'/joingallagher.uk/'.$relative;
+                if(!is_file($source)||is_link($source)||realpath($source)!==$source)continue;
+                $a=stat($entry->getPathname());$b=stat($source);
+                if($a['ino']===$b['ino']||$a['dev']!==$b['dev']||$a['uid']!==$b['uid']||$a['mode']!==$b['mode']||$a['size']!==$b['size'])continue;
+                if(!hash_equals(hash_file('sha256',$source),hash_file('sha256',$entry->getPathname())))continue;
+                $temp=$entry->getPathname().'.jwtc-share';if(file_exists($temp)||is_link($temp))throw new RuntimeException('Sharing temporary exists');
+                if(!link($source,$temp)||!rename($temp,$entry->getPathname()))throw new RuntimeException('Code sharing failed');$sourceShared++;
+            }
+        }
+    }
+    $cleared=0;$views=$home.'/joingallagher.uk/storage/framework/views';
+    foreach(glob($views.'/*.php') as $view){
+        if(is_link($view)||!preg_match('/^[a-f0-9]{32,64}\.php$/',basename($view)))continue;
+        $tail=file_get_contents($view,false,null,max(0,filesize($view)-1024));
+        if(!str_contains($tail,'ENDPATH')){unlink($view);$cleared++;}
+    }
+    echo 'PASS: immutable rollback source files shared '.$sourceShared.'; incomplete generated view caches cleared '.$cleared."\n";
     echo 'PASS: identical dependency files shared without removing rollback paths; files '.$linked."\n";
     echo 'PASS: removed '.$removed." redundant extracted files; verified archives, backups, application and uploads retained\n";
 } catch (Throwable $error) {

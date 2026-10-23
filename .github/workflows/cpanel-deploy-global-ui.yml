@@ -47,6 +47,7 @@ jobs:
           php -l scripts/release/deploy_global_release.php
           php -l scripts/release/activate_global_features.php
           python3 -m unittest discover -s scripts/release -p test_restore_guard.py -v
+          python3 -m unittest discover -s scripts/release -p test_extract_global_candidate.py -v
           for name in SSH_HOST SSH_PORT SSH_USER SSH_KEY KNOWN_HOSTS APP_PATH STAGING_DB_DATABASE STAGING_DB_USERNAME STAGING_DB_PASSWORD; do
             if [[ -z "${!name}" ]]; then
               echo "::error::Missing configuration: $name"
@@ -98,7 +99,7 @@ jobs:
           cleanup_base64="$(base64 -w0 scripts/release/deduplicate_global_packages.php)"
           ssh -T "${ssh_options[@]}" "$SSH_USER@$SSH_HOST" "cd '$APP_PATH' && php -r 'eval(\"?>\".base64_decode(\"$cleanup_base64\"));'"
           script_base64="$(base64 -w0 scripts/release/upgrade_global_release.php)"
-          base64 -w0 scripts/release/restore_guard.py |
+          base64 -w0 scripts/release/extract_global_candidate.py |
             ssh -T "${ssh_options[@]}" "$SSH_USER@$SSH_HOST" "cd '$APP_PATH' && php -r 'eval(\"?>\".base64_decode(\"$script_base64\"));'"
       - name: Final HTTP and zero-advisory gates on upgraded staging
         shell: bash
