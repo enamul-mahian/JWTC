@@ -108,11 +108,18 @@ try {
     $fingerprints = [];
     foreach ($tables as $table) {
         $columns = $prior[$table]['columns'] ?? $db->getSchemaBuilder()->getColumnListing($table);
-        $rows = $db->table($table)->select($columns)->orderBy('id')->get()->toArray();
+        $query=$db->table($table)->select($columns)->orderBy('id');
+        if ($table==='countries' && $prior) {
+            $extra=$db->table($table)->whereNotIn('id',$prior[$table]['ids'])->get();
+            if($extra->count()>4 || $extra->contains(fn($row)=>!in_array($row->name,['United Kingdom','Scotland','Ireland','UK Territories'],true)))throw new RuntimeException('Unexpected location seed addition.');
+            $query->whereIn('id',$prior[$table]['ids']);
+        }
+        $rows = $query->get()->toArray();
         if (count($rows) === 0) {
             throw new RuntimeException('Missing synthetic legacy record in ' . $table);
         }
         $fingerprints[$table] = [
+            'ids' => array_map(fn($row)=>(int)$row->id,$rows),
             'count' => count($rows),
             'columns' => $columns,
             'sha256' => hash('sha256', json_encode($rows, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES)),
