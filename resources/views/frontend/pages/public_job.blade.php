@@ -19,5 +19,5 @@
 @if($text)<section class="jg-job-copy"><h2>{{ $heading }}</h2><div class="jg-rich-copy">{!! $job->publicDescriptionHtml($text) !!}</div></section>@endif
 @endforeach
 @if($job->application_deadline)<p class="jg-helper">Application deadline: {{ \Illuminate\Support\Carbon::parse($job->application_deadline)->format('d M Y') }}</p>@endif
-<section class="jg-job-copy"><h2>Frequently asked questions</h2>@foreach(\App\Services\JobPresentation::faqs($job) as $faq)<details class="jg-faq-public"><summary>{{ $job->publicDescription($faq['question']??'') }}</summary><p>{{ $job->publicDescription($faq['answer']??'') }}</p></details>@endforeach</section></div></section>
+@php($jgFaqs=\App\Services\JobPresentation::faqs($job)) @if($jgFaqs)<section class="jg-job-copy"><h2>Frequently asked questions</h2>@foreach($jgFaqs as $faq)<details class="jg-faq-public"><summary>{{ $job->publicDescription($faq['question']??'') }}</summary><p>{{ $job->publicDescription($faq['answer']??'') }}</p></details>@endforeach</section>@endif</div></section>
 @endsection

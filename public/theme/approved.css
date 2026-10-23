@@ -24,3 +24,5 @@
 @media(max-width:850px){.jg-site .jg-profile-grid{grid-template-columns:1fr}.jg-site .jg-profile-nav{position:static}.jg-site .jg-profile-nav ul{display:flex;flex-wrap:wrap;gap:5px}.jg-site .jg-profile-nav li a{padding:10px}.jg-site .jg-profile-card{padding:20px}.jg-site .jg-profile-banner{padding:22px}.jg-site .jg-profile-history .form-ad{padding:18px}.jg-site .jg-passport-summary{grid-template-columns:1fr}}
 
 .jg-site .jg-checkbox-grid label{flex-direction:row}.jg-site .jg-rich-field textarea[hidden]{display:none!important}.jg-site .jg-faq-row input,.jg-site .jg-faq-row textarea{display:block;width:100%;border:1px solid #bdd0e9;border-radius:8px;padding:10px;color:#173252;background:white;font:inherit}.jg-site .jg-faq-row label{display:block;font-size:14px;font-weight:600}.jg-site .jg-choice-group input[type=checkbox]{padding:0;flex-shrink:0}
+
+.jg-site .jg-profile-card textarea{display:block;width:100%;border:1px solid #b8cbe5;border-radius:9px;padding:12px;color:#172f51;font:inherit;background:white}
