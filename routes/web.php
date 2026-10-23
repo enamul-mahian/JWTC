@@ -1199,3 +1199,17 @@ Route::prefix('admin/hero-slides')->middleware(['auth','admin_user'])->group(fun
     Route::get('/', [\App\Http\Controllers\Admin\SiteHeroController::class,'index'])->name('admin.hero-slides');
     Route::post('/', [\App\Http\Controllers\Admin\SiteHeroController::class,'update'])->middleware('throttle:12,1,hero-slide-settings:')->name('admin.hero-slides.update');
 });
+
+Route::prefix('admin/jobs')->middleware(['auth','admin_user'])->group(function(){
+    Route::get('/',[\App\Http\Controllers\Admin\JobEditorController::class,'index'])->name('admin.jobs.index');
+    Route::get('/{job}/edit',[\App\Http\Controllers\Admin\JobEditorController::class,'edit'])->whereNumber('job')->name('admin.jobs.edit');
+    Route::patch('/{job}',[\App\Http\Controllers\Admin\JobEditorController::class,'update'])->whereNumber('job')->name('admin.jobs.update');
+});
+
+Route::post('admin/site-chat/presence',[\App\Http\Controllers\Chat\SiteChatController::class,'presence'])->middleware(['auth','admin_user','application.chat.headers','throttle:6,1,site-chat-presence:'])->name('admin.site-chat.presence');
+
+Route::prefix('admin/applications')->middleware(['auth','admin_user'])->group(function(){
+    Route::get('/',[\App\Http\Controllers\Admin\ApplicationProgressController::class,'index'])->name('admin.application-progress.index');
+    Route::get('/{application}/progress',[\App\Http\Controllers\Admin\ApplicationProgressController::class,'show'])->whereNumber('application')->name('admin.application-progress.show');
+    Route::patch('/{application}/progress',[\App\Http\Controllers\Admin\ApplicationProgressController::class,'update'])->whereNumber('application')->name('admin.application-progress.update');
+});

@@ -14,6 +14,12 @@
     <!-- Sidebar navigation-->
     <nav class="sidebar-nav scroll-sidebar" data-simplebar>
         <ul id="sidebarnav">
+            @if(in_array(strtolower((string)auth()->user()?->user_type), ['admin','super_admin'], true) && auth()->user()->can('active-job'))
+            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('admin.jobs.index') }}"><span><i class="ti ti-briefcase"></i></span><span class="hide-menu">Manage All Jobs</span></a></li>
+            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('admin.application-progress.index') }}"><span><i class="ti ti-list-check"></i></span><span class="hide-menu">Applications &amp; Progress</span></a></li>
+            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('admin.application-statuses.index') }}"><span><i class="ti ti-adjustments"></i></span><span class="hide-menu">Workflow Settings</span></a></li>
+            @endif
+
             @if(in_array(strtolower((string)auth()->user()?->user_type), ['admin','super_admin'], true) && auth()->user()->can('employer-list'))
             <li class="sidebar-item"><a class="sidebar-link" href="{{ route('admin.company-approvals.index') }}"><span><i class="ti ti-user-check"></i></span><span class="hide-menu">Company Approvals</span></a></li>
             @endif
@@ -21,8 +27,8 @@
             <li class="sidebar-item"><a class="sidebar-link" href="{{ route('admin.news-ticker') }}"><span><i class="ti ti-news"></i></span><span class="hide-menu">News Ticker</span></a></li>
             <li class="sidebar-item"><a class="sidebar-link" href="{{ route('admin.hero-slides') }}"><span><i class="ti ti-photo"></i></span><span class="hide-menu">Homepage Slides</span></a></li>
             @endif
-            @if(in_array(strtolower((string)auth()->user()?->user_type), ['admin','super_admin'], true) && auth()->user()->can('manage-application-chat'))
-            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('admin.site-chat') }}"><span><i class="ti ti-message-circle"></i></span><span class="hide-menu">Visitor Chat Inbox</span></a></li>
+            @if(in_array(strtolower((string)auth()->user()?->user_type), ['admin','super_admin'], true) && (auth()->user()->can('manage-application-chat') || auth()->user()->hasAnyRole(['Admin','Super Admin'])))
+            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('admin.site-chat') }}"><span><i class="ti ti-message-circle"></i></span><span class="hide-menu">Chat Inbox &amp; Schedule</span></a></li>
             @endif
             <!-- ============================= -->
             <!-- Home -->
@@ -64,7 +70,7 @@
                 </li>
             @endif
 
-            @if(config('application_chat.enabled') && in_array(auth()->user()?->user_type, [\App\Enum\UserType::ADMIN, \App\Enum\UserType::SUPER_ADMIN], true) && auth()->user()->can('manage-application-chat'))
+            @if(config('application_chat.enabled') && in_array(auth()->user()?->user_type, [\App\Enum\UserType::ADMIN, \App\Enum\UserType::SUPER_ADMIN], true) && (auth()->user()->can('manage-application-chat') || auth()->user()->hasAnyRole(['Admin','Super Admin'])))
                 <li class="sidebar-item">
                     <a href="{{ route('application-chat.index') }}" class="sidebar-link">
                         <span><i class="ti ti-messages"></i></span>

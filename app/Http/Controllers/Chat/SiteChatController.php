@@ -16,7 +16,7 @@ class SiteChatController extends Controller
     private function reviewer(Request $request): void
     {
         abort_unless(in_array(strtolower((string)$request->user()?->user_type), ['admin','super_admin'], true), 403);
-        abort_unless($request->user()->can('manage-application-chat'), 403);
+        abort_unless(($request->user()->can('manage-application-chat') || $request->user()->hasAnyRole(['Admin','Super Admin'])), 403);
     }
     private function owned(Request $request, string $id): object
     {
@@ -26,13 +26,13 @@ class SiteChatController extends Controller
     private function messages(object $thread, int $after = 0)
     {
         return DB::table('site_chat_messages')->where('thread_id',$thread->id)->where('id','>',$after)->orderBy('id')->limit(100)->get()->map(fn($row)=>[
-            'id'=>(int)$row->id, 'from'=>$row->admin_id ? 'Support' : 'You', 'body'=>Crypt::decryptString($row->body_encrypted), 'created_at'=>$row->created_at,
+            'id'=>(int)$row->id, 'from'=>$row->admin_id ? 'Support' : 'You', 'body'=>Crypt::decryptString($row->body_encrypted), 'created_at'=>\Illuminate\Support\Carbon::parse($row->created_at,config('app.timezone'))->toIso8601String(),
         ]);
     }
     public function state(Request $request)
     {
         $settings = $this->settings();
-        return response()->json(['enabled'=>(bool)$settings?->enabled, 'online'=>(bool)($settings?->online_until && now()->lt($settings->online_until)), 'thread'=>$request->session()->get('site_chat_id')])->header('Cache-Control','no-store, private');
+        return response()->json(['enabled'=>(bool)$settings?->enabled, 'online'=>(bool)($settings?->enabled && $settings?->online_until && now()->lt($settings->online_until) && app(\App\Services\ChatHours::class)->open($settings)), 'within_hours'=>$settings ? app(\App\Services\ChatHours::class)->open($settings) : false, 'thread'=>$request->session()->get('site_chat_id')])->header('Cache-Control','no-store, private');
     }
     public function start(Request $request)
     {
@@ -95,8 +95,28 @@ class SiteChatController extends Controller
     public function configure(Request $request)
     {
         $this->reviewer($request); abort_unless($this->settings(),503);
-        $data=$request->validate(['enabled'=>'required|boolean','available'=>'required|boolean']);
-        DB::table('site_chat_settings')->where('id',1)->update(['enabled'=>(bool)$data['enabled'],'online_until'=>$data['enabled']&&$data['available'] ? now()->addSeconds(90):null,'updated_at'=>now()]);
+        $data=$request->validate(['enabled'=>'required|boolean','available'=>'required|boolean','schedule_enabled'=>'sometimes|boolean','timezone'=>'sometimes|timezone','hours'=>'sometimes|array|max:7','hours.*.start'=>'nullable|date_format:H:i','hours.*.end'=>'nullable|date_format:H:i']);
+        $update=['enabled'=>(bool)$data['enabled'],'online_until'=>$data['enabled']&&$data['available'] ? now()->addSeconds(90):null,'updated_at'=>now()];
+        if($request->has('schedule_enabled')){
+            $hours=[];
+            foreach($data['hours']??[] as $day=>$range){
+                if(!in_array((int)$day,range(1,7),true))throw \Illuminate\Validation\ValidationException::withMessages(['hours'=>'Use days Monday through Sunday.']);
+                $start=$range['start']??null;$end=$range['end']??null;
+                if((bool)$start!==(bool)$end || ($start && $start===$end))throw \Illuminate\Validation\ValidationException::withMessages(['hours'=>'Set both a start and an end time; use blank times for closed days.']);
+                if($start)$hours[$day]=['start'=>$start,'end'=>$end];
+            }
+            if($data['schedule_enabled'] && !$hours)throw \Illuminate\Validation\ValidationException::withMessages(['hours'=>'Add at least one opening period.']);
+            $update+=['schedule_enabled'=>(bool)$data['schedule_enabled'],'timezone'=>$data['timezone']??'UTC','weekly_hours'=>json_encode($hours,JSON_THROW_ON_ERROR)];
+        }
+        DB::table('site_chat_settings')->where('id',1)->update($update);
         return $request->expectsJson()?response()->json(['saved'=>true]):back()->with('success','Chat settings saved.');
     }
+    public function presence(Request $request)
+    {
+        $this->reviewer($request);$settings=$this->settings();abort_unless($settings,503);
+        $data=$request->validate(['available'=>'required|boolean']);
+        DB::table('site_chat_settings')->where('id',1)->update(['online_until'=>$settings->enabled && $data['available'] ? now()->addSeconds(90):null]);
+        return response()->json(['saved'=>true]);
+    }
+
 }
