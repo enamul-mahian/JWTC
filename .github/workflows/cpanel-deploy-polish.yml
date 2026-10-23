@@ -1,9 +1,6 @@
 name: cPanel Upgrade Job Editor and Applicant Profile
 
 on:
-  push:
-    branches: [main]
-    paths: [.github/workflows/cpanel-deploy-polish.yml]
   workflow_dispatch:
 
 permissions:
