@@ -166,3 +166,5 @@ jobs:
 # Retry with private view diagnostic status only.
 
 # Preserve public rollback code snapshots while compacting.
+
+# Recovery attempt: preserve private environment outside code archive

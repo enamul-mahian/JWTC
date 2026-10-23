@@ -8,6 +8,7 @@ def compact(previous,reusable_inode=None):
  expected={};directories=[]
  for item in previous.rglob('*'):
   relative=item.relative_to(previous).as_posix()
+  if relative=='.env':continue
   if item.is_symlink() or relative.split('/')[0] not in ALLOWED:raise ValueError('non-code path')
   if item.is_dir():directories.append(item);continue
   if not item.is_file():raise ValueError('non-file')
@@ -38,7 +39,7 @@ def compact(previous,reusable_inode=None):
    if item.is_symlink() or hashlib.sha256(item.read_bytes()).hexdigest()!=sha:raise ValueError('source changed')
   for relative in expected:(previous/relative).unlink()
   for directory in sorted(directories,key=lambda p:len(p.parts),reverse=True):directory.rmdir()
-  previous.rmdir()
+  if not any(previous.iterdir()):previous.rmdir()
   return len(expected),len(directories),archive.stat().st_size
  except Exception:
   # The archive/source are retained on any unexpected state; never bulk-delete.
