@@ -12,11 +12,12 @@ class SiteChatAndJobFormattingTest extends TestCase
     {
         parent::setUp();
         $this->artisan('migrate',['--force'=>true])->assertSuccessful();
+        DB::table('job_categories')->insert(['id'=>802,'name'=>'Chat fixture','status'=>1]);
     }
     private function actor(string $type): User
     {
         static $i=0; $i++;
-        return User::create(['name'=>'Fixture','email'=>'chat'.$i.'@example.test','phone'=>'555'.str_pad((string)$i,8,'0',STR_PAD_LEFT),'password'=>'SyntheticPassword123!', 'user_type'=>$type,'status'=>1]);
+        return User::create(['name'=>'Fixture','email'=>'chat'.$i.'@example.test','phone'=>'555'.str_pad((string)$i,8,'0',STR_PAD_LEFT),'password'=>'SyntheticPassword123!', 'user_type'=>$type,'status'=>1,'job_category_id'=>802]);
     }
     public function test_rich_job_lists_and_json_benefits_render_without_active_content(): void
     {

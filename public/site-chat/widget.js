@@ -63,6 +63,18 @@
     } catch (error) {feedback.textContent = error.message;}
     finally {busy = false; button.disabled = false; await poll();}
   });
-  request('/state').then(data => {if (!data.enabled) return; root.hidden = false; thread = data.thread; showContact(!thread); document.getElementById('jg-chat-presence').textContent = data.online ? 'Our team is available' : 'We are offline. Leave a message for our team.';}).catch(() => {});
+  let initialized = false;
+  async function refreshState() {
+    if (document.hidden) return;
+    try {
+      const data = await request('/state');
+      root.hidden = !data.enabled;
+      if (!data.enabled) {panel.hidden = true; return;}
+      if (!initialized) {thread = data.thread; showContact(!thread); initialized = true;}
+      document.getElementById('jg-chat-presence').textContent = data.online ? 'Our team is available' : 'We are offline. Leave a message for our team.';
+    } catch { /* Preserve an open conversation during a brief network failure. */ }
+  }
+  refreshState();
+  setInterval(refreshState, 30000);
   setInterval(poll, 10000);
 })();
