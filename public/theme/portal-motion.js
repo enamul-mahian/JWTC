@@ -12,6 +12,7 @@
       entries.forEach(entry => {
         if (!entry.isIntersecting) return;
         entry.target.style.setProperty('--jg-motion-delay', Math.min(stagger++ * 55, 165) + 'ms');
+        entry.target.addEventListener('animationend', () => {entry.target.classList.remove('jg-motion-enter'); entry.target.style.removeProperty('--jg-motion-delay');}, {once:true});
         entry.target.classList.add('jg-motion-enter');
         observer.unobserve(entry.target);
       });
