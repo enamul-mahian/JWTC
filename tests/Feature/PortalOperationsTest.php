@@ -40,7 +40,7 @@ class PortalOperationsTest extends TestCase
     }
     public function test_approved_employer_can_render_post_job_form_submit_and_reopen_for_edit(): void
     {
-        $this->actingAs($this->employer)->get('/jobs/create')->assertOk()->assertSee('Submit job for review')->assertSee('Fixture skill');
+        $this->actingAs($this->employer)->get('/jobs/create')->assertOk()->assertSee('Submit job for review')->assertSee('Fixture skill')->assertDontSee('ckeditor.js')->assertDontSee('jquery-min.js');
         $data=$this->payload();$data['company_id']=99999;$data['is_publish']=1;
         $this->post('/jobs',$data)->assertRedirect()->assertSessionHasNoErrors();
         $job=Job::where('title',$data['title'])->firstOrFail();

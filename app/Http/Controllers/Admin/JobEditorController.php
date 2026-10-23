@@ -29,7 +29,7 @@ class JobEditorController extends Controller
         foreach(['employment_status','job_level','work_place','other_benefits','skills','gender'] as $key)$data[$key]=json_encode($data[$key]??[],JSON_THROW_ON_ERROR);
         unset($data['company_id'],$data['user_id'],$data['slug']);
         $data['is_publish']=(int)$extra['is_publish'];
-        if(!empty($extra['created_at']))$data['created_at']=$extra['created_at'];
+        if(!empty($extra['created_at']) && substr($extra['created_at'],0,10)!==$job->created_at?->format('Y-m-d'))$data['created_at']=$extra['created_at'];
         DB::transaction(function()use($job,$data,$request){
             $record=Job::lockForUpdate()->findOrFail($job->id);$record->fill($data);$fields=array_keys($record->getDirty());$record->save();
             if($fields)DB::table('job_edit_events')->insert(['job_id'=>$record->id,'actor_id'=>$request->user()->id,'changed_fields'=>json_encode($fields,JSON_THROW_ON_ERROR),'created_at'=>now()]);
