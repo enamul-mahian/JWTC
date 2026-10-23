@@ -52,6 +52,7 @@ class JobApplicationController extends Controller
             'job_id' => ['required', 'integer', 'exists:jobs,id'],
             'employer_id' => ['sometimes', 'integer', 'exists:companies,id'],
             'expected_salary' => ['required', 'numeric', 'min:0', 'max:999999.99'],
+            'application_code' => ['required', 'string', 'max:100'],
         ]);
 
         $job = Job::findOrFail($data['job_id']);
@@ -62,7 +63,7 @@ class JobApplicationController extends Controller
 
         try {
             $application = app(\App\Services\ApplicationSubmissionService::class)->submit(
-                $request->user(), $job, (float) $data['expected_salary']
+                $request->user(), $job, (float) $data['expected_salary'], $data['application_code']
             );
         } catch (\DomainException $e) {
             return back()->withError($e->getMessage());

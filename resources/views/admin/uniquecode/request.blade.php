@@ -35,8 +35,14 @@
                                                 <td>{{ $data->is_used ? 'Yes' : 'No' }}</td>
                                                 <td>
                                                     <button class="btn btn-primary" data-toggle="modal" data-target="#setCodeModal" data-id="{{ $data->id }}" data-user="{{ $data->user->name ?? 'N/A' }}">
-                                                        Set Code
+                                                        Approve Code(s)
                                                     </button>
+<form method="POST" action="{{ route('admin.unique_codes.update_code') }}" class="d-inline">
+@csrf
+@method('PATCH')
+<input type="hidden" name="unique_code_id" value="{{ $data->id }}">
+<button type="submit" name="action" value="reject" class="btn btn-danger">Reject / Cancel request</button>
+</form>
                                                 </td>
                                             </tr>
                                         @endforeach
@@ -70,7 +76,10 @@
                         <input type="hidden" name="unique_code_id" id="uniqueCodeId">
                         <div class="form-group">
                             <label for="code">Code</label>
-                            <input type="text" class="form-control" name="code" id="code" required>
+                            <input type="text" class="form-control" name="code" id="code" minlength="4" maxlength="100" required>
+<label for="code-quantity">Number of codes to approve</label>
+<input id="code-quantity" type="number" name="quantity" class="form-control" min="1" max="100" value="1" required>
+<p>The first code uses the value above. Additional codes are generated automatically for this applicant.</p>
                         </div>
                     </div>
                     

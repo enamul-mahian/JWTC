@@ -506,10 +506,10 @@ if (!function_exists("checkAvailability")) {
             return 0;
         }
 
-        // One outstanding request/approved unused code at a time.
-        // Used codes remain as history and do not prevent future requests.
+        // Allow another request while approved codes are available; prevent duplicate pending requests.
         return UniqueCode::where('user_id', auth()->id())
             ->where('is_used', 0)
+            ->whereNull('code')
             ->exists() ? 0 : 1;
     }
 }

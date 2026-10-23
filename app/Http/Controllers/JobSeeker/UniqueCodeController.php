@@ -44,7 +44,7 @@ class UniqueCodeController extends Controller
 
         if (!$created) {
             return redirect()->route('unique_codes')
-                ->withErrors('You already have a pending or unused approved code.');
+                ->withErrors('You already have a pending code request. Please wait for an administrator to review it.');
         }
 
         return redirect()->route('unique_codes')->withSuccess('Request Sent!');

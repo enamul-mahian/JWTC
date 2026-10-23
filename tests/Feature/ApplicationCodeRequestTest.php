@@ -53,7 +53,7 @@ class ApplicationCodeRequestTest extends TestCase
         $this->assertNotContains('GET', Route::getRoutes()->getByName('request-code')->methods());
     }
 
-    public function test_only_one_outstanding_request_and_new_request_after_consumption(): void
+    public function test_one_pending_request_while_unused_approved_codes_allow_more_requests(): void
     {
         $url = route('request-code');
 
@@ -64,10 +64,30 @@ class ApplicationCodeRequestTest extends TestCase
 
         DB::table('unique_codes')->update(['code' => 'TEST-APPROVED-1']);
         $this->post($url)->assertRedirect(route('unique_codes'));
-        $this->assertDatabaseCount('unique_codes', 1);
+        $this->assertDatabaseCount('unique_codes', 2);
 
         DB::table('unique_codes')->update(['is_used' => 1]);
         $this->post($url)->assertRedirect(route('unique_codes'));
-        $this->assertDatabaseCount('unique_codes', 2);
+        $this->assertDatabaseCount('unique_codes', 3);
+    }
+
+    public function test_admin_can_approve_multiple_codes_or_reject_a_pending_request(): void
+    {
+        $this->post(route('request-code'));
+        $id = DB::table('unique_codes')->value('id');
+        $controller = app(\App\Http\Controllers\Admin\JobCategoryController::class);
+        $controller->updateCode(\Illuminate\Http\Request::create('/', 'PATCH', [
+            'unique_code_id'=>$id, 'code'=>'APPROVED-FIRST', 'quantity'=>3,
+        ]));
+        $this->assertDatabaseCount('unique_codes', 3);
+        $this->assertSame(3, DB::table('unique_codes')->whereNotNull('code')->where('is_used',0)->count());
+        $this->post(route('request-code'));
+        $pending = DB::table('unique_codes')->whereNull('code')->value('id');
+        $controller->updateCode(\Illuminate\Http\Request::create('/', 'PATCH', [
+            'unique_code_id'=>$pending, 'action'=>'reject',
+        ]));
+        $this->assertDatabaseHas('unique_codes', ['id'=>$pending,'code'=>null,'is_used'=>1]);
+        $this->post(route('request-code'));
+        $this->assertDatabaseCount('unique_codes', 5);
     }
 }

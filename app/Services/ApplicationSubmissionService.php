@@ -15,9 +15,9 @@ class ApplicationSubmissionService
      * Atomically submit one application and consume exactly one approved code.
      * Lock the applicant row so concurrent web/API submissions serialize.
      */
-    public function submit(User $applicant, Job $job, float $expectedSalary): Application
+    public function submit(User $applicant, Job $job, float $expectedSalary, ?string $applicationCode = null): Application
     {
-        return DB::transaction(function () use ($applicant, $job, $expectedSalary) {
+        return DB::transaction(function () use ($applicant, $job, $expectedSalary, $applicationCode) {
             User::whereKey($applicant->getKey())->lockForUpdate()->firstOrFail();
 
             if ($applicant->user_type !== UserType::JOB_SEEKER) {
@@ -35,15 +35,19 @@ class ApplicationSubmissionService
                 throw new \DomainException('You have already applied to this job.');
             }
 
+            if (!is_string($applicationCode) || trim($applicationCode) === '') {
+                throw new \DomainException('Enter your unique application code before applying.');
+            }
+
             $code = UniqueCode::where('user_id', $applicant->getKey())
                 ->where('is_used', 0)
-                ->whereNotNull('code')
+                ->where('code', trim($applicationCode))
                 ->orderBy('id')
                 ->lockForUpdate()
                 ->first();
 
             if (!$code) {
-                throw new \DomainException('Please request and obtain an approved application code.');
+                throw new \DomainException('This application code is invalid, already used, or does not belong to your account.');
             }
 
             $application = Application::create([

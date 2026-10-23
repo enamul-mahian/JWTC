@@ -68,13 +68,14 @@ class JobApplicationController extends Controller
         $data = $request->validate([
             'job_id' => ['required', 'integer', 'exists:jobs,id'],
             'expected_salary' => ['required', 'numeric', 'min:0', 'max:999999.99'],
+            'application_code' => ['required', 'string', 'max:100'],
         ]);
 
         try {
             $application = $submissions->submit(
                 $request->user(),
                 Job::findOrFail($data['job_id']),
-                (float) $data['expected_salary']
+                (float) $data['expected_salary'], $data['application_code']
             );
         } catch (\DomainException $exception) {
             return response()->json(['message' => $exception->getMessage()], 422);
