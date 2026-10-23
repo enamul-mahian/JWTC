@@ -1,11 +1,6 @@
 name: cPanel Repair Registration and Company Approval Navigation
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - .github/workflows/cpanel-deploy-registration-fix.yml
-      - scripts/release/*registration*.php
   workflow_dispatch:
 
 permissions:
