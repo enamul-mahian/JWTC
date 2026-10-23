@@ -24,15 +24,19 @@ class Job extends Model
         return filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : null;
     }
 
+    private function hiddenPosterEmails(): array
+    {
+        return app(\App\Services\PosterEmailVisibility::class)->enabled() ? [] : [$this->resume_receiving_email, $this->company?->contact_per_email];
+    }
+
     public function publicDescription(?string $value): string
     {
-        $text = html_entity_decode(strip_tags($value ?? ''), ENT_QUOTES, 'UTF-8');
-        if (!app(\App\Services\PosterEmailVisibility::class)->enabled()) {
-            foreach ([$this->resume_receiving_email, $this->company?->contact_per_email] as $email) {
-                if (is_string($email) && $email !== '') $text = str_ireplace($email, '[contact hidden]', $text);
-            }
-        }
-        return $text;
+        return app(\App\Services\JobContent::class)->text($value, $this->hiddenPosterEmails());
+    }
+
+    public function publicDescriptionHtml(?string $value): string
+    {
+        return app(\App\Services\JobContent::class)->render($value, $this->hiddenPosterEmails());
     }
 
     public function toArray()
@@ -41,7 +45,7 @@ class Job extends Model
         if (!app(\App\Services\PosterEmailVisibility::class)->enabled()) {
             unset($values['resume_receiving_email']);
             foreach (['job_context', 'job_responsibilities', 'additional_requirements', 'other_benefits', 'apply_procedure'] as $field) {
-                if (isset($values[$field])) $values[$field] = $this->publicDescription($values[$field]);
+                if (isset($values[$field])) $values[$field] = $this->publicDescriptionHtml($values[$field]);
             }
         }
         return $values;

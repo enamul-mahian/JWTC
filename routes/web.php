@@ -1176,3 +1176,16 @@ Route::get('admin/login', [UserAuthLoginController::class, 'login'])->defaults('
 Route::post('admin/login', [UserAuthLoginController::class, 'userLogin'])->defaults('audience', 'admin')->middleware('throttle:10,1')->name('admin.login.submit');
 
 Route::get('vacancies/{job}', [HomeController::class, 'publicJob'])->whereNumber('job')->name('public.job');
+
+// First-party visitor support chat; visitor thread IDs are session-bound.
+Route::prefix('site-chat')->middleware('application.chat.headers')->group(function () {
+    Route::get('/state', [\App\Http\Controllers\Chat\SiteChatController::class,'state'])->middleware('throttle:30,1')->name('site-chat.state');
+    Route::post('/threads', [\App\Http\Controllers\Chat\SiteChatController::class,'start'])->middleware('throttle:3,10')->name('site-chat.start');
+    Route::get('/threads/{id}', [\App\Http\Controllers\Chat\SiteChatController::class,'poll'])->whereUuid('id')->middleware('throttle:30,1');
+    Route::post('/threads/{id}/messages', [\App\Http\Controllers\Chat\SiteChatController::class,'send'])->whereUuid('id')->middleware('throttle:10,1');
+});
+Route::prefix('admin/site-chat')->middleware(['auth','admin_user','application.chat.headers'])->group(function () {
+    Route::get('/', [\App\Http\Controllers\Chat\SiteChatController::class,'inbox'])->middleware('throttle:30,1')->name('admin.site-chat');
+    Route::post('/settings', [\App\Http\Controllers\Chat\SiteChatController::class,'configure'])->middleware('throttle:6,1')->name('admin.site-chat.settings');
+    Route::post('/{id}/reply', [\App\Http\Controllers\Chat\SiteChatController::class,'reply'])->whereUuid('id')->middleware('throttle:15,1')->name('admin.site-chat.reply');
+});

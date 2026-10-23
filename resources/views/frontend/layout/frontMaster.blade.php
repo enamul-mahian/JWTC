@@ -20,10 +20,9 @@ jgWideScreen.addEventListener('change', jgSyncNavigation);
 @if(Session::has('warning'))toastr.warning(@json(Session::get('warning')));@endif
 @if(Session::has('error'))toastr.error(@json(Session::get('error')));@endif
 @foreach($errors->all() as $error)toastr.error(@json($error));@endforeach
-var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
-(function(){var s1=document.createElement('script'),s0=document.getElementsByTagName('script')[0];s1.async=true;s1.src='https://embed.tawk.to/6731126e4304e3196adfe7dd/1icbr00au';s1.charset='UTF-8';s1.setAttribute('crossorigin','*');s0.parentNode.insertBefore(s1,s0);})();
 </script>
 @stack('js')
 @stack('script')
+@include('site-chat.widget')
 @stack('scripts')
 </body></html>
