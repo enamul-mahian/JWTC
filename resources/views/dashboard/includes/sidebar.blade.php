@@ -70,7 +70,7 @@
                 </li>
             @endif
 
-            @if(config('application_chat.enabled') && in_array(auth()->user()?->user_type, [\App\Enum\UserType::ADMIN, \App\Enum\UserType::SUPER_ADMIN], true) && (auth()->user()->can('manage-application-chat') || auth()->user()->hasAnyRole(['Admin','Super Admin'])))
+            @if(config('application_chat.enabled') && in_array(auth()->user()?->user_type, [\App\Enum\UserType::ADMIN, \App\Enum\UserType::SUPER_ADMIN], true) && auth()->user()->can('manage-application-chat'))
                 <li class="sidebar-item">
                     <a href="{{ route('application-chat.index') }}" class="sidebar-link">
                         <span><i class="ti ti-messages"></i></span>

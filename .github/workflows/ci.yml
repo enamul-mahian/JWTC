@@ -37,8 +37,10 @@ jobs:
         run: python3 -m unittest discover -s scripts/release -p 'test_*.py'
       - name: Lint tracked application PHP files
         run: find app routes config database tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l
-      - name: Compile Blade views
-        run: php artisan view:cache
+      - name: Compile and syntax-check every Blade view
+        run: |
+          php artisan view:cache
+          find storage/framework/views -type f -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: PHPUnit regression suite
         run: vendor/bin/phpunit --colors=never
       - name: Set up Node.js

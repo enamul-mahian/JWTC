@@ -17,7 +17,8 @@
     @if (session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
-    <div class="jg-workflow-preview mb-4"><h2 class="h5">Application progress preview</h2><p>These stages and percentages are shared with the applicant timeline.</p><ol>@foreach($statuses as $stage)@if($stage['is_active'])<li><strong>{{ $stage['name'] }}</strong><small>{{ $stage['progress'] }}% complete</small></li>@endif@endforeach</ol><a href="{{ route('admin.application-progress.index') }}" class="btn btn-primary btn-sm">Open application timelines</a></div>
+    <div class="jg-workflow-preview mb-4"><h2 class="h5">Application progress preview</h2><p>These stages and percentages are shared with the applicant timeline.</p><ol>@foreach($statuses as $stage)@if($stage['is_active'])<li><strong>{{ $stage['name'] }}</strong><small>{{ $stage['progress'] }}% complete</small></li>@endif
+@endforeach</ol><a href="{{ route('admin.application-progress.index') }}" class="btn btn-primary btn-sm">Open application timelines</a></div>
     <div class="card mb-4">
         <div class="card-header"><strong>Current stages</strong></div>
         <div class="card-body">
