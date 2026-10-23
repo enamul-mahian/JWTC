@@ -1,0 +1,142 @@
+name: cPanel Upgrade Job Editor and Applicant Profile
+
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/cpanel-deploy-polish.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: cpanel-staging-operations
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production
+    env:
+      SSH_HOST: ${{ secrets.CPANEL_SSH_HOST }}
+      SSH_PORT: ${{ secrets.CPANEL_SSH_PORT }}
+      SSH_USER: ${{ secrets.CPANEL_SSH_USER }}
+      SSH_KEY: ${{ secrets.CPANEL_SSH_PRIVATE_KEY }}
+      KNOWN_HOSTS: ${{ secrets.CPANEL_SSH_KNOWN_HOSTS }}
+      APP_PATH: ${{ secrets.CPANEL_APP_PATH }}
+      STAGING_DB_DATABASE: ${{ secrets.STAGING_DB_DATABASE }}
+      STAGING_DB_USERNAME: ${{ secrets.STAGING_DB_USERNAME }}
+      STAGING_DB_PASSWORD: ${{ secrets.STAGING_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - name: Validate script syntax and required configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l scripts/release/deduplicate_polish_packages.php
+          php -l scripts/release/upgrade_polish_release.php
+          php -l scripts/release/verify_polish_views.php
+          php -l scripts/release/polish_predeploy_gate.php
+          php -l scripts/release/create_motion_backup.php
+          php -l scripts/release/deploy_polish_release.php
+          python3 -m unittest discover -s scripts/release -p test_restore_guard.py -v
+          for name in SSH_HOST SSH_PORT SSH_USER SSH_KEY KNOWN_HOSTS APP_PATH STAGING_DB_DATABASE STAGING_DB_USERNAME STAGING_DB_PASSWORD; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing configuration: $name"
+              exit 1
+            fi
+          done
+          [[ "$SSH_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]]
+          [[ "$SSH_USER" =~ ^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$ ]]
+          [[ "$SSH_PORT" =~ ^[0-9]{1,5}$ ]]
+          (( 10#$SSH_PORT > 0 && 10#$SSH_PORT < 65536 ))
+          [[ "$APP_PATH" =~ ^/home/[a-zA-Z0-9_.-]+(/[a-zA-Z0-9_.-]+)+$ ]]
+          [[ "$APP_PATH" != *'/../'* && "$APP_PATH" != */.. ]]
+          [[ "$STAGING_DB_DATABASE" == dropoqux_jwtc_stage ]]
+          [[ "$STAGING_DB_USERNAME" == dropoqux_jwtc_stage ]]
+      - name: Prepare temporary SSH identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/jwtc-stage-ssh"
+          printf '%s\n' "$SSH_KEY" > "$RUNNER_TEMP/jwtc-stage-ssh/key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$RUNNER_TEMP/jwtc-stage-ssh/known_hosts"
+          ssh-keygen -y -P '' -f "$RUNNER_TEMP/jwtc-stage-ssh/key" >/dev/null
+      - name: Verify approved candidate run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api repos/enamul-mahian/JWTC/actions/runs/39969764609 > "$RUNNER_TEMP/candidate-run.json"
+          python3 -c 'import json,os; r=json.load(open(os.environ["RUNNER_TEMP"]+"/candidate-run.json")); assert r["conclusion"]=="success" and r["head_sha"]=="42c08971d8ce364e4f3c9e6ea6ee785df90c2eb9"'
+      - uses: actions/download-artifact@v4
+        with:
+          name: jwtc-application-candidate
+          run-id: 39969764609
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/approved-candidate
+      - name: Transfer candidate and verify private staging upgrade
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/approved-candidate"
+          sha256sum -c SHA256SUMS
+          target='/home/dropoqux/jwtc-private-staging/20261022-215145-f92ca979/candidate-input-portal-polish'
+          ssh_options=(-p "$SSH_PORT" -i "$RUNNER_TEMP/jwtc-stage-ssh/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/jwtc-stage-ssh/known_hosts" -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=2)
+          ssh -T "${ssh_options[@]}" "$SSH_USER@$SSH_HOST" "test ! -L '$target' && umask 077 && mkdir -p '$target'"
+          scp -P "$SSH_PORT" -i "$RUNNER_TEMP/jwtc-stage-ssh/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/jwtc-stage-ssh/known_hosts" ./*.tar.gz release-manifest.json "$SSH_USER@$SSH_HOST:$target/"
+          cd "$GITHUB_WORKSPACE"
+          cleanup_base64="$(base64 -w0 scripts/release/deduplicate_polish_packages.php)"
+          ssh -T "${ssh_options[@]}" "$SSH_USER@$SSH_HOST" "cd '$APP_PATH' && php -r 'eval(\"?>\".base64_decode(\"$cleanup_base64\"));'"
+          script_base64="$(base64 -w0 scripts/release/upgrade_polish_release.php)"
+          base64 -w0 scripts/release/restore_guard.py |
+            ssh -T "${ssh_options[@]}" "$SSH_USER@$SSH_HOST" "cd '$APP_PATH' && php -r 'eval(\"?>\".base64_decode(\"$script_base64\"));'"
+      - name: Final HTTP and zero-advisory gates on upgraded staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          script_base64="$(base64 -w0 scripts/release/polish_predeploy_gate.php)"
+          ssh -T -p "$SSH_PORT" -i "$RUNNER_TEMP/jwtc-stage-ssh/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/jwtc-stage-ssh/known_hosts" -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=2 "$SSH_USER@$SSH_HOST" "cd '$APP_PATH' && php -r 'eval(\"?>\".base64_decode(\"$script_base64\"));'"
+      - name: Share verified immutable dependency files before backup
+        shell: bash
+        run: |
+          set -euo pipefail
+          script_base64="$(base64 -w0 scripts/release/deduplicate_polish_packages.php)"
+          ssh -T -p "$SSH_PORT" -i "$RUNNER_TEMP/jwtc-stage-ssh/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/jwtc-stage-ssh/known_hosts" -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=2 "$SSH_USER@$SSH_HOST" "cd '$APP_PATH' && php -r 'eval(\"?>\".base64_decode(\"$script_base64\"));'"
+      - name: Read-only authenticated staging templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          script_base64="$(base64 -w0 scripts/release/verify_polish_views.php)"
+          ssh -T -p "$SSH_PORT" -i "$RUNNER_TEMP/jwtc-stage-ssh/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/jwtc-stage-ssh/known_hosts" -o ConnectTimeout=20 "$SSH_USER@$SSH_HOST" "cd '/home/dropoqux/jwtc-private-staging/20261022-215145-f92ca979/application' && php -r 'eval(\"?>\".base64_decode(\"$script_base64\"));'"
+      - name: Retain fresh encrypted production backup
+        shell: bash
+        run: |
+          set -euo pipefail
+          script_base64="$(base64 -w0 scripts/release/create_motion_backup.php)"
+          python3 -c 'import os,json; print(json.dumps({"database":os.environ["STAGING_DB_DATABASE"],"username":os.environ["STAGING_DB_USERNAME"],"password":os.environ["STAGING_DB_PASSWORD"]}))' |
+            ssh -T -p "$SSH_PORT" -i "$RUNNER_TEMP/jwtc-stage-ssh/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/jwtc-stage-ssh/known_hosts" -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=2 "$SSH_USER@$SSH_HOST" "cd '$APP_PATH' && php -r 'eval(\"?>\".base64_decode(\"$script_base64\"));'"
+      - name: Promote authorized verified release with code rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          script_base64="$(base64 -w0 scripts/release/deploy_polish_release.php)"
+          ssh -T -p "$SSH_PORT" -i "$RUNNER_TEMP/jwtc-stage-ssh/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/jwtc-stage-ssh/known_hosts" -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=2 "$SSH_USER@$SSH_HOST" "cd '$APP_PATH' && php -r 'eval(\"?>\".base64_decode(\"$script_base64\"));'"
+      - name: Read-only authenticated production templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          script_base64="$(base64 -w0 scripts/release/verify_polish_views.php)"
+          ssh -T -p "$SSH_PORT" -i "$RUNNER_TEMP/jwtc-stage-ssh/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/jwtc-stage-ssh/known_hosts" -o ConnectTimeout=20 "$SSH_USER@$SSH_HOST" "cd '$APP_PATH' && php -r 'eval(\"?>\".base64_decode(\"$script_base64\"));'"
+      - name: Remove temporary SSH identity
+        if: always()
+        shell: bash
+        run: rm -f -- "$RUNNER_TEMP/jwtc-stage-ssh/key" "$RUNNER_TEMP/jwtc-stage-ssh/known_hosts"
