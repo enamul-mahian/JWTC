@@ -56,10 +56,10 @@
       sync();
     }
     button.addEventListener('click', () => {userPaused = !userPaused; sync();});
-    ticker.addEventListener('mouseenter', () => {hovering = true; sync();});
-    ticker.addEventListener('mouseleave', () => {hovering = false; sync();});
-    ticker.addEventListener('focusin', () => {focused = true; sync();});
-    ticker.addEventListener('focusout', event => {focused = ticker.contains(event.relatedTarget); sync();});
+    ticker.addEventListener('pointerenter', event => {if (event.pointerType === 'mouse') {hovering = true; sync();}});
+    ticker.addEventListener('pointerleave', () => {hovering = false; sync();});
+    ticker.addEventListener('focusin', event => {focused = event.target !== button; sync();});
+    ticker.addEventListener('focusout', event => {focused = ticker.contains(event.relatedTarget) && event.relatedTarget !== button; sync();});
     ticker.addEventListener('touchstart', () => {touching = true; sync();}, {passive:true});
     ticker.addEventListener('touchend', () => {touching = false; sync();}, {passive:true});
     ticker.addEventListener('touchcancel', () => {touching = false; sync();}, {passive:true});
