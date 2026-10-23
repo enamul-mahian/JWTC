@@ -69,8 +69,6 @@ class SiteChatController extends Controller
     public function inbox(Request $request)
     {
         $this->reviewer($request); abort_unless($settings=$this->settings(),503);
-        $threads=DB::table('site_chat_threads')->latest('last_message_at')->paginate(30);
-        $threads->getCollection()->transform(function($row){$row->name=Crypt::decryptString($row->name_encrypted);$row->email=Crypt::decryptString($row->email_encrypted);return $row;});
         $selected=null; $messages=collect();
         if ($request->filled('thread')) {
             $data=$request->validate(['thread'=>'required|uuid']);
@@ -78,6 +76,8 @@ class SiteChatController extends Controller
             $messages=$this->messages($selected,(int)$request->integer('after',0));
             if ($request->expectsJson()) return response()->json(['messages'=>$messages,'status'=>$selected->status])->header('Cache-Control','no-store, private');
         }
+        $threads=DB::table('site_chat_threads')->latest('last_message_at')->paginate(30);
+        $threads->getCollection()->transform(function($row){$row->name=Crypt::decryptString($row->name_encrypted);$row->email=Crypt::decryptString($row->email_encrypted);return $row;});
         return response()->view('site-chat.inbox',array_merge(compact('threads','selected','messages','settings'), ['setting'=>gs()]))->header('Cache-Control','no-store, private');
     }
     public function reply(Request $request, string $id)

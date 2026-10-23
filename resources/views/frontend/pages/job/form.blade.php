@@ -1,5 +1,5 @@
 @php
-$lists=function($name)use($job){$value=old($name,$job->{$name});if(is_array($value))return $value;$decoded=json_decode((string)$value,true);return is_array($decoded)?$decoded:[];};
+$lists=function($name)use($job){$value=old($name,$job->{$name});if(is_array($value))return array_values(array_filter($value,'is_scalar'));$decoded=json_decode((string)$value,true);if(is_array($decoded))return array_values(array_filter($decoded,'is_scalar'));if($name==='other_benefits' && trim((string)$value)!=='' && $value!=='null')return [is_scalar($decoded)?(string)$decoded:(string)$value];return [];};
 @endphp
 <fieldset class="jg-editor-panel"><legend>1. Job overview</legend><div class="jg-form-grid">
 <label class="jg-field-wide">Job title<input name="title" maxlength="255" value="{{ old('title',$job->title) }}" required></label>
