@@ -46,6 +46,7 @@ jobs:
           php -l scripts/release/create_motion_backup.php
           php -l scripts/release/deploy_global_release.php
           php -l scripts/release/activate_global_features.php
+          php -l scripts/release/reset_global_candidate.php
           python3 -m unittest discover -s scripts/release -p test_restore_guard.py -v
           python3 -m unittest discover -s scripts/release -p test_extract_global_candidate.py -v
           for name in SSH_HOST SSH_PORT SSH_USER SSH_KEY KNOWN_HOSTS APP_PATH STAGING_DB_DATABASE STAGING_DB_USERNAME STAGING_DB_PASSWORD; do
@@ -77,18 +78,24 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gh api repos/enamul-mahian/JWTC/actions/runs/39991263268 > "$RUNNER_TEMP/candidate-run.json"
-          python3 -c 'import json,os; r=json.load(open(os.environ["RUNNER_TEMP"]+"/candidate-run.json")); assert r["conclusion"]=="success" and r["head_sha"]=="6924653527f7e31880a5b1ea571aa21c2563ae09"'
+          gh api repos/enamul-mahian/JWTC/actions/runs/39993592495 > "$RUNNER_TEMP/candidate-run.json"
+          python3 -c 'import json,os; r=json.load(open(os.environ["RUNNER_TEMP"]+"/candidate-run.json")); assert r["conclusion"]=="success" and r["head_sha"]=="ea31a4493b87fc26c38551bb33c162a02c54c195"'
       - uses: actions/download-artifact@v4
         with:
           name: jwtc-application-candidate
-          run-id: 39991263268
+          run-id: 39993592495
           github-token: ${{ github.token }}
           path: ${{ runner.temp }}/approved-candidate
       - name: Transfer candidate and verify private staging upgrade
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
+          gh api repos/enamul-mahian/JWTC/actions/runs/39991263268/artifacts > "$RUNNER_TEMP/retained-artifacts.json"
+          python3 -c 'import json,os; a=json.load(open(os.environ["RUNNER_TEMP"]+"/retained-artifacts.json"))["artifacts"]; assert any(x["name"]=="jwtc-application-candidate" and not x["expired"] for x in a)'
+          reset_base64="$(base64 -w0 scripts/release/reset_global_candidate.php)"
+          ssh -T -p "$SSH_PORT" -i "$RUNNER_TEMP/jwtc-stage-ssh/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/jwtc-stage-ssh/known_hosts" -o ConnectTimeout=20 "$SSH_USER@$SSH_HOST" "cd '$APP_PATH' && php -r 'eval(\"?>\".base64_decode(\"$reset_base64\"));'"
           cd "$RUNNER_TEMP/approved-candidate"
           sha256sum -c SHA256SUMS
           target='/home/dropoqux/jwtc-private-staging/20261022-215145-f92ca979/candidate-input-portal-global-ui'

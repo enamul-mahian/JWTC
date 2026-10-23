@@ -16,14 +16,12 @@ try {
     $report = json_decode(file_get_contents($base.'/restore-report.json'), true, 16, JSON_THROW_ON_ERROR);
     if (($report['sql_reexport_verified'] ?? false) !== true) throw new RuntimeException('Unexpected restore state');
     if (is_file($base.'/candidate-portal-global-ui-verification.json')) {
-        $done = json_decode(file_get_contents($base.'/candidate-portal-global-ui-verification.json'), true, 32, JSON_THROW_ON_ERROR);
-        $retained = json_decode(file_get_contents($base.'/candidate-input-portal-global-ui/release-manifest.json'), true, 64, JSON_THROW_ON_ERROR);
-        if (($done['candidate_commit'] ?? '') !== ($retained['commit'] ?? null)) throw new RuntimeException('Retained release mismatch');
-        foreach ($retained['files'] as $record) {
-            if (!hash_equals($record['sha256'], hash_file('sha256', $root.'/'.$record['path']))) throw new RuntimeException('Retained staging code changed');
+        $done=json_decode(file_get_contents($base.'/candidate-portal-global-ui-verification.json'),true,32,JSON_THROW_ON_ERROR);
+        $retained=json_decode(file_get_contents($base.'/candidate-input-portal-global-ui/release-manifest.json'),true,64,JSON_THROW_ON_ERROR);
+        if(($done['candidate_commit']??'')===($retained['commit']??null)){
+            foreach($retained['files'] as $record)if(!hash_equals($record['sha256'],hash_file('sha256',$root.'/'.$record['path'])))throw new RuntimeException('Retained staging code changed');
+            echo "PASS: supported staging runtime already verified; all package hashes match\n";exit(0);
         }
-        echo "PASS: supported staging runtime already verified; all package hashes match\n";
-        exit(0);
     }
     $env = Dotenv\Dotenv::parse(file_get_contents($root.'/.env'));
     if (($env['DB_DATABASE'] ?? '') !== 'dropoqux_jwtc_stage' || ($env['DB_USERNAME'] ?? '') !== 'dropoqux_jwtc_stage'
@@ -53,7 +51,7 @@ try {
     };
     $phase = 'before-snapshot';
     $before = $snapshot($pdo);
-    if (count($before) < 46 || (int) $pdo->query('SELECT COUNT(*) FROM migrations')->fetchColumn() !== 64) throw new RuntimeException('Unexpected baseline schema');
+    if (count($before) < 46 || !in_array((int)$pdo->query('SELECT COUNT(*) FROM migrations')->fetchColumn(),[64,65],true)) throw new RuntimeException('Unexpected baseline schema');
     $run = static function (array $args, ?string $cwd = null, array $environment = [], int $timeout = 300): string {
         $process = new Symfony\Component\Process\Process($args, $cwd, $environment);
         $process->setTimeout($timeout);
@@ -170,7 +168,7 @@ try {
     $run([PHP_BINARY, 'artisan', 'view:cache'], $root, $isolated);
     $run([PHP_BINARY, 'artisan', 'view:clear'], $root, $isolated);
     $result = ['verified_at_utc' => gmdate('c'), 'candidate_commit' => $manifest['commit'],
-        'artifact_run' => 39991263268, 'migrations' => $migrations, 'historical_tables_verified' => count($before),
+        'artifact_run' => 39993592495, 'migrations' => $migrations, 'historical_tables_verified' => count($before),
         'untouched_files_verified' => count($assets), 'production_modified' => false,
         'browser_acceptance_verified' => false, 'smtp_delivery_verified' => false];
     file_put_contents($base.'/candidate-portal-global-ui-verification.json', json_encode($result, JSON_PRETTY_PRINT|JSON_THROW_ON_ERROR)."\n");
