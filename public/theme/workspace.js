@@ -1,5 +1,10 @@
 (() => {
 'use strict';
+const navigation = document.querySelector('.jg-navigation');
+const wide = window.matchMedia('(min-width: 901px)');
+const syncNavigation = () => { if (navigation) navigation.open = wide.matches; };
+syncNavigation();
+wide.addEventListener('change', syncNavigation);
 const mobile = window.matchMedia('(max-width: 850px)');
 document.querySelectorAll('.jg-account-menu').forEach(menu => {
   const sync = () => { menu.open = !mobile.matches; };

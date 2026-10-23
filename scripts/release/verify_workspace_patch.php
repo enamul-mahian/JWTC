@@ -16,6 +16,12 @@ try {
         $request=Illuminate\Http\Request::create('https://joingallagher.uk'.$path,'GET');$request->setUserResolver(fn()=>$actor);$request->setLaravelSession($session);
         $route=Illuminate\Support\Facades\Route::getRoutes()->match($request);$request->setRouteResolver(fn()=>$route);$app->instance('request',$request);
         $phase=$label.'-controller';$response=$handler($request);$phase=$label.'-render';if($response instanceof Illuminate\Contracts\View\View)$response->render();elseif($response instanceof Symfony\Component\HttpFoundation\Response){if($response->getStatusCode()>=400)throw new RuntimeException('Template response failed');$response->getContent();}
+        if(in_array($label,['applicant-documents','applicant-interviews'],true)){
+            $checked=(new App\Http\Middleware\PrivateDocumentResponseHeaders())->handle($request,fn()=>new Symfony\Component\HttpFoundation\Response('',200,['Content-Type'=>'text/html']));
+            $policy=$checked->headers->get('Content-Security-Policy');
+            if(!str_contains($policy,"style-src 'self'")||!str_contains($policy,"script-src 'self'"))throw new RuntimeException('First-party workspace assets blocked');
+            echo 'LIVE_CSP '.$label." same-origin-assets-only OK\n";
+        }
         echo 'READONLY_VIEW '.$label." OK\n";
     };
     $admins=App\Models\User::whereRaw('LOWER(user_type) IN (?,?)',['admin','super_admin'])->get();
@@ -34,6 +40,7 @@ try {
     $employer=App\Models\User::whereRaw('LOWER(user_type)=?',['employer'])->whereNotNull('employer_approved_at')->where('status',1)->get()->first(fn($user)=>$user->can('post-job'));
     if($employer)$render('employer-post-job','/jobs/create',$employer,fn($request)=>app(App\Http\Controllers\Employer\JobController::class)->create($request));else echo "READONLY_SKIP no-approved-employer\n";
     $applicant=App\Models\User::where('user_type',App\Enum\UserType::JOB_SEEKER)->first();
+    if($applicant)$render('applicant-profile-view','/job_seeker/view-jobseeker-profile',$applicant,fn($request)=>app(App\Http\Controllers\JobSeeker\JobSeekerProfileShowController::class)->show());
     if($applicant)$render('applicant-profile','/job_seeker/job-seeker-profile',$applicant,fn($request)=>app(App\Http\Controllers\JobSeeker\JobSeekerProfileController::class)->profile($request));
     if($admin)$render('job-locations','/admin/job-locations',$admin,fn($request)=>app(App\Http\Controllers\Admin\JobLocationOptionsController::class)->index($request));
     if($applicant){

@@ -16,7 +16,7 @@ jobs:
   laravel:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Set up PHP 8.3
         uses: shivammathur/setup-php@v2
         with:
@@ -44,7 +44,7 @@ jobs:
       - name: PHPUnit regression suite
         run: vendor/bin/phpunit --colors=never
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '24'
           cache: npm
@@ -66,7 +66,7 @@ jobs:
       - name: Build frontend assets
         run: npm run build
       - name: Save built Vite assets
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: jwtc-vite-assets
           path: public/build/
@@ -113,7 +113,7 @@ jobs:
       QUEUE_CONNECTION: sync
       MAIL_MAILER: array
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Set up PHP matching cPanel 8.3
         uses: shivammathur/setup-php@v2
         with:
@@ -185,7 +185,7 @@ jobs:
       MAIL_MAILER: array
       JWTC_LEGACY_IMPORT_FIXTURE: ephemeral-only
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Set up Laravel PHP 8.3
         uses: shivammathur/setup-php@v2
         with:
@@ -240,7 +240,7 @@ jobs:
 
   release-candidate:
     name: Production dependency and candidate package check
-    needs: [laravel, mysql-schema, legacy-schema-upgrade]
+    needs: [laravel, mysql-schema, legacy-schema-upgrade, workspace-browser]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -255,7 +255,7 @@ jobs:
       QUEUE_CONNECTION: sync
       MAIL_MAILER: array
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
@@ -271,7 +271,7 @@ jobs:
           php artisan package:discover --ansi
           php artisan route:list --except-vendor
           php artisan view:cache
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: '24'
           cache: npm
@@ -283,9 +283,57 @@ jobs:
         run: |
           python3 scripts/release/package_candidate.py --root . --output "$RUNNER_TEMP/jwtc-candidate" --commit "$(git rev-parse HEAD)"
       - name: Retain candidate and SHA-256 manifest for staging
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: jwtc-application-candidate
           path: ${{ runner.temp }}/jwtc-candidate/
           if-no-files-found: error
           retention-days: 7
+
+  workspace-browser:
+    name: Applicant desktop/mobile appearance and CSP
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      APP_ENV: testing
+      APP_DEBUG: 'false'
+      APP_KEY: 'base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
+      APP_URL: 'http://127.0.0.1:8765'
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ':memory:'
+      SESSION_DRIVER: array
+      CACHE_DRIVER: array
+      MAIL_MAILER: array
+    steps:
+      - uses: actions/checkout@v6
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, fileinfo, pdo_sqlite, sqlite3, gd, zip
+          coverage: none
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Prepare isolated synthetic views
+        run: |
+          mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs
+          composer install --prefer-dist --no-interaction --no-progress
+          export JWTC_UI_FIXTURES="$RUNNER_TEMP/workspace-fixtures"
+          php scripts/release/render_workspace_fixtures.php
+          test -s "$JWTC_UI_FIXTURES/headers.json"
+      - name: Install isolated browser test tools
+        run: |
+          npm install --prefix "$RUNNER_TEMP/workspace-browser" --no-audit --no-fund playwright@1.62.1
+          "$RUNNER_TEMP/workspace-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Verify three pages at desktop and phone widths
+        run: |
+          export NODE_PATH="$RUNNER_TEMP/workspace-browser/node_modules"
+          export JWTC_UI_FIXTURES="$RUNNER_TEMP/workspace-fixtures"
+          node scripts/release/check_workspace_browser.cjs
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: applicant-workspace-screenshots
+          path: ${{ runner.temp }}/workspace-fixtures/*.png
+          retention-days: 7
+          if-no-files-found: ignore

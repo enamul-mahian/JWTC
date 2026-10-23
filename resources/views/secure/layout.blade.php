@@ -27,7 +27,7 @@
       footer{border-top:1px solid var(--line);padding:1rem 0;text-align:center;color:var(--muted);font-size:.82rem}
       @media(max-width:600px){main{margin:1rem auto} .card{padding:1rem}header.top .wrap{flex-wrap:wrap}}
     </style>
-<link rel="stylesheet" href="{{ asset('theme/approved.css') }}?v=20261024-2"><link rel="stylesheet" href="{{ asset('theme/workspace.css') }}?v=20261024-2">
+<link rel="stylesheet" href="{{ asset('theme/approved.css') }}?v=20261024-3"><link rel="stylesheet" href="{{ asset('theme/workspace.css') }}?v=20261024-3">
 </head>
 <body class="jg-site">
     @include('frontend.includes.approved_nav')
@@ -45,7 +45,7 @@
     @if(auth()->user()?->user_type===\App\Enum\UserType::JOB_SEEKER)</div></div>@endif
     </main>
     <footer>Private records are accessible only to authorized account holders and reviewers. Never share passwords or verification codes.</footer>
-<script>const n=document.querySelector('.jg-navigation');if(n)n.open=matchMedia('(min-width:901px)').matches;</script>
-<script defer src="{{ asset('theme/workspace.js') }}?v=20261024-2"></script>
+
+<script defer src="{{ asset('theme/workspace.js') }}?v=20261024-3"></script>
 </body>
 </html>
