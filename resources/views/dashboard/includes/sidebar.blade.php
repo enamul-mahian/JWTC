@@ -14,6 +14,9 @@
     <!-- Sidebar navigation-->
     <nav class="sidebar-nav scroll-sidebar" data-simplebar>
         <ul id="sidebarnav">
+            @if(in_array(strtolower((string)auth()->user()?->user_type), ['admin','super_admin'], true) && auth()->user()->can('manage-application-chat'))
+            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('admin.site-chat') }}"><span><i class="ti ti-message-circle"></i></span><span class="hide-menu">Visitor Chat Inbox</span></a></li>
+            @endif
             <!-- ============================= -->
             <!-- Home -->
             <!-- ============================= -->
