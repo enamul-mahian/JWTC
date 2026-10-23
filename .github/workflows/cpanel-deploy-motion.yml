@@ -1,15 +1,6 @@
 name: cPanel Deploy Portal Motion and News Ticker
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/cpanel-deploy-motion.yml'
-      - 'scripts/release/upgrade_motion_release.php'
-      - 'scripts/release/motion_predeploy_gate.php'
-      - 'scripts/release/deploy_motion_release.php'
-      - 'scripts/release/deduplicate_motion_packages.php'
-      - 'scripts/release/create_motion_backup.php'
   workflow_dispatch:
 
 permissions:
