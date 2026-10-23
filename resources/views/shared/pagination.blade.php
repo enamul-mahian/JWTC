@@ -1,5 +1,5 @@
 @if($paginator->hasPages())
-<nav class="jg-page-nav" aria-label="Pagination"><div class="jg-page-summary">Showing {{ $paginator->firstItem()??0 }}–{{ $paginator->lastItem()??0 }}@if(method_exists($paginator,'total')) of {{ $paginator->total() }} results @endif</div><div class="jg-page-links">
+<nav class="jg-page-nav" aria-label="Pagination"><div class="jg-page-summary">Showing {{ $paginator->firstItem()??0 }}–{{ $paginator->lastItem()??0 }}@if(method_exists($paginator,'total')) of {{ $paginator->total() }} results @endif</div><div class="jg-page-links pagination">
 @if($paginator->onFirstPage())<span aria-disabled="true">← Previous</span>@else<a rel="prev" href="{{ $paginator->previousPageUrl() }}">← Previous</a>@endif
 @if(method_exists($paginator,'lastPage'))
 @foreach(array_values(array_unique(array_merge([1],range(max(1,$paginator->currentPage()-2),min($paginator->lastPage(),$paginator->currentPage()+2)),[$paginator->lastPage()]))) as $page)

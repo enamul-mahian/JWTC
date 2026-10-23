@@ -107,4 +107,9 @@ class User extends Authenticatable
         return $this->hasMany(CvDownload::class);
     }
 
+    /** Canonical account type for historic mixed-case records; stored values stay intact. */
+    public function getUserTypeAttribute($value): string
+    {
+        return strtolower(trim((string)$value));
+    }
 }
