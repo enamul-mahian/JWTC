@@ -29,6 +29,7 @@ class JWTCDesignRegressionTest extends TestCase
             $table->string('name');
             $table->boolean('status')->default(true);
         });
+        Schema::create('job_location_options', static function (Blueprint $table) { $table->id(); $table->unsignedBigInteger('country_id'); $table->boolean('enabled')->default(true); });
         Schema::create('job_categories', static function (Blueprint $table) { $table->id(); $table->string('name'); });
         Schema::create('companies', static function (Blueprint $table) {
             $table->id();

@@ -7,7 +7,7 @@
 <label for="company-name">Company / organisation name</label><input id="company-name" name="name" required maxlength="255" autocomplete="organization" value="{{ old('name') }}">
 <label for="company-email">Business email</label><input id="company-email" name="email" type="email" required autocomplete="email" value="{{ old('email') }}">
 <label for="company-phone">Contact phone</label><input id="company-phone" name="phone" type="tel" required autocomplete="tel" value="{{ old('phone') }}">
-<label for="company-category">Industry / job category</label><select id="company-category" name="job_categories_id" required><option value="">Select a category</option>@foreach($jobCategories as $category)<option value="{{ $category->id }}" @selected(old('job_categories_id') == $category->id)>{{ $category->name }}</option>@endforeach</select>
+<label for="company-category">Industry / job category</label><select id="company-category" name="job_categories_id" required><option value="">Select a category</option>@foreach($jobCategories as $category)<option value="{{ $category->id }}" @selected(old('job_categories_id', $jobCategories->first(fn($item)=>strtolower($item->name)==='others')?->id) == $category->id)>{{ $category->name }}</option>@endforeach</select>
 <label for="company-password">Password</label><input id="company-password" name="password" type="password" required minlength="8" autocomplete="new-password">
 <label for="company-confirm">Confirm password</label><input id="company-confirm" name="password_confirmation" type="password" required minlength="8" autocomplete="new-password">
 @include('shared.hcaptcha')<button class="jg-button">Submit for approval</button>

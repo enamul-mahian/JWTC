@@ -62,7 +62,7 @@ class JobController extends Controller
 
         // Only validated fields can be accepted; ownership and moderation
         // flags are always set on the server, never from request payloads.
-        $jobs = $request->validated();
+        $jobs = \App\Services\JobPresentation::fields($request,$request->validated(),isset($job)?$job:null);
 
         $jobs['slug'] = Str::slug($request->title) . '-' . Str::lower(Str::random(10));
         $jobs['employment_status'] = json_encode($request->employment_status);
@@ -126,7 +126,7 @@ class JobController extends Controller
     public function update(UpdateJobRequest $request, Job $job)
     {
         $this->requireOwnedJob($job);
-        $jobs = $request->validated();
+        $jobs = \App\Services\JobPresentation::fields($request,$request->validated(),isset($job)?$job:null);
         // Preserve the original slug for historic links and SEO.
         $jobs['employment_status'] = json_encode($request->employment_status);
         $jobs['job_level'] = json_encode($request->job_level);

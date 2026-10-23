@@ -15,7 +15,7 @@
     <nav class="sidebar-nav scroll-sidebar" data-simplebar>
         <ul id="sidebarnav">
             @if(in_array(strtolower((string)auth()->user()?->user_type), ['admin','super_admin'], true) && auth()->user()->can('active-job'))
-            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('admin.jobs.index') }}"><span><i class="ti ti-briefcase"></i></span><span class="hide-menu">Manage All Jobs</span></a></li>
+            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('admin.jobs.index') }}"><span><i class="ti ti-briefcase"></i></span><span class="hide-menu">Manage All Jobs</span></a></li><li class="sidebar-item"><a class="sidebar-link" href="{{ route('admin.job-locations.index') }}"><span class="hide-menu">Job Locations</span></a></li>
             <li class="sidebar-item"><a class="sidebar-link" href="{{ route('admin.application-progress.index') }}"><span><i class="ti ti-list-check"></i></span><span class="hide-menu">Applications &amp; Progress</span></a></li>
             <li class="sidebar-item"><a class="sidebar-link" href="{{ route('admin.application-statuses.index') }}"><span><i class="ti ti-adjustments"></i></span><span class="hide-menu">Workflow Settings</span></a></li>
             @endif
@@ -289,6 +289,7 @@
                     </a>
                     <ul aria-expanded="false" class="collapse first-level">
                         @can('application-setting')
+<li class="sidebar-item"><a class="sidebar-link" href="{{ route('admin.security.index') }}"><span class="hide-menu">Human Verification</span></a></li>
                             <li class="sidebar-item">
                                 <a href="{{ route('setting') }}" class="sidebar-link">
                                     <div class="round-16 d-flex align-items-center justify-content-center">

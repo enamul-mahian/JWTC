@@ -24,7 +24,7 @@ class JobEditorController extends Controller
     }
     public function update(UpdateJobRequest $request,Job $job)
     {
-        $this->reviewer($request);$data=$request->validated();
+        $this->reviewer($request);$data=\App\Services\JobPresentation::fields($request,$request->validated(),$job);
         $extra=$request->validate(['is_publish'=>'required|boolean','created_at'=>'nullable|date']);
         foreach(['employment_status','job_level','work_place','other_benefits','skills','gender'] as $key)$data[$key]=json_encode($data[$key]??[],JSON_THROW_ON_ERROR);
         unset($data['company_id'],$data['user_id'],$data['slug']);

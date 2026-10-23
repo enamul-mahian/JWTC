@@ -15,6 +15,7 @@ class PortalOperationsTest extends TestCase
         parent::setUp();$this->artisan('migrate',['--force'=>true])->assertSuccessful();
         DB::table('job_categories')->insert(['id'=>806,'name'=>'Portal fixture','status'=>1]);
         DB::table('countries')->insert(['id'=>806,'name'=>'Fixture country','code'=>'ZZ']);
+        DB::table('job_location_options')->insert(['country_id'=>806,'enabled'=>true]);
         DB::table('company_sizes')->insert(['id'=>806,'title'=>'Fixture size']);
         DB::table('industry_types')->insert(['id'=>806,'name'=>'Fixture industry']);
         DB::table('job_types')->insert(['id'=>806,'name'=>'Full Time','status'=>1]);
@@ -28,7 +29,7 @@ class PortalOperationsTest extends TestCase
     }
     private function actor(string $type,string $suffix): User
     {
-        return User::create(['name'=>'Portal '.$suffix,'email'=>$suffix.'@example.test','phone'=>'9900'.($suffix==='admin'?'1':'2'),'password'=>'SyntheticPassword123!','user_type'=>$type,'status'=>1,'job_category_id'=>806]);
+        return User::create(['name'=>'Portal '.$suffix,'email'=>$suffix.'@example.test','phone'=>'99'.sprintf('%010u',crc32($suffix)),'password'=>'SyntheticPassword123!','user_type'=>$type,'status'=>1,'job_category_id'=>806]);
     }
     private function payload(): array
     {
@@ -90,5 +91,57 @@ class PortalOperationsTest extends TestCase
         $this->assertStringContainsString('&lt;script&gt;unsafe&lt;/script&gt;',(string)$form->text('name'));
         $form->close();$this->assertStringNotContainsString('unsafe',(string)$form->text('name'));
         $this->assertStringContainsString('selected',(string)$form->select('status',[1=>'Active'],1));
+    }
+
+    public function test_new_editor_uses_checkbox_choices_rich_text_and_accepts_logo_and_faq(): void
+    {
+        $this->actingAs($this->employer)->get('/jobs/create')->assertOk()->assertSee('type="checkbox"',false)->assertSee('contenteditable="true"',false)->assertDontSee('multiple required',false)->assertSee('Job / company logo');
+        $data=$this->payload()+['logo'=>\Illuminate\Http\UploadedFile::fake()->image('logo.png',80,80),'faq_question'=>['Can I apply?'],'faq_answer'=>['Apply through your account. jobs@example.test']];
+        $this->post('/jobs',$data)->assertRedirect()->assertSessionHasNoErrors();
+        $job=Job::where('title',$data['title'])->firstOrFail();$this->assertStringContainsString('job-logos/',$job->logo_path);
+        $this->assertFileExists(public_path('assets/images/'.$job->logo_path));
+        $this->assertSame('Can I apply?',json_decode($job->faqs,true)[0]['question']);
+        $this->assertStringNotContainsString('jobs@example.test',$job->toArray()['faqs']);
+        $this->assertSame($this->employer->id,(int)$job->user_id);
+        @unlink(public_path('assets/images/'.$job->logo_path));
+        $data['logo']=\Illuminate\Http\UploadedFile::fake()->create('unsafe.svg',1,'image/svg+xml');
+        $this->post('/jobs',$data)->assertSessionHasErrors('logo');
+    }
+    public function test_job_location_choices_can_be_added_removed_without_deleting_country_or_jobs(): void
+    {
+        $job=$this->job();$this->actingAs($this->admin)->get('/admin/job-locations')->assertOk()->assertSee('Scotland')->assertSee('UK Territories');
+        $this->post('/admin/job-locations',['name'=>'Jersey','code'=>'JE'])->assertRedirect();
+        $id=DB::table('countries')->where('name','Jersey')->value('id');$option=DB::table('job_location_options')->where('country_id',$id)->value('id');
+        $this->delete('/admin/job-locations/'.$option)->assertRedirect();
+        $this->assertDatabaseHas('countries',['id'=>$id]);$this->assertDatabaseHas('jobs',['id'=>$job->id]);
+        $this->assertSame(0,(int)DB::table('job_location_options')->where('id',$option)->value('enabled'));
+        $this->actingAs($this->employer)->post('/admin/job-locations',['name'=>'Unauthorized'])->assertForbidden();
+    }
+    public function test_profile_handles_missing_personal_record_and_saves_private_unique_passport_with_lock(): void
+    {
+        $applicant=$this->actor('job_seeker','applicant');
+        $this->actingAs($applicant)->get('/job_seeker/job-seeker-profile')->assertOk()->assertSee('My Dashboard')->assertSee('Passport information')->assertSee('Save personal information');
+        $this->patch('/job_seeker/profile/basics',['first_name'=>'Example','last_name'=>'Applicant','nationality'=>'Fixture country'])->assertRedirect()->assertSessionHasNoErrors();
+        $payload=['passport_number'=>'ZZ123456','holder_name'=>'Example Applicant','issuing_country'=>'Fixture country','issue_date'=>'2020-01-01','expiry_date'=>'2030-01-01'];
+        $this->put('/job_seeker/profile/passport',$payload)->assertRedirect()->assertSessionHasNoErrors();
+        $record=DB::table('applicant_passport_profiles')->where('user_id',$applicant->id)->first();
+        $this->assertNotSame('ZZ123456',$record->number_encrypted);$this->assertSame('ZZ123456',decrypt($record->number_encrypted));
+        $this->get('/job_seeker/job-seeker-profile')->assertOk()->assertSee('3456')->assertDontSee('ZZ123456');
+        $other=$this->actor('job_seeker','another');$this->actingAs($other)->put('/job_seeker/profile/passport',$payload)->assertSessionHasErrors('passport_number');
+        $this->assertNull(session()->getOldInput('passport_number'));
+        $job=$this->job();DB::table('applications')->insert(['user_id'=>$applicant->id,'employer_id'=>$this->company->id,'job_id'=>$job->id,'status'=>1,'date_applied'=>now()->toDateString(),'expected_salary'=>10,'created_at'=>now(),'updated_at'=>now()]);
+        $this->actingAs($applicant)->put('/job_seeker/profile/passport',array_merge($payload,['passport_number'=>'CHANGED123']))->assertSessionHasErrors('passport_number');
+        $this->actingAs($this->employer)->put('/job_seeker/profile/passport',$payload)->assertForbidden();
+    }
+    public function test_hcaptcha_settings_keep_secret_encrypted_and_require_configuration_to_enable(): void
+    {
+        $this->admin->givePermissionTo(Permission::findOrCreate('application-setting','web'));
+        $this->actingAs($this->admin)->get('/admin/security-settings')->assertOk()->assertSee('Human verification');
+        $site='06243b52-2ab0-4044-9540-6a1cf3f44fd0';
+        $this->put('/admin/security-settings',['enabled'=>1,'sitekey'=>$site])->assertSessionHasErrors('hcaptcha_secret');
+        $this->put('/admin/security-settings',['enabled'=>1,'sitekey'=>$site,'hcaptcha_secret'=>'synthetic-secret'])->assertRedirect()->assertSessionHasNoErrors();
+        $encrypted=DB::table('site_security_settings')->value('hcaptcha_secret_encrypted');$this->assertNotSame('synthetic-secret',$encrypted);$this->assertSame('synthetic-secret',decrypt($encrypted));
+        $this->get('/admin/security-settings')->assertOk()->assertDontSee('synthetic-secret');
+        $this->actingAs($this->employer)->get('/admin/security-settings')->assertForbidden();
     }
 }
