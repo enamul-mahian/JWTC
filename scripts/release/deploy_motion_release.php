@@ -2,7 +2,7 @@
 // Explicitly authorized production promotion; additive migrations only.
 ini_set('display_errors', '0');
 ini_set('log_errors', '0');
-set_error_handler(static function () { throw new RuntimeException('Deployment operation failed'); });
+set_error_handler(static function ($severity,$message,$file,$line) { echo 'SAFE_WARNING_LINE '.(int)$line."\n"; foreach(['Disk quota exceeded','No space left on device','Permission denied','File exists','No such file or directory'] as $reason) if(str_contains($message,$reason))echo 'SAFE_WARNING_REASON '.$reason."\n"; throw new RuntimeException('Deployment operation failed'); });
 $phase = 'preflight';
 $maintenance = false;
 $moved = [];
@@ -85,6 +85,7 @@ try {
             || !hash_equals($record['sha256'], hash_file('sha256', $release.'/'.$path))) throw new RuntimeException('Candidate bytes changed');
         $records[$path] = $record['sha256'];
     }
+    $phase = 'rollback-destination';
     $id = gmdate('Ymd-His').'-'.bin2hex(random_bytes(4));
     $parent = $home.'/jwtc-private-deployments';
     $uapi = null;
@@ -112,6 +113,7 @@ try {
     chmod($rollback.'/previous/.env', 0600);
     $groups = ['app', 'config', 'database', 'resources', 'routes', 'vendor'];
     foreach ($groups as $group) {
+        $phase = 'prepare-'.$group;
         $command(['/bin/cp', '-a', $release.'/'.$group, $rollback.'/prepared/'.$group], $root);
         $entries = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($rollback.'/prepared/'.$group, FilesystemIterator::SKIP_DOTS), RecursiveIteratorIterator::SELF_FIRST);
         chmod($rollback.'/prepared/'.$group, 0755);
@@ -246,6 +248,8 @@ try {
     echo "PASS: live release promoted with all legacy data, uploads and original key preserved\n";
     echo "PASS: 61 migration records; public HTTP checks passed; previous code retained privately\n";
 } catch (Throwable $e) {
+    echo 'SAFE_ERROR_CLASS '.get_class($e)."\n";
+    if(in_array($e->getMessage(),['Candidate bytes changed','Deployment command failed','Prepared symlink','Domain mapping unavailable','Domain mapping failed','Rollback destination is public','Unsafe rollback parent'],true)) echo 'SAFE_REASON '.$e->getMessage()."\n";
     fwrite(STDERR, 'FAIL: production promotion at '.$phase."; private details suppressed\n");
     if ($rollback && ($moved || $changed)) {
         try {
