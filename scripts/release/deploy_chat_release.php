@@ -38,10 +38,10 @@ try {
     $home = realpath(getenv('HOME'));
     if ($root !== $home.'/joingallagher.uk' || is_link($root)) throw new RuntimeException('Wrong live root');
     $base = $home.'/jwtc-private-staging/20261022-215145-f92ca979';
-    $gate = json_decode(file_get_contents($base.'/chat-predeploy-gate.json'), true, 32, JSON_THROW_ON_ERROR);
-    $stageReport = json_decode(file_get_contents($base.'/candidate-chat-verification.json'), true, 32, JSON_THROW_ON_ERROR);
-    $release = $base.'/candidate-unpacked-chat';
-    $manifest = json_decode(file_get_contents($base.'/candidate-input-chat/release-manifest.json'), true, 64, JSON_THROW_ON_ERROR);
+    $gate = json_decode(file_get_contents($base.'/chatfix-predeploy-gate.json'), true, 32, JSON_THROW_ON_ERROR);
+    $stageReport = json_decode(file_get_contents($base.'/candidate-chatfix-verification.json'), true, 32, JSON_THROW_ON_ERROR);
+    $release = $base.'/candidate-unpacked-chatfix';
+    $manifest = json_decode(file_get_contents($base.'/candidate-input-chatfix/release-manifest.json'), true, 64, JSON_THROW_ON_ERROR);
     if (($gate['http_smoke'] ?? false) !== true || ($gate['audit'] ?? null) !== []
         || ($stageReport['migrations'] ?? 0) !== 60 || $gate['candidate_commit'] !== $manifest['commit']
         || $stageReport['candidate_commit'] !== $manifest['commit']
@@ -66,7 +66,7 @@ try {
     $dsn = $socket !== '' ? 'mysql:unix_socket='.$socket : 'mysql:host='.($env['DB_HOST'] ?? '127.0.0.1').';port='.($env['DB_PORT'] ?? '3306');
     $pdo = new PDO($dsn.';dbname='.$env['DB_DATABASE'].';charset=utf8mb4', $env['DB_USERNAME'], $env['DB_PASSWORD'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
     if ($pdo->query('SELECT DATABASE()')->fetchColumn() !== $env['DB_DATABASE']
-        || (int) $pdo->query('SELECT COUNT(*) FROM migrations')->fetchColumn() !== 59) throw new RuntimeException('Unexpected source schema');
+        || (int) $pdo->query('SELECT COUNT(*) FROM migrations')->fetchColumn() !== 60) throw new RuntimeException('Unexpected source schema');
     $backupManifests = glob($home.'/jwtc-private-backups/*/manifest.json');
     rsort($backupManifests, SORT_STRING);
     $fresh = json_decode(file_get_contents($backupManifests[0] ?? ''), true, 32, JSON_THROW_ON_ERROR);

@@ -9,7 +9,7 @@ try {
     $home = realpath(getenv('HOME'));
     $base = $home.'/jwtc-private-staging/20261022-215145-f92ca979';
     $stage = $base.'/application';
-    $report = json_decode(file_get_contents($base.'/candidate-chat-verification.json'), true, 16, JSON_THROW_ON_ERROR);
+    $report = json_decode(file_get_contents($base.'/candidate-chatfix-verification.json'), true, 16, JSON_THROW_ON_ERROR);
     if (($report['migrations'] ?? 0) !== 60 || ($report['historical_tables_verified'] ?? 0) < 46) throw new RuntimeException('Unverified candidate');
     $run = static function (array $args, ?string $cwd = null, array $env = []): string {
         $p = new Symfony\Component\Process\Process($args, $cwd, $env);
@@ -85,7 +85,7 @@ try {
     }
     echo 'DEPENDENCY_AUDIT '.json_encode($counts)."\n";
     if (!empty($counts['critical']) || !empty($counts['high']) || !empty($counts['unknown'])) throw new RuntimeException('Dependency advisories require review');
-    file_put_contents($base.'/chat-predeploy-gate.json', json_encode(['passed_at_utc' => gmdate('c'), 'document_root' => $roots[0], 'candidate_commit' => $report['candidate_commit'], 'http_smoke' => true, 'audit' => $counts], JSON_PRETTY_PRINT|JSON_THROW_ON_ERROR));
+    file_put_contents($base.'/chatfix-predeploy-gate.json', json_encode(['passed_at_utc' => gmdate('c'), 'document_root' => $roots[0], 'candidate_commit' => $report['candidate_commit'], 'http_smoke' => true, 'audit' => $counts], JSON_PRETTY_PRINT|JSON_THROW_ON_ERROR));
     echo "PASS: predeployment HTTP and platform gates\n";
 } catch (Throwable $e) {
     if (in_array($e->getMessage(), ['UAPI unavailable', 'Unsupported web root', 'Gate command failed'], true)) fwrite(STDERR, 'REASON: '.$e->getMessage()."\n");

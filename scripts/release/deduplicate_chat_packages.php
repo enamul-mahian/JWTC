@@ -15,7 +15,7 @@ try {
         $expected = [];
         foreach ($manifest['files'] as $record) $expected[$record['path']] = $record['sha256'];
         $unpacked = str_replace('/candidate-input', '/candidate-unpacked', $input);
-        $targets = $input === $base.'/candidate-input-chat' ? glob($unpacked.'-incomplete-*', GLOB_ONLYDIR) : [$unpacked];
+        $targets = $input === $base.'/candidate-input-chatfix' ? glob($unpacked.'-incomplete-*', GLOB_ONLYDIR) : [$unpacked];
         foreach ($targets as $target) {
             if (!is_dir($target)) continue;
             if (is_link($target) || realpath($target) !== $target || !str_starts_with($target, $base.'/candidate-unpacked')) throw new RuntimeException('Unsafe generated directory');
