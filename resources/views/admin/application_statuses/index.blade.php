@@ -1,7 +1,7 @@
 @extends('dashboard.layout.dasboardMaster')
 @section('title', 'Application Workflow Settings')
 
-@push('style')<link rel="stylesheet" href="{{ asset('theme/approved.css') }}?v=20261023-6">@endpush
+@push('style')<link rel="stylesheet" href="{{ asset('theme/approved.css') }}?v=20261023-7">@endpush
 @section('content')
 <section class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center flex-wrap mb-3">

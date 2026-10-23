@@ -1,13 +1,14 @@
-@php($jgModern=request()->routeIs('home','search-jobs','public.job','register','login','jobseeker.login','company.login','company.register','company.approval','admin.login','jobs.create','jobs.edit','jobseeker.application.timeline','registration.otp.*'))
+@php($jgModern=request()->routeIs('home','search-jobs','public.job','register','login','jobseeker.login','company.login','company.register','company.approval','admin.login','jobs.create','jobs.edit','find-jobs','jobseeker.application.timeline','registration.otp.*'))
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="csrf-token" content="{{ csrf_token() }}"><title>@yield('title', 'JoinGallagher.uk')</title><meta name="description" content="@yield('meta_description', 'Browse job opportunities and manage your recruitment applications.')">
 @if(!empty($setting?->favicon))<link rel="icon" href="{{ asset('assets/images/setting/'.$setting->favicon) }}">@endif
 @unless($jgModern)@include('frontend.includes.style')@endunless
-<link rel="stylesheet" href="{{ asset('theme/approved.css') }}?v=20261023-6">
+<link rel="stylesheet" href="{{ asset('theme/approved.css') }}?v=20261023-7">
 <link rel="manifest" href="{{ asset('site.webmanifest') }}"><meta name="theme-color" content="#0b2348"><link rel="apple-touch-icon" href="{{ asset('pwa/icon-192.png') }}"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="JoinGallagher">
 <link rel="stylesheet" href="{{ asset('pwa/install.css') }}?v=1">
 @stack('style')
 <link rel="stylesheet" href="{{ asset('theme/portal-motion.css') }}?v=20261023-1">
+<link rel="stylesheet" href="{{ asset('theme/workspace.css') }}?v=20261023-1">
 </head><body class="jg-site"><a href="#jg-main" class="jg-skip">Skip to main content</a>
 @include('frontend.includes.approved_nav')
 @include('frontend.includes.news_ticker')

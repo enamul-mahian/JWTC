@@ -1,9 +1,7 @@
-@extends('frontend.layout.frontMaster')
+@extends('jobseeker.layout.workspace')
 @section('title','My Profile')
-@section('content')
+@section('workspace_content')
 @include('modal.common')
-<section class="jg-wrap jg-profile-workspace"><header class="jg-workspace-title"><span class="jg-pill">Applicant workspace</span><h1>My Dashboard</h1><p>Manage your profile, applications and documents.</p></header>
-<div class="jg-profile-grid"><aside class="jg-profile-nav"><h2>My account</h2>@include('jobseeker.partials.sidenav')</aside><div class="jg-profile-main">
 <header class="jg-profile-banner"><div><span class="jg-pill">My profile</span><h2>{{ $user->name }}</h2><p>{{ $user->email }}</p><input type="file" name="photo" id="imageInput" accept="image/jpeg,image/png,image/webp" hidden><button type="button" class="jg-button-secondary" onclick="document.getElementById('imageInput').click()">Update photo</button> <a href="{{ route('jobseeker.private-documents.index') }}" class="jg-button-secondary">My CV / Documents →</a></div>@if($user->photo)<img src="{{ asset('assets/images/profilephoto/'.$user->photo) }}" alt="Your profile photo">@else<div class="jg-profile-avatar" aria-hidden="true">{{ mb_substr($user->name,0,1) }}</div>@endif</header>
 @if($errors->any())<div class="jg-form-errors" role="alert"><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
 <section class="jg-profile-card"><h2>Personal information</h2><p class="jg-helper">Keep your name and contact details up to date.</p><form action="{{ route('jobseeker.profile.basics') }}" method="POST">@csrf @method('PATCH')<div class="jg-form-grid">
@@ -16,6 +14,6 @@
 @if($passportLocked)<p>Passport details are locked after application submission. Contact support for corrections.</p>@else<details @if(!$passport) open @endif><summary>{{ $passport?'Update passport information':'Add passport information' }}</summary><form method="POST" action="{{ route('jobseeker.profile.passport') }}">@csrf @method('PUT')<div class="jg-form-grid"><label>Passport holder name<input name="holder_name" required maxlength="180" value="{{ old('holder_name',$passport?->holder_name??$user->name) }}"></label><label>Passport number<input name="passport_number" required minlength="5" maxlength="30" autocomplete="off" placeholder="Enter your passport number"></label><label>Issuing country<select name="issuing_country" required><option value="">Select</option>@foreach($countries as $country)<option @selected(old('issuing_country',$passport?->issuing_country??$user->personal_info->nationality)===$country->name)>{{ $country->name }}</option>@endforeach</select></label><label>Issue date<input type="date" name="issue_date" value="{{ old('issue_date',$passport?->issue_date) }}"></label><label>Expiry date<input type="date" name="expiry_date" required value="{{ old('expiry_date',$passport?->expiry_date) }}"></label></div><button class="jg-button jg-primary-button">Save passport information</button></form></details>@endif
 <p><a href="{{ route('jobseeker.private-documents.index') }}">Upload or view passport scans and documents →</a></p></section>
 <div id="profile-table" class="jg-profile-history">@include('jobseeker.dashboard.profile_data')</div>
-</div></div></section>
+
 @endsection
 @push('script')<script src="{{ asset('frontend/assets/script/job_seeker.js') }}"></script>@endpush

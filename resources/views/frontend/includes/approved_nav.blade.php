@@ -9,6 +9,7 @@
 @if(auth()->user()->user_type === \App\Enum\UserType::JOB_SEEKER)<a href="{{ route('jobseeker.dashboard') }}">My dashboard</a>
 @elseif(auth()->user()->user_type === \App\Enum\UserType::EMPLOYER)<a href="{{ route('employer.dashboard') }}">Company dashboard</a>
 @else<a href="{{ route('admin.dashboard') }}">Admin dashboard</a>@endif
+@if(config('support_center.enabled'))<a href="{{ route('support.index') }}">Support inbox</a>@endif
 <form method="POST" action="{{ route('logout') }}">@csrf<button class="jg-link-button">Sign out</button></form>
 @endguest
 </div></details></nav></header>

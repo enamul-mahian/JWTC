@@ -1,30 +1,7 @@
-@extends('frontend.layout.frontMaster')
-@Section('title', 'Jobseeker Dashbaord')
-@Section('content')
-    <div class="page-header">
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-12">
-                    <div class="inner-header">
-                        <h3>{{ __('messages.ChangePassword') }}</h3>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="content">
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-4 col-md-4 col-xs-12">
-                    <div class="right-sideabr">
-                        <h4>{{ __('messages.ChangePassword') }} </h4>
-                        @include('jobseeker.partials.sidenav')
-                    </div>
-                </div>
-                <div class="col-lg-8 col-md-8 col-xs-12">
-                    <div class="job-alerts-item candidates">
-                        <form method="POST" action="{{ route('jobseeker-password-update') }}" id="password_form">
+@extends('jobseeker.layout.workspace')
+@section('title','Change Password')
+@section('workspace_title','Change Password')
+@section('workspace_content')<section class="jg-profile-card"><h2>Account security</h2>                        <form method="POST" action="{{ route('jobseeker-password-update') }}" id="password_form">
                             @csrf
     
                             <div class="form-group">
@@ -55,13 +32,7 @@
                                 <button class="btn btn-info btn-sm" type="submit">Verify code and change password</button>
                             </form>
                         @endif
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    @endsection
-
+</section>@endsection
     @push('script')
     <script>
         $(document).ready(function () {

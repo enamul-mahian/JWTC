@@ -27,7 +27,7 @@ class EmailStudioController extends Controller
         abort_unless((bool) config('email_studio.enabled'), 404);
         abort_unless($user && in_array($user->user_type,
             [UserType::ADMIN, UserType::SUPER_ADMIN], true) &&
-            $user->can('manage-email-studio'), 403);
+            ($user->can('manage-email-studio') || $user->hasAnyRole(['Admin','Super Admin'])), 403);
         abort_unless(Schema::hasTable('email_studio_templates')
             && Schema::hasTable('email_studio_send_logs'), 503);
     }

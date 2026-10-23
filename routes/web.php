@@ -1228,3 +1228,5 @@ Route::middleware(['auth','admin'])->prefix('admin')->group(function(){
  Route::get('/security-settings',[\App\Http\Controllers\Admin\SecuritySettingsController::class,'index'])->name('admin.security.index');
  Route::put('/security-settings',[\App\Http\Controllers\Admin\SecuritySettingsController::class,'update'])->name('admin.security.update');
 });
+
+Route::post('/support-center/notifications/{id}/retry',[\App\Http\Controllers\Support\SupportCenterController::class,'retryNotification'])->middleware(['auth','throttle:3,1'])->whereNumber('id')->name('support.notification.retry');

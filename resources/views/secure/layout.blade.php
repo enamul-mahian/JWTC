@@ -27,13 +27,13 @@
       footer{border-top:1px solid var(--line);padding:1rem 0;text-align:center;color:var(--muted);font-size:.82rem}
       @media(max-width:600px){main{margin:1rem auto} .card{padding:1rem}header.top .wrap{flex-wrap:wrap}}
     </style>
+<link rel="stylesheet" href="{{ asset('theme/approved.css') }}?v=20261023-7"><link rel="stylesheet" href="{{ asset('theme/workspace.css') }}?v=20261023-1">
 </head>
-<body>
-    <header class="top"><div class="wrap">
-        <a href="{{ url('/') }}" class="brand">JOIN GALLAGHER · SECURE WORKSPACE</a>
-        <span class="small">Private, account-restricted workspace</span>
-    </div></header>
-    <main id="main">
+<body class="jg-site">
+    @include('frontend.includes.approved_nav')
+    <main id="main" class="jg-private-shell">
+    @if(auth()->user()?->user_type===\App\Enum\UserType::JOB_SEEKER)<div class="jg-profile-grid"><aside class="jg-profile-nav"><h2>My account</h2>@include('jobseeker.partials.sidenav')</aside><div class="jg-profile-main">@endif
+
         @if(session('success'))<div class="alert" role="status">{{ session('success') }}</div>@endif
         @if($errors->any())
             <div class="alert error" role="alert">
@@ -42,7 +42,9 @@
             </div>
         @endif
         @yield('content')
+    @if(auth()->user()?->user_type===\App\Enum\UserType::JOB_SEEKER)</div></div>@endif
     </main>
     <footer>Private records are accessible only to authorized account holders and reviewers. Never share passwords or verification codes.</footer>
+<script>const n=document.querySelector('.jg-navigation');if(n)n.open=matchMedia('(min-width:901px)').matches;</script>
 </body>
 </html>

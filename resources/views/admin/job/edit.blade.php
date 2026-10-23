@@ -1,6 +1,6 @@
 @extends('dashboard.layout.dasboardMaster')
 @section('title','Edit Job')
-@push('style')<link rel="stylesheet" href="{{ asset('theme/approved.css') }}?v=20261023-6">@endpush
+@push('style')<link rel="stylesheet" href="{{ asset('theme/approved.css') }}?v=20261023-7">@endpush
 @section('content')<div class="jg-site jg-editor"><h1>Edit job vacancy</h1><p>Manage job details for any employer. The original job URL and ownership stay intact.</p>
 @if(session('success'))<p class="alert alert-success">{{ session('success') }}</p>@endif
 @if($errors->any())<div class="alert alert-danger" role="alert">{{ $errors->first() }}</div>@endif

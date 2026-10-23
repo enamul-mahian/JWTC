@@ -72,13 +72,14 @@ class SupportCenterController extends Controller
         $actor = $this->actor($request, $center);
         abort_unless(in_array($actor->user_type,
             [UserType::JOB_SEEKER, UserType::EMPLOYER], true), 403);
-        return view('support.create');
+        return view('support.create',['companies'=>DB::table('companies')->whereIn('id',DB::table('jobs')->where('is_publish',1)->whereNull('deleted_at')->select('company_id'))->orderBy('company_name')->get(['id','company_name'])]);
     }
 
     public function store(Request $request, SupportCenter $center)
     {
         $actor = $this->actor($request, $center);
         $data = $request->validate([
+            'recipient_company_id'=>['nullable','integer','min:1'],
             'category' => ['required', Rule::in([
                 'general', 'complaint', 'payment', 'refund',
                 'account', 'documents', 'technical',
@@ -88,6 +89,8 @@ class SupportCenterController extends Controller
                 'max:' . config('support_center.max_ticket_length', 10000)],
         ]);
         $ticket = $center->create($actor, $data);
+        $mailStatus=app(\App\Services\SupportNotifications::class)->notify($actor,$ticket,$data['description'],'ticket:'.$ticket->id);
+        if($mailStatus==='failed')$request->session()->flash('warning','Request saved in the inbox. Email notification could not be sent; support can retry after SMTP configuration.');
         return $this->json($request)
             ? response()->json(['ticket' => $this->ticketData($ticket, $center)], 201)
             : redirect()->route('support.show', $ticket->id)
@@ -118,6 +121,7 @@ class SupportCenterController extends Controller
             'refundEvents' => $refundEvents,
             'actor' => $actor,
             'isOwner' => (int) $ticket->requester_id === (int) $actor->id,
+            'deliveries'=>\Illuminate\Support\Facades\Schema::hasTable('support_mail_deliveries')?DB::table('support_mail_deliveries')->where('ticket_id',$id)->orderByDesc('id')->get(['id','status','attempts','created_at']):collect(),
             'canManage' => $center->canManage($actor),
             'staff' => $center->canManage($actor)
                 ? \App\Models\User::whereIn('user_type', [
@@ -143,9 +147,18 @@ class SupportCenterController extends Controller
         ]);
         $reply = $center->reply($actor, $id, $data['body'],
             (bool) ($data['internal_only'] ?? false));
+        if(!($data['internal_only']??false))app(\App\Services\SupportNotifications::class)->notify($actor,$center->ticket($actor,$id),$data['body'],'reply:'.$reply->id);
         return $this->json($request)
             ? response()->json(['id' => $reply->id, 'message' => 'Reply recorded.'], 201)
             : redirect()->route('support.show', $id)->with('success', 'Reply saved.');
+    }
+
+    public function retryNotification(Request $request,int $id,SupportCenter $center)
+    {
+        $actor=$this->actor($request,$center);abort_unless($center->canManage($actor),403);
+        $delivery=DB::table('support_mail_deliveries')->where('id',$id)->first();abort_unless($delivery,404);$center->ticket($actor,$delivery->ticket_id);
+        $status=app(\App\Services\SupportNotifications::class)->deliver($id);
+        return back()->with($status==='failed'?'warning':'success',$status==='failed'?'Email not sent. Check the default SMTP profile in Email Studio.':'Email accepted by the SMTP server.');
     }
 
     public function status(Request $request, int $id, SupportCenter $center)
@@ -192,6 +205,7 @@ class SupportCenterController extends Controller
                 'max:' . config('support_center.max_refund_reason_length', 5000)],
         ]);
         $refund = $center->requestRefund($actor, $id, $data);
+        app(\App\Services\SupportNotifications::class)->notify($actor,$center->ticket($actor,$id),'A financial refund review has been requested. Sign in to the private ticket to review the amount, reason and payment evidence.','refund:'.$refund->id);
         return $this->json($request)
             ? response()->json([
                 'refund_id' => $refund->id,

@@ -61,7 +61,7 @@
                 </li>
             @endif
 
-            @if(in_array(auth()->user()?->user_type, [\App\Enum\UserType::ADMIN, \App\Enum\UserType::SUPER_ADMIN], true) && auth()->user()->can('manage-email-studio'))
+            @if(in_array(auth()->user()?->user_type, [\App\Enum\UserType::ADMIN, \App\Enum\UserType::SUPER_ADMIN], true) && (auth()->user()->can('manage-email-studio') || auth()->user()->hasAnyRole(['Admin','Super Admin'])))
                 <li class="sidebar-item">
                     <a class="sidebar-link" href="{{ route('email-studio.index') }}">
                         <span><i class="ti ti-mail"></i></span>
@@ -80,7 +80,7 @@
             @endif
 
             @if(config('support_center.enabled') && in_array(auth()->user()?->user_type, [\App\Enum\UserType::ADMIN, \App\Enum\UserType::SUPER_ADMIN], true) &&
-                (auth()->user()->can('manage-support-tickets') || auth()->user()->can('review-refund-requests') || auth()->user()->can('confirm-refund-settlement')))
+                (auth()->user()->hasAnyRole(['Admin','Super Admin']) || auth()->user()->can('manage-support-tickets') || auth()->user()->can('review-refund-requests') || auth()->user()->can('confirm-refund-settlement')))
                 <li class="sidebar-item">
                     <a href="{{ route('support.index') }}" class="sidebar-link">
                         <span><i class="ti ti-headset"></i></span>

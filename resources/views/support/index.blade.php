@@ -1,11 +1,12 @@
 @extends('secure.layout')
 @section('title', 'Support & Refund Center')
 @section('content')
+    @if(in_array(auth()->user()?->user_type,[\App\Enum\UserType::ADMIN,\App\Enum\UserType::SUPER_ADMIN],true))<a href="{{ route('admin.dashboard') }}">← Admin dashboard</a>@endif
     <h1>Support, Complaints & Refund Center</h1>
     <p class="muted">Private account support requests and payment-review records. All refund decisions are audited; this portal never transfers money automatically.</p>
     <div class="row">
         @if(in_array(auth()->user()?->user_type, [\App\Enum\UserType::JOB_SEEKER, \App\Enum\UserType::EMPLOYER], true))
-            <a href="{{ route('support.create') }}" class="button">+ New support ticket</a>
+            <a href="{{ route('support.create') }}" class="button">+ New support ticket</a><a href="{{ route('support.create',['category'=>'refund']) }}" class="button secondary">Request refund</a>
         @endif
         @if($canManage || $canReview)
             <span class="badge">Authorized support team</span>
