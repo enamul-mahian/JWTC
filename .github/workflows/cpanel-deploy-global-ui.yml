@@ -49,6 +49,7 @@ jobs:
           php -l scripts/release/reset_global_candidate.php
           python3 -m unittest discover -s scripts/release -p test_restore_guard.py -v
           python3 -m unittest discover -s scripts/release -p test_extract_global_candidate.py -v
+          python3 -m unittest discover -s scripts/release -p test_compact_global_rollbacks.py -v
           for name in SSH_HOST SSH_PORT SSH_USER SSH_KEY KNOWN_HOSTS APP_PATH STAGING_DB_DATABASE STAGING_DB_USERNAME STAGING_DB_PASSWORD; do
             if [[ -z "${!name}" ]]; then
               echo "::error::Missing configuration: $name"
@@ -86,6 +87,12 @@ jobs:
           run-id: 39993592495
           github-token: ${{ github.token }}
           path: ${{ runner.temp }}/approved-candidate
+      - name: Compact older rollback code into byte-verified private archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          compact_base64="$(base64 -w0 scripts/release/compact_global_rollbacks.py)"
+          ssh -T -p "$SSH_PORT" -i "$RUNNER_TEMP/jwtc-stage-ssh/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/jwtc-stage-ssh/known_hosts" -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=2 "$SSH_USER@$SSH_HOST" "cd '$APP_PATH' && python3 -c 'import base64;exec(base64.b64decode(\"$compact_base64\"))'"
       - name: Transfer candidate and verify private staging upgrade
         env:
           GH_TOKEN: ${{ github.token }}
