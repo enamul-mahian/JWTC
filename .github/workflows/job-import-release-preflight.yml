@@ -1,0 +1,74 @@
+name: Build current deployment candidate (no live changes)
+
+on:
+  push:
+    branches:
+      - 'feature/current-release-deployment-preflight'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify latest release source and importer migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f database/migrations/2026_10_25_000001_create_external_job_imports_table.php
+          test -f database/migrations/2026_10_25_000002_add_optional_external_job_details.php
+          test -f app/Http/Controllers/Admin/ExternalJobImportController.php
+          test -f app/Http/Requests/StoreJobRequest.php
+          python3 scripts/release/check_migration_safety.py
+          git status --porcelain
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, fileinfo, pdo_mysql, gd, zip
+          coverage: none
+      - name: Install production PHP dependencies and audit
+        run: |
+          mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs
+          composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader
+          composer audit --locked --no-dev
+          composer check-platform-reqs --no-dev
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Build production assets
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+      - name: Package exact tracked revision for private staging review
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/release/package_candidate.py --root . --output "$RUNNER_TEMP/job-import-release" --commit "$(git rev-parse HEAD)"
+          cd "$RUNNER_TEMP/job-import-release"
+          sha256sum -c SHA256SUMS
+          python3 - <<'PY'
+          import json
+          data=json.load(open("release-manifest.json"))
+          assert data["production_ready"] is False
+          paths={entry["path"] for entry in data["files"]}
+          for name in (
+            "database/migrations/2026_10_25_000001_create_external_job_imports_table.php",
+            "database/migrations/2026_10_25_000002_add_optional_external_job_details.php",
+            "app/Http/Controllers/Admin/ExternalJobImportController.php",
+            "routes/web.php",
+          ):
+            assert name in paths, f"Candidate missing {name}"
+          print("PASS: exact-source package complete; staging and backups still required")
+          PY
+      - name: Retain verified staging candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: jwtc-job-import-staging-candidate
+          path: ${{ runner.temp }}/job-import-release/
+          if-no-files-found: error
+          retention-days: 7
