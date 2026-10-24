@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Import Jobs</title></head>
 <body style="font-family:system-ui;max-width:960px;margin:40px auto;padding:0 20px">
 <a href="{{ route('admin.dashboard') }}">← Admin Dashboard</a>
-<h1>Import Jobs</h1><p>CSV import stages records for review. No jobs are published automatically.</p>
+<h1>Import Jobs</h1><p><a href="{{ route('admin.custom-jobs.create') }}">Create Custom Job</a></p><p>CSV import stages records for review. No jobs are published automatically.</p>
 @if($errors->any())<div role="alert" style="color:#a11">@foreach($errors->all() as $error)<p>{{ $error }}</p>@endforeach</div>@endif
 @if(session('success'))<p role="status">{{ session('success') }}</p>@endif
 <h2>CSV Import</h2>
