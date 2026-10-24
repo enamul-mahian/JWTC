@@ -227,14 +227,20 @@ jobs:
             $db = Illuminate\Support\Facades\DB::connection("mysql");
             $schema = Illuminate\Support\Facades\Schema::connection("mysql");
             if (($db->selectOne("SELECT DATABASE() AS name")->name ?? "") !== "jwtc_legacy_ci_only") exit(1);
-            if ($db->table("migrations")->count() !== 65) exit(2);
+            $applied = $db->table("migrations")->pluck("migration")->all();
+            $files = array_map(static fn($file) => pathinfo($file, PATHINFO_FILENAME), glob(database_path("migrations/*.php")));
+            $missing = array_values(array_diff($files, $applied));
+            if (count($applied) < 65 || $missing) {
+              fwrite(STDERR, "Migration verification failed: applied=".count($applied)."; missing=".implode(",", $missing)."\n");
+              exit(2);
+            }
             foreach (["users", "jobs", "applications", "uploaded_cvs",
               "jobseeker_uploads", "payment_credentials", "unique_codes",
               "application_chat_threads", "support_tickets", "email_studio_templates",
               "applicant_private_documents"] as $table) {
               if (!$schema->hasTable($table)) exit(3);
             }
-            echo "PASS: Legacy MariaDB structure upgraded through 22 additional migrations\n";
+            echo "PASS: Legacy MariaDB structure upgraded; ".count($applied)." migrations applied and all repository migrations verified\n";
           '
 
 
