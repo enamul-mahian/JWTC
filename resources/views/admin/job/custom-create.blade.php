@@ -10,6 +10,7 @@
 <label>Company <select name="company_id" required><option value="">Choose company</option>
 @foreach($companies as $item)<option value="{{ $item->id }}" @selected(old('company_id') == $item->id)>{{ $item->company_name }}</option>@endforeach
 </select></label>
+@php($adminCustomCreate = true)
 @include('frontend.pages.job.form')
 <button type="submit">Save as Draft</button>
 </form>
