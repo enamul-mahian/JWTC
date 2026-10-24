@@ -69,9 +69,13 @@ class JobImportController extends Controller
                 $key = hash('sha256', strtolower($data['source_id'] ?: ($data['source_url'] ?: $data['apply_url'])));
                 $reason = $validator->fails() ? implode('; ', $validator->errors()->all()) : null;
                 if (!$reason && !empty($data['deadline']) && $data['deadline'] < now()->toDateString()) $reason = 'Expired deadline';
-                if (!$reason && isset($seen[$key])) $reason = 'Duplicate within CSV';
-                if (!$reason && DB::table('job_import_rows')->where('source_key', $key)->exists()) $reason = 'Previously imported';
-                $seen[$key] = true;
+                if (isset($seen[$key])) {
+                    $reason = 'Duplicate within CSV';
+                    $key = hash('sha256', $key . ':duplicate:' . count($rows));
+                } else {
+                    $seen[$key] = true;
+                    if (!$reason && DB::table('job_import_rows')->where('source_key', $key)->exists()) $reason = 'Previously imported';
+                }
                 $rows[] = ['source_key' => $key, 'status' => $reason ? 'skipped' : 'pending', 'reason' => $reason, 'payload' => json_encode($data, JSON_THROW_ON_ERROR)];
             }
         } finally {
