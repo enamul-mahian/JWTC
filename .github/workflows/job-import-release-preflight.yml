@@ -3,7 +3,7 @@ name: Build current deployment candidate (no live changes)
 on:
   push:
     branches:
-      - 'feature/current-release-deployment-preflight'
+      - main
   workflow_dispatch:
 
 permissions:
