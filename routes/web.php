@@ -1230,3 +1230,6 @@ Route::middleware(['auth','admin'])->prefix('admin')->group(function(){
 });
 
 Route::post('/support-center/notifications/{id}/retry',[\App\Http\Controllers\Support\SupportCenterController::class,'retryNotification'])->middleware(['auth','throttle:3,1'])->whereNumber('id')->name('support.notification.retry');
+
+// Admin-only staged import routes; publishing is intentionally not enabled.
+require __DIR__.'/import-jobs.php';
