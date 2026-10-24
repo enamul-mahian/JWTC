@@ -1230,3 +1230,10 @@ Route::middleware(['auth','admin'])->prefix('admin')->group(function(){
 });
 
 Route::post('/support-center/notifications/{id}/retry',[\App\Http\Controllers\Support\SupportCenterController::class,'retryNotification'])->middleware(['auth','throttle:3,1'])->whereNumber('id')->name('support.notification.retry');
+
+
+// Admin-only staging area for externally sourced UK government job listings.
+Route::prefix('admin/external-jobs')->middleware(['auth', 'admin_user'])->group(function () {
+    Route::get('/', [\App\Http\Controllers\Admin\ExternalJobImportController::class, 'index'])->name('admin.external-jobs.index');
+    Route::post('/upload', [\App\Http\Controllers\Admin\ExternalJobImportController::class, 'upload'])->middleware('throttle:10,1')->name('admin.external-jobs.upload');
+});
