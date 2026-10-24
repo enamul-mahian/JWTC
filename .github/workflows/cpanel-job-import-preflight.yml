@@ -52,7 +52,7 @@ jobs:
           printf '%s\n' "$KNOWN_HOSTS" > "$RUNNER_TEMP/ssh/known_hosts"
           chmod 600 "$RUNNER_TEMP/ssh/key"
           ssh-keygen -y -P '' -f "$RUNNER_TEMP/ssh/key" >/dev/null
-          ssh -T -p "$SSH_PORT" -i "$RUNNER_TEMP/ssh/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known_hosts" -o ConnectTimeout=20 "$SSH_USER@$SSH_HOST" "cd '$APP_PATH' && test -f artisan && test -f .env && test -f vendor/autoload.php && test ! -L artisan && php -r 'echo PHP_VERSION_ID >= 80200 ? \"PASS: PHP runtime available\\n\" : \"FAIL: PHP runtime unsupported\\n\";' && php artisan migrate:status --no-ansi | grep -E '(external_job_imports|optional_external_job_details)' || true"
+          ssh -T -p "$SSH_PORT" -i "$RUNNER_TEMP/ssh/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known_hosts" -o ConnectTimeout=20 "$SSH_USER@$SSH_HOST" "cd '$APP_PATH' && test -f artisan && test -f .env && test -f vendor/autoload.php && test ! -L artisan && php -r 'if (PHP_VERSION_ID < 80200) {exit(1);} echo \"PASS: PHP runtime available\\n\";' && php artisan migrate:status --no-ansi | grep -E '(Migration|external_job_imports|optional_external_job_details)'"
           echo "Preflight complete: read-only information only. No backup or deployment performed."
       - name: Remove SSH identity
         if: always()
