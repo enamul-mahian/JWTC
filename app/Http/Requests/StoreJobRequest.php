@@ -36,6 +36,9 @@ class StoreJobRequest extends FormRequest
             'faq_answer' => 'nullable|array|max:12',
             'faq_answer.*' => 'nullable|string|max:2000',
             'title' => 'required|string|max:255',
+            'source_url' => 'nullable|url|starts_with:https://|max:2048',
+            'external_apply_url' => 'nullable|url|starts_with:https://|max:2048',
+            'location_detail' => 'nullable|string|max:255',
             'vacancies' => 'required|integer|min:1|max:9999999999',
             'job_category_id' => 'required|integer|exists:job_categories,id',
             'employment_status' => 'required|array', //Frontend title name Job Type
