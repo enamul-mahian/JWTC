@@ -102,6 +102,9 @@
                             <div class="col-md-12 col-sm-12 col-lg-6">
                                 <h4 class="text-info mb-2">{{ $jobDetails?->title }}</h4>
                                 <h6>{{ $jobDetails?->company?->company_name }}</h6>
+                                @if($jobDetails?->location_detail)<p>{{ $jobDetails->location_detail }}</p>@endif
+                                @if($jobDetails?->external_apply_url)<p><a href="{{ $jobDetails->external_apply_url }}" target="_blank" rel="noopener noreferrer" class="apply-btn">Apply on employer website</a></p>@endif
+                                @if($jobDetails?->source_url)<p><a href="{{ $jobDetails->source_url }}" target="_blank" rel="noopener noreferrer">Original job listing</a></p>@endif
                                 @if($jobDetails?->publicPosterEmail())
                                     <a class="jg-poster-email" href="mailto:{{ $jobDetails->publicPosterEmail() }}">{{ $jobDetails->publicPosterEmail() }}</a>
                                 @endif

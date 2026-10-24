@@ -21,6 +21,7 @@ class JobPresentation {
    $items=[];foreach($request->input('faq_question',[]) as $i=>$question){$answer=$request->input('faq_answer.'.$i);if(trim((string)$question)!=='' && trim((string)$answer)!=='')$items[]=['question'=>trim($question),'answer'=>trim($answer)];}
    $data['faqs']=json_encode($items,JSON_THROW_ON_ERROR);
   }else{$draft=$job?clone $job:new Job();$draft->fill($data);$draft->unsetRelation('country');$data['faqs']=json_encode(self::faqs($draft),JSON_THROW_ON_ERROR);}
+  // Optional source/application metadata is validated by the shared job request.
   return $data;
  }
  public static function logo(Job $job): ?string {
