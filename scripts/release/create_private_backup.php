@@ -86,11 +86,13 @@ try {
     $tables = (int) $query->fetchColumn();
     $pdo->rollBack();
     echo "PASS: staging credentials accepted; database differs from live configuration\n";
+    // A production backup does not restore into staging. Existing staging
+    // tables must be preserved; emptiness belongs to a separate restore gate.
     if ($tables !== 0) {
-        echo "STOP: staging database contains tables; no overwrite or restore attempted\n";
-        exit(2);
+        echo "INFO: staging database has existing tables; preserved unchanged\n";
+    } else {
+        echo "PASS: staging database is empty\n";
     }
-    echo "PASS: staging database is empty\n";
     if (!preg_match('/^[A-Za-z0-9_]+$/D', $liveDatabase)
         || !is_string($liveUsername) || !is_string($livePassword)) {
         throw new RuntimeException('Unsupported live identity');
