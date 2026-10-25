@@ -20,7 +20,7 @@ for name in names:
 print("REMOVED_INCOMPLETE_STAGING_DIRECTORIES", removed)
 result = subprocess.run(
     ["uapi", "--output=json", "Quota", "get_local_quota_info"],
-    capture_output=True, text=True, check=True,
+    stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, check=True,
 )
 data = json.loads(result.stdout)["result"]["data"]
 print("INODES_USED", data.get("inodes_used"), "INODE_LIMIT", data.get("inode_limit"))
