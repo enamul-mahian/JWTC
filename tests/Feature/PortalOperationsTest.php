@@ -243,4 +243,38 @@ class PortalOperationsTest extends TestCase
     }
 
 
+    public function test_admin_can_import_pasted_work_hub_text_without_remote_fetch_or_live_job_changes(): void
+    {
+        $url = 'https://www.jobs.service.gov.uk/jobs/6ad095af813f93ba4140e36e';
+        $pasted = "Multi Skilled Kitchen Fitter\n"
+            ."Company: Reading Borough Council\n"
+            ."Salary: £32,293 to £38,262 a year\n"
+            ."Hours: Full-time\n"
+            ."Location: Reading, RG2 0QX\n"
+            ."Working pattern: On-site\n"
+            ."Job type: Permanent\n"
+            ."Posting date: ".today()->subDays(2)->format('j M Y')."\n"
+            ."Closing date: ".today()->addDays(4)->format('j M Y')."\n"
+            ."Summary\nReliable carpentry and kitchen installation.\n";
+        $before = DB::table('jobs')->count();
+        $this->actingAs($this->admin)->get('/admin/external-jobs')
+            ->assertOk()->assertSee('Paste the vacancy text');
+        $this->post('/admin/external-jobs/from-text', [
+            'source_url' => $url, 'vacancy_text' => $pasted,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('external_job_imports', [
+            'source_url' => $url, 'company_name' => 'Reading Borough Council',
+            'title' => 'Multi Skilled Kitchen Fitter', 'status' => 'draft',
+        ]);
+        $this->assertSame($before, DB::table('jobs')->count());
+        $this->post('/admin/external-jobs/from-text', [
+            'source_url' => $url, 'vacancy_text' => $pasted,
+        ])->assertRedirect();
+        $this->assertSame(1, DB::table('external_job_imports')->where('source_url', $url)->count());
+        $this->actingAs($this->employer)->post('/admin/external-jobs/from-text', [
+            'source_url' => $url, 'vacancy_text' => $pasted,
+        ])->assertForbidden();
+    }
+
+
 }
