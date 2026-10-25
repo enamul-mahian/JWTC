@@ -555,7 +555,7 @@ class PortalOperationsTest extends TestCase
             \App\Services\JobDateRevision::note($record));
         $this->get('/vacancies/11')->assertOk()
             ->assertSee('Website administrator')
-            ->assertSee("not this vacancy's original publication date")
+            ->assertSee("not this vacancy's original publication date", false)
             ->assertSee('27 Nov 2026');
         $this->get('/search-jobs')->assertOk()
             ->assertSee('Site-listed closing date (unverified)')
