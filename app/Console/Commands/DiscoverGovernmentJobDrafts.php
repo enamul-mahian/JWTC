@@ -105,7 +105,7 @@ class DiscoverGovernmentJobDrafts extends Command
                                 'created_at' => now(), 'updated_at' => now(),
                             ]);
                         }
-                    } catch (\\Throwable $invalidDate) {
+                    } catch (\Throwable $invalidDate) {
                         // Fail closed when source date formats unexpectedly change.
                     }
                 }
