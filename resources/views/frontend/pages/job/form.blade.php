@@ -19,9 +19,15 @@ $lists=function($name)use($job){$value=old($name,$job->{$name});if(is_array($val
 <fieldset class="jg-editor-panel"><legend>2. Responsibilities and salary</legend><div class="jg-form-grid">
 <div class="jg-field-wide jg-rich-field"><label id="label-job_context">Job summary</label><div class="jg-rich-toolbar" role="toolbar" aria-label="Job summary formatting"><button type="button" data-command="bold"><strong>B</strong></button><button type="button" data-command="italic"><em>I</em></button><button type="button" data-command="insertUnorderedList">Bullet list</button><button type="button" data-command="insertOrderedList">Numbered list</button><button type="button" data-command="removeFormat">Clear formatting</button></div><div class="jg-rich-editor" contenteditable="true" role="textbox" aria-multiline="true" aria-labelledby="label-job_context" data-editor="job_context">{!! app(\App\Services\JobContent::class)->render(old('job_context',$job->job_context)) !!}</div><textarea hidden name="job_context">{{ old('job_context',$job->job_context) }}</textarea></div>
 <div class="jg-field-wide jg-rich-field"><label id="label-job_responsibilities">Responsibilities</label><div class="jg-rich-toolbar" role="toolbar" aria-label="Responsibilities formatting"><button type="button" data-command="bold"><strong>B</strong></button><button type="button" data-command="italic"><em>I</em></button><button type="button" data-command="insertUnorderedList">Bullet list</button><button type="button" data-command="insertOrderedList">Numbered list</button><button type="button" data-command="removeFormat">Clear formatting</button></div><div class="jg-rich-editor" contenteditable="true" role="textbox" aria-multiline="true" aria-labelledby="label-job_responsibilities" data-editor="job_responsibilities">{!! app(\App\Services\JobContent::class)->render(old('job_responsibilities',$job->job_responsibilities)) !!}</div><textarea hidden name="job_responsibilities">{{ old('job_responsibilities',$job->job_responsibilities) }}</textarea></div>
-<label>Minimum salary<input type="number" name="minimum_salary" min="0" value="{{ old('minimum_salary',$job->minimum_salary) }}" required></label>
-<label>Maximum salary<input type="number" name="maximum_salary" min="0" value="{{ old('maximum_salary',$job->maximum_salary) }}" required></label>
-<label>Salary period<select name="salary_type" required>@foreach(array_unique(array_filter(array_merge(['hourly','daily','weekly','monthly','yearly'],[$job->salary_type]))) as $period)<option value="{{ $period }}" @selected(old('salary_type',$job->salary_type)===$period)>{{ ucfirst($period) }}</option>@endforeach</select></label>
+<label>Minimum annual gross salary<input type="number" name="minimum_salary" min="0" value="{{ old('minimum_salary',$job->minimum_salary) }}" required></label>
+<label>Maximum annual gross salary<input type="number" name="maximum_salary" min="0" value="{{ old('maximum_salary',$job->maximum_salary) }}" required></label>
+<label>Salary basis<input value="Yearly (gross)" readonly><input type="hidden" name="salary_type" value="yearly"></label>
+<label>Weekly contracted working hours<input id="jg-weekly-hours" name="weekly_working_hours" type="number" min="1" max="80" step="0.5" value="{{ old('weekly_working_hours',\App\Services\JobPresentation::weeklyHours($job)) }}" placeholder="e.g. 40"><small>Used only to calculate indicative hourly equivalent.</small></label>
+<div class="jg-field-wide" id="jg-salary-preview" aria-live="polite" style="padding:15px;border:1px solid #cad8ec;border-radius:10px;background:#f6f9fd">
+<strong>Automatic gross pay equivalents</strong>
+<p id="jg-salary-preview-values">Enter annual minimum, maximum and weekly hours.</p>
+<small>Annual salary is the source of truth. Payment frequency: To Be Confirmed with employer. Weekly = annual ÷ 52; monthly = annual ÷ 12; hourly = annual ÷ (52 × hours).</small>
+</div>
 @if(!empty($adminCreate))
 <label class="jg-field-wide">Publishing employer (approved account)
 <select name="company_id" required>
@@ -72,3 +78,26 @@ $lists=function($name)use($job){$value=old($name,$job->{$name});if(is_array($val
 <button type="button" class="jg-button-secondary" data-add-faq>Add FAQ</button> <button type="button" class="jg-button-secondary" data-generate-faq>Generate from current details</button><small data-faq-feedback role="status"></small>
 </fieldset>
 @once @push('script')<script defer src="{{ asset('theme/job-editor.js') }}?v=20261026-faq-saved-content-2"></script>@endpush @endonce
+
+@push('script')
+<script>
+(function(){
+  const root=document.querySelector('#jg-weekly-hours')?.closest('form');
+  if(!root) return;
+  const min=root.querySelector('[name=minimum_salary]');
+  const max=root.querySelector('[name=maximum_salary]');
+  const hours=root.querySelector('[name=weekly_working_hours]');
+  const out=document.getElementById('jg-salary-preview-values');
+  const money=v=>(root.querySelector('[name=country_id] option:checked')?.textContent?.trim()==='Ireland'?'€':'£')+v.toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2});
+  function refresh(){
+    const a=Number(min.value),b=Number(max.value),h=Number(hours.value);
+    if(!min.value||!max.value||!hours.value||!Number.isFinite(a)||!Number.isFinite(b)||!Number.isFinite(h)||a<0||b<a||h<1||h>80){
+      out.textContent='Enter valid annual minimum, maximum and weekly hours.';
+      return;
+    }
+    out.textContent='Yearly: '+money(a)+' – '+money(b)+' | Monthly equivalent: '+money(a/12)+' – '+money(b/12)+' | Weekly equivalent: '+money(a/52)+' – '+money(b/52)+' | Hourly equivalent: '+money(a/(52*h))+' – '+money(b/(52*h))+' ('+h+' hours/week).';
+  }
+  [min,max,hours].forEach(x=>x.addEventListener('input',refresh));refresh();
+})();
+</script>
+@endpush

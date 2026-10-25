@@ -141,6 +141,14 @@
                                         <p class="mb-1">{{ __('messages.Vacancy') }}: {{ $jobDetails?->vacancies }}</p>
                                         <p class="mb-1">{{ __('messages.Salary') }}:
                                             {{ \App\Services\JobPresentation::salarySummary($jobDetails) }}</p>
+                                        @if($equivalents = \App\Services\JobPresentation::salaryEquivalents($jobDetails))
+                                            <div class="mt-2" style="line-height:1.8">
+                                                <div>Monthly gross equivalent: {{ $equivalents['monthly'] }}</div>
+                                                <div>Weekly gross equivalent: {{ $equivalents['weekly'] }}</div>
+                                                <div>Hourly gross equivalent ({{ $equivalents['hours'] }} hours/week): {{ $equivalents['hourly'] }}</div>
+                                                <small>Payment frequency: To Be Confirmed with employer. Equivalents are estimates, not confirmed payment arrangements or take-home pay.</small>
+                                            </div>
+                                        @endif
                                     </div>
                                     <div class="col-lg-4 col-md-4 col-sm-6">
                                         <p class="mb-1">{{ __('messages.Age') }}:
