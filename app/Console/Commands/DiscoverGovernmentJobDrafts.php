@@ -64,6 +64,51 @@ class DiscoverGovernmentJobDrafts extends Command
                 libxml_clear_errors();
                 libxml_use_internal_errors($prior);
                 $xpath = new \DOMXPath($doc);
+                // Work Hub exposes the actual values as an HTML definition table on many listings.
+                // Do not infer missing details: only stage when every eligibility label is explicit.
+                $heading = trim((string) $xpath->evaluate('string(//h1[1])'));
+                $pageText = preg_replace('/\\s+/u', ' ', trim((string) $xpath->evaluate('string(//body)')));
+                $field = static function (string $label) use ($pageText): ?string {
+                    if (!preg_match('/'.preg_quote($label, '/').':\\s*(.*?)\\s*(?=Company:|Salary:|Hours:|Location:|Working pattern:|Job type:|Posting date:|Closing date:|Apply for this job|Summary|$)/iu', $pageText, $match)) {
+                        return null;
+                    }
+                    return trim($match[1]);
+                };
+                $hours = $field('Hours');
+                $working = $field('Working pattern');
+                $jobType = $field('Job type');
+                $postedText = $field('Posting date');
+                $deadlineText = $field('Closing date');
+                if ($heading !== '' && $field('Company') && $postedText
+                    && mb_strtolower((string) $hours) === 'full-time'
+                    && mb_strtolower((string) $working) === 'on-site'
+                    && mb_strtolower((string) $jobType) === 'permanent') {
+                    try {
+                        $posted = Carbon::createFromFormat('!j M Y', $postedText);
+                        $deadline = $deadlineText ? Carbon::createFromFormat('!j M Y', $deadlineText) : null;
+                        if ($posted && $posted->format('j M Y') === $postedText
+                            && !$posted->isFuture() && $posted->gte(now()->startOfDay()->subDays(14))
+                            && $deadline && $deadline->format('j M Y') === $deadlineText
+                            && !$deadline->lt(now()->startOfDay())) {
+                            $added += DB::table('external_job_imports')->insertOrIgnore([
+                                'source' => 'uk_government_jobs', 'source_url' => $url,
+                                'source_hash' => hash('sha256', $url),
+                                'title' => mb_substr($heading, 0, 255),
+                                'company_name' => mb_substr((string) $field('Company'), 0, 255),
+                                'location' => mb_substr((string) ($field('Location') ?? ''), 0, 255) ?: null,
+                                'salary' => mb_substr((string) ($field('Salary') ?? ''), 0, 255) ?: null,
+                                'application_deadline' => $deadline->toDateString(),
+                                'posted_on' => $posted->toDateString(),
+                                'workplace' => 'onsite', 'employment_type' => 'permanent',
+                                'schedule' => 'full_time', 'summary' => null,
+                                'status' => 'draft', 'imported_by' => $importerId,
+                                'created_at' => now(), 'updated_at' => now(),
+                            ]);
+                        }
+                    } catch (\\Throwable $invalidDate) {
+                        // Fail closed when source date formats unexpectedly change.
+                    }
+                }
                 foreach ($xpath->query('//script[@type="application/ld+json"]') as $node) {
                     $data = json_decode($node->textContent, true);
                     if (!is_array($data)) continue;
