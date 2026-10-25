@@ -94,4 +94,24 @@ class ExternalJobImportController extends Controller
             ->with('import_result', "Imported {$inserted} drafts; skipped {$skipped}.")
             ->with('import_errors', array_slice($errors, 0, 30));
     }
+    public function review(Request $request, int $id)
+    {
+        $this->authorizeAdmin($request);
+        $data = $request->validate(['decision' => ['required', 'in:approved,rejected']]);
+        $updated = DB::table('external_job_imports')
+            ->where('id', $id)->where('status', 'draft')
+            ->where('posted_on', '>=', now()->startOfDay()->subDays(14)->toDateString())
+            ->where(function ($query) {
+                $query->whereNull('application_deadline')
+                    ->orWhere('application_deadline', '>=', now()->toDateString());
+            })
+            ->update(['status' => $data['decision'], 'updated_at' => now()]);
+        if (!$updated) {
+            return redirect()->route('admin.external-jobs.index')
+                ->withErrors(['review' => 'Draft not found, already reviewed, or no longer eligible.']);
+        }
+        return redirect()->route('admin.external-jobs.index')
+            ->with('import_result', 'Import draft '. $id .' marked '. $data['decision'] .'. Not published.');
+    }
+
 }
