@@ -12,7 +12,7 @@
 
                     </div>
                     <div class="card-body">
-                        <form action="{{ route('user.update', $user->id) }}" method="post">
+                        <form action="{{ route('user.update', $user->id) }}" method="post" id="admin-user-edit-form">
                             @method('put')
                             @csrf
                             <div class=" mb-3">
@@ -40,7 +40,7 @@
                                 </select>
                             </div>
 
-                            <button class="btn btn-primary me-2" type="submit">Submit</button>
+                            <button class="btn btn-primary me-2" type="submit" id="admin-user-save">Save changes</button>
                             <a href="{{ route('user-management.index') }}">
                                 <button class="btn btn-danger" type="button"> Back </button>
                             </a>
@@ -51,3 +51,16 @@
         </div>
     </section>
 @endsection
+@push('script')
+<script>
+    // Prevent accidental rapid repeat submissions that can trigger hosting
+    // rate-limit rules. All authorization and validation remain server-side.
+    document.getElementById('admin-user-edit-form')?.addEventListener('submit', function () {
+        const submit = document.getElementById('admin-user-save');
+        if (submit) {
+            submit.disabled = true;
+            submit.textContent = 'Saving…';
+        }
+    });
+</script>
+@endpush
