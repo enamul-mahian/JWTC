@@ -37,8 +37,8 @@
 
     <div class="jw-import-note mb-4" role="note">
         <strong>Review first, publish separately.</strong>
-        Importing or approving a government job here does not publish it to the public job board.
-        Confirm source attribution, publishing permissions and application instructions before posting.
+        Importing and approving only creates a reviewed draft. Publication is a separate, explicit Admin action.
+        Confirm source attribution, publishing rights and application instructions before selecting Publish.
         Your existing jobs and applicants are not changed by imports.
     </div>
 
@@ -125,7 +125,7 @@
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 p-4 border-bottom">
                 <div>
                     <h2 class="fs-5 fw-bold mb-1">Imported Jobs &amp; Review</h2>
-                    <p class="jw-import-muted small mb-0">Approve or reject eligible draft records. Approving does not publish a live job.</p>
+                    <p class="jw-import-muted small mb-0">Review imported vacancies, then explicitly publish approved drafts to the public government jobs board.</p>
                 </div>
                 <span class="badge bg-light text-dark border">{{ $jobs->total() }} total records</span>
             </div>
@@ -150,6 +150,8 @@
                                 <td>
                                     @if($job->status === 'approved')
                                         <span class="badge bg-success-subtle text-success">Approved draft</span>
+                                    @elseif($job->status === 'published')
+                                        <span class="badge bg-primary-subtle text-primary">Published</span>
                                     @elseif($job->status === 'rejected')
                                         <span class="badge bg-danger-subtle text-danger">Rejected</span>
                                     @else
@@ -168,8 +170,24 @@
                                             <button type="submit" name="decision" value="approved" class="btn btn-sm btn-outline-success">Approve</button>
                                             <button type="submit" name="decision" value="rejected" class="btn btn-sm btn-outline-danger">Reject</button>
                                         </form>
+                                    @elseif($job->status === 'approved')
+                                        <form method="POST" action="{{ route('admin.external-jobs.publication',$job->id) }}">
+                                            @csrf
+                                            <input type="hidden" name="action" value="publish">
+                                            <label class="small d-block mb-2"><input type="checkbox" name="publishing_rights" value="1" required> Source and posting rights checked</label>
+                                            <button type="submit" class="btn btn-sm btn-primary">Publish to public board</button>
+                                        </form>
+                                    @elseif($job->status === 'published')
+                                        <div class="d-flex flex-column gap-2">
+                                            <a href="{{ route('government-jobs.show',$job->id) }}" target="_blank" rel="noopener noreferrer">Public vacancy</a>
+                                            <form method="POST" action="{{ route('admin.external-jobs.publication',$job->id) }}">
+                                                @csrf
+                                                <input type="hidden" name="action" value="unpublish">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">Unpublish</button>
+                                            </form>
+                                        </div>
                                     @else
-                                        <span class="jw-import-muted small">Reviewed</span>
+                                        <span class="jw-import-muted small">Rejected</span>
                                     @endif
                                 </td>
                             </tr>

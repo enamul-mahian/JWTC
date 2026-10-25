@@ -14,6 +14,20 @@ class JobSearch {
   $jobs=$q->orderByDesc('created_at')->orderByDesc('id')->paginate(10)->withQueryString();
   $locations=\App\Models\Country::whereIn('id',\Illuminate\Support\Facades\DB::table('job_location_options')->where('enabled',true)->select('country_id'))->orderBy('name')->get(['id','name']);
   $job_categories=\App\Models\Dashboard\JobCategory::whereStatus(1)->orderBy('name')->get();
-  return compact('jobs','locations','job_categories','title','country_id','category_id');
+  // External government jobs are not employer-owned vacancies. Show them
+  // separately with explicit attribution and links to the original publisher.
+  $governmentJobs=collect();
+  if (!$country_id && !$category_id && !$r->filled('salary_type')) {
+   $external=\Illuminate\Support\Facades\DB::table('external_job_imports')
+    ->where('source','uk_government_jobs')->where('status','published')
+    ->where('application_deadline','>=',today()->toDateString())
+    ->where('posted_on','>=',today()->subDays(14)->toDateString());
+   if ($title!=='')$external->where(function($query)use($title){
+    $search='%'.str_replace(['%','_'],['\\%','\\_'],$title).'%';
+    $query->where('title','like',$search)->orWhere('company_name','like',$search)->orWhere('location','like',$search);
+   });
+   $governmentJobs=$external->orderByDesc('posted_on')->orderByDesc('id')->limit(6)->get();
+  }
+  return compact('jobs','locations','job_categories','title','country_id','category_id','governmentJobs');
  }
 }

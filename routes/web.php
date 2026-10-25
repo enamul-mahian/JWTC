@@ -1202,6 +1202,8 @@ Route::prefix('admin/hero-slides')->middleware(['auth','admin_user'])->group(fun
 
 Route::prefix('admin/jobs')->middleware(['auth','admin_user'])->group(function(){
     Route::get('/',[\App\Http\Controllers\Admin\JobEditorController::class,'index'])->name('admin.jobs.index');
+    Route::get('/create',[\App\Http\Controllers\Admin\JobEditorController::class,'create'])->name('admin.jobs.create');
+    Route::post('/',[\App\Http\Controllers\Admin\JobEditorController::class,'store'])->middleware('throttle:10,1')->name('admin.jobs.store');
     Route::get('/{job}/edit',[\App\Http\Controllers\Admin\JobEditorController::class,'edit'])->whereNumber('job')->name('admin.jobs.edit');
     Route::patch('/{job}',[\App\Http\Controllers\Admin\JobEditorController::class,'update'])->whereNumber('job')->name('admin.jobs.update');
 });
@@ -1232,10 +1234,15 @@ Route::middleware(['auth','admin'])->prefix('admin')->group(function(){
 Route::post('/support-center/notifications/{id}/retry',[\App\Http\Controllers\Support\SupportCenterController::class,'retryNotification'])->middleware(['auth','throttle:3,1'])->whereNumber('id')->name('support.notification.retry');
 
 
+// Public directory for explicitly published, currently valid government-sourced drafts.
+Route::get('/government-jobs', [\App\Http\Controllers\Frontend\ExternalGovernmentJobController::class, 'index'])->name('government-jobs.index');
+Route::get('/government-jobs/{id}', [\App\Http\Controllers\Frontend\ExternalGovernmentJobController::class, 'show'])->whereNumber('id')->name('government-jobs.show');
+
 // Admin-only staging area for externally sourced UK government job listings.
 Route::prefix('admin/external-jobs')->middleware(['auth', 'admin_user'])->group(function () {
     Route::get('/', [\App\Http\Controllers\Admin\ExternalJobImportController::class, 'index'])->name('admin.external-jobs.index');
     Route::post('/upload', [\App\Http\Controllers\Admin\ExternalJobImportController::class, 'upload'])->middleware('throttle:10,1')->name('admin.external-jobs.upload');
     Route::post('/from-link', [\App\Http\Controllers\Admin\ExternalJobImportController::class, 'importLink'])->middleware('throttle:3,1')->name('admin.external-jobs.import-link');
     Route::post('/{id}/review', [\App\Http\Controllers\Admin\ExternalJobImportController::class, 'review'])->whereNumber('id')->middleware('throttle:30,1')->name('admin.external-jobs.review');
+    Route::post('/{id}/publication', [\App\Http\Controllers\Admin\ExternalJobImportController::class, 'publication'])->whereNumber('id')->middleware('throttle:12,1')->name('admin.external-jobs.publication');
 });
