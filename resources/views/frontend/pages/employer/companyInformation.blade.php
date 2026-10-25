@@ -1,14 +1,17 @@
 @extends('frontend.layout.frontMaster')
 @section('title', 'Employer Information')
+@push('page-style')
+    <link rel="stylesheet" href="{{ asset('theme/employer-account.css') }}?v=20261025-1">
+@endpush
 @section('content')
-    <section id="latest-jobs" class="section bg-gray mt-4">
+    <section id="latest-jobs" class="section bg-gray jg-employer-account">
         <!-- Page Header Start -->
         <div class="page-header">
             <div class="container">
                 <div class="row">
                     <div class="col-lg-12">
                         <div class="inner-header">
-                            <h3>{{ __('messages.Manageapplications') }} <span style="font-size: 16px">/{{ __('messages.CompanyInformation') }}</span> </h3>
+                            <h3>{{ __('messages.Manageapplications') }} <span class="jg-account-breadcrumb">/ {{ __('messages.CompanyInformation') }}</span></h3>
                         </div>
                     </div>
                 </div>
@@ -19,12 +22,12 @@
         <!-- Start Content -->
         <div id="content">
             <div class="container">
-                <div class="row">
-                    <div class="col-lg-4 col-md-12 col-xs-12">
+                <div class="row jg-employer-account-grid">
+                    <aside class="col-lg-4 col-md-12 col-xs-12 jg-account-side" aria-label="Employer account menu">
                         @include('frontend.pages.employer.sideMenu')
-                    </div>
+                    </aside>
 
-                    <div class="col-lg-8 col-md-12 col-xs-12">
+                    <div class="col-lg-8 col-md-12 col-xs-12 jg-account-main">
                         <form action="{{ route('company.information.store') }}" method="post" enctype="multipart/form-data">
                             @csrf
                             <div class="job-alerts-item">
