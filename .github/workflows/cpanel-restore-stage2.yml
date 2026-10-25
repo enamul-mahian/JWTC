@@ -1,0 +1,86 @@
+name: cPanel Restore Verified Backup to Stage2
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cpanel-restore-stage2.yml'
+      - 'scripts/release/restore_stage2_backup.php'
+      - 'scripts/release/restore_guard.py'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cpanel-staging-operations
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production
+    env:
+      SSH_HOST: ${{ secrets.CPANEL_SSH_HOST }}
+      SSH_PORT: ${{ secrets.CPANEL_SSH_PORT }}
+      SSH_USER: ${{ secrets.CPANEL_SSH_USER }}
+      SSH_KEY: ${{ secrets.CPANEL_SSH_PRIVATE_KEY }}
+      KNOWN_HOSTS: ${{ secrets.CPANEL_SSH_KNOWN_HOSTS }}
+      APP_PATH: ${{ secrets.CPANEL_APP_PATH }}
+      STAGING_DB_DATABASE: ${{ secrets.STAGING2_DB_DATABASE }}
+      STAGING_DB_USERNAME: ${{ secrets.STAGING2_DB_USERNAME }}
+      STAGING_DB_PASSWORD: ${{ secrets.STAGING2_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - name: Validate script syntax and required configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l scripts/release/restore_stage2_backup.php
+          python3 -m unittest discover -s scripts/release -p test_restore_guard.py -v
+          for name in SSH_HOST SSH_PORT SSH_USER SSH_KEY KNOWN_HOSTS APP_PATH STAGING_DB_DATABASE STAGING_DB_USERNAME STAGING_DB_PASSWORD; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing configuration: $name"
+              exit 1
+            fi
+          done
+          [[ "$SSH_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]]
+          [[ "$SSH_USER" =~ ^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$ ]]
+          [[ "$SSH_PORT" =~ ^[0-9]{1,5}$ ]]
+          (( 10#$SSH_PORT > 0 && 10#$SSH_PORT < 65536 ))
+          [[ "$APP_PATH" =~ ^/home/[a-zA-Z0-9_.-]+(/[a-zA-Z0-9_.-]+)+$ ]]
+          [[ "$APP_PATH" != *'/../'* && "$APP_PATH" != */.. ]]
+          [[ "$STAGING_DB_DATABASE" == dropoqux_jwtc_stage2 ]]
+          [[ "$STAGING_DB_USERNAME" =~ ^dropoqux_[a-zA-Z0-9_]+$ ]]
+      - name: Prepare temporary SSH identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/jwtc-stage-ssh"
+          printf '%s\n' "$SSH_KEY" > "$RUNNER_TEMP/jwtc-stage-ssh/key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$RUNNER_TEMP/jwtc-stage-ssh/known_hosts"
+          ssh-keygen -y -P '' -f "$RUNNER_TEMP/jwtc-stage-ssh/key" >/dev/null
+      - name: Restore verified encrypted snapshot into empty Stage2 only
+        shell: bash
+        run: |
+          set -euo pipefail
+          script_base64="$(base64 -w0 scripts/release/restore_stage2_backup.php)"
+          # Credentials travel over encrypted SSH stdin, never remote command
+          # arguments, repository files, uploaded artifacts or printed output.
+          python3 -c 'import os,json; print(json.dumps({"database":os.environ["STAGING_DB_DATABASE"],"username":os.environ["STAGING_DB_USERNAME"],"password":os.environ["STAGING_DB_PASSWORD"],"helper_base64":__import__("base64").b64encode(open("scripts/release/restore_guard.py","rb").read()).decode()}))' |
+            ssh -T -p "$SSH_PORT" -i "$RUNNER_TEMP/jwtc-stage-ssh/key" \
+              -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+              -o UserKnownHostsFile="$RUNNER_TEMP/jwtc-stage-ssh/known_hosts" \
+              -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=2 \
+              "$SSH_USER@$SSH_HOST" \
+              "cd '$APP_PATH' && php -r 'eval(\"?>\".base64_decode(\"$script_base64\"));'"
+      - name: Remove temporary SSH identity
+        if: always()
+        shell: bash
+        run: rm -f -- "$RUNNER_TEMP/jwtc-stage-ssh/key" "$RUNNER_TEMP/jwtc-stage-ssh/known_hosts"
