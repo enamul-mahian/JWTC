@@ -2,7 +2,9 @@ name: Clean Failed Stage2 Extraction Only
 on:
   push:
     branches: [main]
-    paths: ['.github/workflows/clean-failed-stage2-extraction.yml']
+    paths:
+      - '.github/workflows/clean-failed-stage2-extraction.yml'
+      - 'scripts/release/cleanup_failed_stage2.py'
   workflow_dispatch:
 permissions:
   contents: read
