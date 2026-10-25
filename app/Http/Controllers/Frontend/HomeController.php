@@ -35,11 +35,19 @@ class HomeController extends Controller
         // return view('frontend.pages.register', compact('title', 'jobCategories'));
 
 
-        $latestJobs = Job::query()->with(['company', 'country', 'job_category'])->where('is_publish', 1)->latest()->limit(6)->get();
-        $publishedJobCount = Job::where('is_publish', 1)->count();
-        $hiringCompanyCount = Job::where('is_publish', 1)->distinct()->count('company_id');
+        // Keep historic published job URLs reachable, but don't represent closed
+        // applications as vacancies accepting applications.
+        $today = now()->toDateString();
+        $published = Job::query()->where('is_publish', 1);
+        $latestJobs = (clone $published)->with(['company', 'country', 'job_category'])
+            ->orderByRaw('CASE WHEN application_deadline >= ? THEN 0 WHEN application_deadline IS NULL THEN 1 ELSE 2 END', [$today])
+            ->orderByDesc('created_at')->orderByDesc('id')->limit(6)->get();
+        $publishedJobCount = (clone $published)->count();
+        $openJobCount = (clone $published)->whereDate('application_deadline', '>=', $today)->count();
+        $closedJobCount = (clone $published)->whereDate('application_deadline', '<', $today)->count();
+        $hiringCompanyCount = (clone $published)->distinct()->count('company_id');
         $locations = Country::whereIn('id',\Illuminate\Support\Facades\DB::table('job_location_options')->where('enabled',true)->select('country_id'))->orderBy('name')->get(['id','name']);
-        return view('frontend.index', compact('latestJobs', 'publishedJobCount', 'hiringCompanyCount', 'locations'));
+        return view('frontend.index', compact('latestJobs', 'publishedJobCount', 'openJobCount', 'closedJobCount', 'hiringCompanyCount', 'locations'));
     }
 
     public function publicJob(int $job)
