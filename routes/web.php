@@ -162,6 +162,7 @@ Route::get('contact', [ContactController::class, 'contact'])
     ->name('contact');
 
 Route::post('send-contact-data', [ContactController::class, 'contactStore'])
+    ->middleware('throttle:5,1')
     ->name('send-contact-data');
 
 Route::get('details/{url}', [HomeController::class, 'getPageData'])
