@@ -1,0 +1,248 @@
+/* Employer Job Lists / Archive Jobs / Manage Jobs.
+   Keep this sheet scoped to these screens: the old Bootstrap dashboard and the
+   newer .jg-site design system must not override one another. */
+.jg-site .jg-employer-intro {
+    display:block;
+    width:calc(100% - 56px);
+    max-width:1144px!important;
+    margin:24px auto 10px!important;
+    padding:28px 32px!important;
+    background:linear-gradient(110deg,#102a50,#164c77)!important;
+    border:1px solid #295780!important;
+    border-radius:16px!important;
+    box-shadow:0 8px 24px rgba(13,37,73,.09);
+    color:#fff!important;
+}
+.jg-site .jg-employer-intro .jw-eyebrow {
+    display:block;
+    color:#b1e3f0!important;
+    font-size:12px;
+    line-height:1.5;
+    font-weight:700;
+    letter-spacing:.07em;
+    text-transform:uppercase;
+    margin:0 0 6px;
+}
+.jg-site .jg-employer-intro h1 {
+    color:#fff!important;
+    font-size:clamp(25px,3vw,36px);
+    line-height:1.2;
+    letter-spacing:-.02em;
+    margin:0 0 10px;
+    font-weight:800;
+}
+.jg-site .jg-employer-intro p:not(.jw-eyebrow) {
+    color:#e3edfa!important;
+    font-size:14px;
+    margin:0 0 17px;
+}
+.jg-site .jg-employer-intro .jw-workspace-actions {
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+}
+.jg-site .jg-employer-intro .jw-workspace-actions a {
+    display:inline-flex;
+    min-height:40px;
+    align-items:center;
+    justify-content:center;
+    padding:9px 14px;
+    border:1px solid rgba(255,255,255,.45);
+    border-radius:8px;
+    color:#fff!important;
+    background:rgba(255,255,255,.12);
+    text-decoration:none;
+    font-size:13px;
+    font-weight:650;
+}
+.jg-site .jg-employer-intro .jw-workspace-actions a:hover,
+.jg-site .jg-employer-intro .jw-workspace-actions a:focus-visible {
+    color:#102a50!important;
+    background:#fff;
+}
+#latest-jobs.jg-employer-jobs.section {
+    padding:10px 0 50px!important;
+    margin:0!important;
+    background:transparent!important;
+    min-height:0;
+}
+.jg-site .jg-employer-jobs .page-header {
+    padding:16px 0 14px!important;
+    margin:0!important;
+}
+.jg-site .jg-employer-jobs .page-header>.container,
+.jg-site .jg-employer-jobs #content>.container {
+    width:100%!important;
+    max-width:1200px!important;
+    padding-left:28px!important;
+    padding-right:28px!important;
+}
+.jg-site .jg-employer-jobs .page-header .inner-header h3 {
+    color:#10264e!important;
+    font-size:clamp(25px,2.8vw,32px)!important;
+    line-height:1.25!important;
+    margin:0!important;
+}
+.jg-site .jg-employer-jobs #content {padding:6px 0 40px!important}
+.jg-site .jg-employer-jobs #content>.container>.row:has(.right-sideabr) {
+    display:grid;
+    grid-template-columns:230px minmax(0,1fr);
+    align-items:start;
+    gap:24px;
+    margin:0;
+}
+.jg-site .jg-employer-jobs #content>.container>.row:has(.right-sideabr)>.col-lg-4,
+.jg-site .jg-employer-jobs #content>.container>.row:has(.right-sideabr)>.col-lg-8 {
+    width:auto;max-width:100%;min-width:0;padding:0;flex:none;
+}
+/* The shared sidebar partial already includes .right-sideabr.
+   Pages that wrap it again must not create a second padded/nav surface. */
+.jg-site .jg-employer-jobs .right-sideabr {
+    width:100%;
+    min-width:0;
+    padding:20px!important;
+    background:#0d2549!important;
+    border:0!important;
+    border-radius:15px!important;
+}
+.jg-site .jg-employer-jobs .right-sideabr .right-sideabr {
+    padding:0!important;margin:0!important;
+    border:0!important;background:transparent!important;
+    box-shadow:none!important;
+}
+.jg-site .jg-employer-jobs .right-sideabr h4 {
+    display:block;
+    margin:0 0 13px!important;
+    padding:0 4px 12px!important;
+    background:transparent!important;
+    border:0!important;
+    color:#fff!important;
+    font-size:18px!important;
+    font-weight:750;
+    line-height:1.35;
+    overflow-wrap:normal;
+}
+.jg-site .jg-employer-jobs .right-sideabr .list-item {
+    display:block!important;
+    margin:0!important;
+    padding:0!important;
+    list-style:none;
+}
+.jg-site .jg-employer-jobs .right-sideabr .list-item>li {
+    display:block!important;
+    width:100%;
+    margin:0!important;
+    padding:0!important;
+    list-style:none;
+}
+.jg-site .jg-employer-jobs .right-sideabr .list-item>li>a {
+    display:block!important;
+    padding:11px 12px!important;
+    margin:2px 0!important;
+    line-height:1.45!important;
+    background:transparent!important;
+    color:#e2ecff!important;
+    text-decoration:none!important;
+    border-radius:8px;
+    overflow-wrap:break-word;
+}
+.jg-site .jg-employer-jobs .right-sideabr .list-item>li>a.active,
+.jg-site .jg-employer-jobs .right-sideabr .list-item>li>a:hover,
+.jg-site .jg-employer-jobs .right-sideabr .list-item>li>a:focus-visible {
+    background:#1d4380!important;
+    color:#fff!important;
+}
+.jg-site .jg-employer-jobs .right-sideabr .list-item form {margin:14px 0 0}
+.jg-site .jg-employer-jobs .right-sideabr .list-item button {
+    width:100%;
+    min-height:41px;
+    margin:0!important;
+}
+.jg-site .jg-employer-jobs #content .job-alerts-item {
+    width:100%;
+    min-width:0;
+    padding:24px!important;
+    border:1px solid #dce5f2!important;
+    background:#fff!important;
+    border-radius:16px!important;
+}
+.jg-site .jg-employer-jobs .job-alerts-item .alerts-title {
+    font-size:23px!important;
+    font-weight:750;
+    color:#10264e!important;
+    margin:0 0 20px!important;
+}
+.jg-site .jg-employer-jobs #content .jg-employer-job-card {
+    min-width:0;
+    margin:0 0 18px!important;
+    padding:22px!important;
+    background:#fff!important;
+    border:1px solid #dce5f2!important;
+    border-radius:14px!important;
+}
+.jg-site .jg-employer-jobs #content .jg-employer-job-card .card-body {padding:0!important}
+.jg-site .jg-employer-jobs .jg-employer-job-card h6 {font-size:16px;line-height:1.4;font-weight:700}
+.jg-site .jg-employer-jobs .jg-employer-job-card p {margin:4px 0 9px;line-height:1.5}
+.jg-site .jg-employer-jobs .jg-employer-logo {
+    display:inline-block;
+    width:110px;
+    max-width:100%;
+    height:110px;
+    object-fit:contain;
+    background:#fff;
+    border:1px solid #e1e7ee;
+    border-radius:7px;
+    padding:10px;
+}
+.jg-site .jg-employer-jobs .jg-employer-card-actions {
+    display:flex;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-top:14px;
+}
+.jg-site .jg-employer-jobs .jg-employer-card-actions form {margin:0!important}
+.jg-site .jg-employer-jobs .jg-employer-card-actions .btn {
+    display:inline-flex;
+    justify-content:center;
+    align-items:center;
+    min-height:42px;
+    margin:0!important;
+    padding:9px 15px!important;
+    border-radius:8px!important;
+    font-size:13px!important;
+    font-weight:650!important;
+    text-decoration:none;
+}
+.jg-site .jg-employer-jobs .jg-employer-card-actions .btn-success {background:#179e4a!important;border-color:#179e4a!important;color:#fff!important}
+.jg-site .jg-employer-jobs .jg-employer-card-actions .btn-primary {background:#0758df!important;border-color:#0758df!important;color:#fff!important}
+.jg-site .jg-employer-jobs .jg-employer-card-actions .btn-danger {background:#d9364a!important;border-color:#d9364a!important;color:#fff!important}
+.jg-site .jg-employer-jobs a:focus-visible,
+.jg-site .jg-employer-jobs button:focus-visible {outline:3px solid #eab54a!important;outline-offset:2px}
+.jg-site .jg-employer-jobs .jg-page-nav{max-width:100%;margin:8px 0 0}
+@media(max-width:850px) {
+    .jg-site .jg-employer-jobs #content>.container>.row:has(.right-sideabr){grid-template-columns:minmax(0,1fr)}
+    .jg-site .jg-employer-jobs .right-sideabr .list-item {display:flex!important;flex-wrap:wrap;gap:5px}
+    .jg-site .jg-employer-jobs .right-sideabr .list-item>li {width:auto}
+    .jg-site .jg-employer-jobs .right-sideabr .list-item>li>a {padding:10px!important}
+    .jg-site .jg-employer-jobs .right-sideabr .list-item>li:last-child {width:100%}
+}
+@media(max-width:600px) {
+    .jg-site .jg-employer-intro {
+        width:calc(100% - 32px);
+        padding:22px 20px!important;
+        margin-top:16px!important;
+    }
+    .jg-site .jg-employer-intro .jw-workspace-actions a {flex:1 1 125px}
+    #latest-jobs.jg-employer-jobs.section {padding-top:6px!important}
+    .jg-site .jg-employer-jobs .page-header>.container,
+    .jg-site .jg-employer-jobs #content>.container {padding-left:16px!important;padding-right:16px!important}
+    .jg-site .jg-employer-jobs #content .job-alerts-item {padding:16px!important}
+    .jg-site .jg-employer-jobs #content .jg-employer-job-card {padding:16px!important}
+    .jg-site .jg-employer-jobs .jg-employer-job-card .text-right {text-align:left!important}
+    .jg-site .jg-employer-jobs .jg-employer-job-card .jg-employer-logo {width:88px;height:88px}
+}
+@media(prefers-reduced-motion:reduce) {
+    .jg-site .jg-employer-intro *,
+    .jg-site .jg-employer-jobs * {transition:none!important}
+}
