@@ -8,6 +8,12 @@ use Tests\TestCase;
 
 class AnnualSalaryEquivalentTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->artisan('migrate', ['--force'=>true])->assertSuccessful();
+    }
+
     public function test_equivalent_figures_are_derived_from_annual_gross_and_hours(): void
     {
         $job = new Job([
