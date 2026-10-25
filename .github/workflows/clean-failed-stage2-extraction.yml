@@ -1,0 +1,59 @@
+name: Clean Failed Stage2 Extraction Only
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/clean-failed-stage2-extraction.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: cpanel-staging-operations
+  cancel-in-progress: false
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+    env:
+      SSH_HOST: ${{ secrets.CPANEL_SSH_HOST }}
+      SSH_PORT: ${{ secrets.CPANEL_SSH_PORT }}
+      SSH_USER: ${{ secrets.CPANEL_SSH_USER }}
+      SSH_KEY: ${{ secrets.CPANEL_SSH_PRIVATE_KEY }}
+      KNOWN_HOSTS: ${{ secrets.CPANEL_SSH_KNOWN_HOSTS }}
+    steps:
+      - name: Remove only incomplete extraction workspace, report remaining quota
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" == refs/heads/main ]]
+          [[ "$GITHUB_REPOSITORY" == enamul-mahian/JWTC ]]
+          umask 077
+          mkdir -p "$RUNNER_TEMP/ssh"
+          printf '%s\n' "$SSH_KEY" > "$RUNNER_TEMP/ssh/key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$RUNNER_TEMP/ssh/hosts"
+          ssh-keygen -y -P '' -f "$RUNNER_TEMP/ssh/key" >/dev/null
+          ssh -T -p "$SSH_PORT" -i "$RUNNER_TEMP/ssh/key" \
+            -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$RUNNER_TEMP/ssh/hosts" -o ConnectTimeout=20 \
+            "$SSH_USER@$SSH_HOST" 'python3 -c '"'"'import os,pathlib,shutil,json,subprocess
+base=pathlib.Path("/home/dropoqux/jwtc-private-staging/20261025-033245-808519b6-stage2")
+root=base.resolve(strict=True)
+assert str(root)==str(base) and not base.is_symlink()
+names=["candidate-unpacked-latest"]
+names += [p.name for p in base.iterdir() if p.name.startswith("candidate-unpacked-latest-incomplete-")]
+removed=0
+for name in names:
+    p=base/name
+    if not p.exists() and not p.is_symlink(): continue
+    assert p.parent==base and not p.is_symlink() and p.is_dir()
+    assert not (p/".extraction-complete").exists(), "Refusing completed staging candidate"
+    shutil.rmtree(p)
+    removed+=1
+print("REMOVED_INCOMPLETE_STAGING_DIRECTORIES",removed)
+result=subprocess.run(["uapi","--output=json","Quota","get_local_quota_info"],capture_output=True,text=True,check=True)
+d=json.loads(result.stdout)["result"]["data"]
+print("INODES_USED",d.get("inodes_used"),"INODE_LIMIT",d.get("inode_limit"))
+'"'"''
+      - name: Remove temporary identity
+        if: always()
+        run: rm -f "$RUNNER_TEMP/ssh/key" "$RUNNER_TEMP/ssh/hosts"
