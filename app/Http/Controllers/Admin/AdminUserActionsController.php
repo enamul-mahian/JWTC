@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class AdminUserActionsController extends Controller
@@ -78,7 +79,7 @@ class AdminUserActionsController extends Controller
         $actor = $this->permitted($request, $user);
         $request->validate([
             'admin_password' => ['required', 'string', 'current_password'],
-            'confirm_email' => ['required', 'string', 'same:expected_email'],
+            'confirm_email' => ['required', 'string', Rule::in([$user->email])],
         ]);
         abort_unless(hash_equals((string) $user->email, (string) $request->input('confirm_email')), 422);
 
