@@ -85,18 +85,20 @@
         crossorigin="anonymous" referrerpolicy="no-referrer" />
 @endpush
 
+@push('page-style')
+    <link rel="stylesheet" href="{{ asset('theme/job-details-layout.css') }}?v=20261026-1">
+@endpush
+
 @section('content')
     <!-- Job Detail Section Start -->
-    <section class="job-detail section mt-4">
+    <section class="job-detail section jg-job-details">
         <div class="container">
-            <div class="row justify-content-between">
-                <div class="col-lg-3 col-md-12 col-xs-12">
-                    <div class="right-sideabr">
-                        @include('frontend.pages.employer.sideMenu')
-                    </div>
-                </div>
+            <div class="row justify-content-between jg-job-detail-grid">
+                <aside class="col-lg-3 col-md-12 col-xs-12 jg-detail-sidebar" aria-label="Employer account menu">
+                    @include('frontend.pages.employer.sideMenu')
+                </aside>
 
-                <div class="col-lg-9 col-md-12 col-xs-12">
+                <div class="col-lg-9 col-md-12 col-xs-12 jg-detail-main">
                     <div class="content-area">
                         <div class="row">
                             <div class="col-md-12 col-sm-12 col-lg-6">
