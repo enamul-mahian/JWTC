@@ -144,6 +144,11 @@ Route::post('user/login', [UserAuthLoginController::class, 'userLogin'])
     ->middleware('throttle:10,1')
     ->name('user.login');
 
+// GET never destroys a session: it displays a fresh CSRF-protected
+// confirmation form for old tabs and accidental GET logout links.
+Route::get('logout', fn () => redirect()->route('logout.confirm'));
+Route::get('logout/confirm', fn () => view('auth.logout-confirm'))
+    ->name('logout.confirm');
 Route::post('logout', [UserAuthLoginController::class, 'logout'])
     ->name('logout');
 
