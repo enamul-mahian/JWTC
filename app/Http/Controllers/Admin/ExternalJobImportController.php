@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Carbon\Carbon;
+use App\Services\WorkHubLinkImporter;
+use InvalidArgumentException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -22,6 +24,23 @@ class ExternalJobImportController extends Controller
         $this->authorizeAdmin($request);
         $jobs = DB::table('external_job_imports')->orderByDesc('id')->paginate(25);
         return response()->view('admin.job.external-import', compact('jobs'))->header('Cache-Control', 'private, no-store');
+    }
+
+    public function importLink(Request $request, WorkHubLinkImporter $importer)
+    {
+        $this->authorizeAdmin($request);
+        $data = $request->validate(['source_url' => ['required', 'string', 'max:2048']]);
+        try {
+            $result = $importer->import($data['source_url'], (int) $request->user()->id);
+        } catch (InvalidArgumentException $error) {
+            return back()->withInput()->withErrors(['source_url' => $error->getMessage()]);
+        } catch (\Throwable $error) {
+            report($error);
+            return back()->withInput()->withErrors(['source_url' => 'Import could not complete. Try again later.']);
+        }
+
+        return redirect()->route('admin.external-jobs.index')->with('import_result',
+            "Checked {$result['checked']} vacancies, saved {$result['added']} new drafts; skipped {$result['skipped']}. Nothing published.");
     }
 
     public function upload(Request $request)
