@@ -53,6 +53,7 @@ jobs:
             [[ -n "${!k}" ]] || { echo "::error::Missing $k"; exit 1; }
           done
           php -l scripts/release/deploy_employer_account_ui.php
+          grep -F "employer-account-release.tar.gz" scripts/release/deploy_employer_account_ui.php >/dev/null
           git diff --exit-code
 
       - name: Run focused regression test and compile every Blade template
