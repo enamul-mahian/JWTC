@@ -28,6 +28,9 @@ class JobPresentation {
  public static function faqs(Job $job): array {
   $saved=json_decode((string)$job->faqs,true);
   $items=is_array($saved) ? array_values(array_filter($saved,static fn($f)=>is_array($f)&&!empty($f['question'])&&!empty($f['answer']))) : [];
+  if(str_contains((string)$job->additional_salary_info,'2026 indicative salary benchmark')) {
+   $items=array_values(array_filter($items,static fn($f)=>!preg_match('/salary|pay|wage|earnings|monthly|hourly|annual|per hour/i',(string)$f['question'])));
+  }
   $country=(string)($job->country?->name??'');
   $period=strtolower(trim((string)$job->salary_type));
   $estimated=str_contains((string)$job->additional_salary_info,'2026 indicative salary benchmark');
