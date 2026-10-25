@@ -37,6 +37,10 @@ try {
     };
     $walk($data);
     echo "DOCUMENT_ROOT_DIAGNOSTIC ".json_encode($reported,JSON_THROW_ON_ERROR)."\n";
+    $all = $run([$uapi, '--output=json', 'DomainInfo', 'domains_data', 'format=list']);
+    $allReport = [];
+    $walk($all);
+    echo "ALL_DOMAIN_ROOTS_DIAGNOSTIC ".json_encode(array_slice($reported,1),JSON_THROW_ON_ERROR)."\n";
     echo "APP_ROOT_VERIFIED yes\n";
 } catch (Throwable $e) {
     echo "DIAGNOSTIC_STOP ".get_class($e)."\n";
