@@ -26,3 +26,13 @@
 .jg-site .jg-checkbox-grid label{flex-direction:row}.jg-site .jg-rich-field textarea[hidden]{display:none!important}.jg-site .jg-faq-row input,.jg-site .jg-faq-row textarea{display:block;width:100%;border:1px solid #bdd0e9;border-radius:8px;padding:10px;color:#173252;background:white;font:inherit}.jg-site .jg-faq-row label{display:block;font-size:14px;font-weight:600}.jg-site .jg-choice-group input[type=checkbox]{padding:0;flex-shrink:0}
 
 .jg-site .jg-profile-card textarea{display:block;width:100%;border:1px solid #b8cbe5;border-radius:9px;padding:12px;color:#172f51;font:inherit;background:white}
+
+/* Site-wide deadline disclosure: visible on desktop and mobile. */
+.jg-site .jg-vacancy-status{display:inline-flex;flex-wrap:wrap;gap:4px;padding:5px 10px;margin:3px 0 10px;border-radius:999px;border:1px solid #d4dde8;font-size:12px;line-height:1.5;color:#30445e;background:#f5f7fa}
+.jg-site .jg-vacancy-open{color:#13502f;border-color:#acd9be;background:#effaf3}
+.jg-site .jg-vacancy-closed{color:#8d3531;border-color:#efc4c0;background:#fff2ef}
+.jg-site .jg-vacancy-unknown{color:#5c4a13;border-color:#eadba3;background:#fff9e7}
+.jg-site .jg-status-filters{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 24px}
+.jg-site .jg-status-filters a{display:inline-flex;align-items:center;padding:9px 15px;border:1px solid #c9d8ee;border-radius:999px;text-decoration:none;font-size:13px;font-weight:650;background:#fff;color:#213d67}
+.jg-site .jg-status-filters a[aria-current=page]{color:white;border-color:#0956d8;background:#0956d8}
+.jg-site .jg-status-filters a:focus-visible{outline:3px solid #74a8fc;outline-offset:2px}
