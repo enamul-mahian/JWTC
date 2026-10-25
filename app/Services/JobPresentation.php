@@ -3,6 +3,30 @@ namespace App\Services;
 use App\Models\Job;
 use Illuminate\Http\Request;
 class JobPresentation {
+ public static function weeklyHours(Job $job): ?float {
+  $info=(string)$job->additional_salary_info;
+  if(!preg_match('/(?:^|\n)Weekly working hours:\s*(\d{1,2}(?:\.\d{1,2})?)\s*(?:\r?\n|$)/i',$info,$m))return null;
+  $hours=(float)$m[1];
+  return $hours>=1 && $hours<=80 ? $hours : null;
+ }
+ public static function salaryEquivalents(Job $job): ?array {
+  $hours=self::weeklyHours($job);
+  if(strtolower(trim((string)$job->salary_type))!=='yearly' || !$hours
+      || $job->minimum_salary===null || $job->maximum_salary===null)return null;
+  $min=(float)$job->minimum_salary;$max=(float)$job->maximum_salary;
+  if($min<0 || $max<$min)return null;
+  $symbol=$job->country?->name==='Ireland' ? '€' : (string)(gs()?->currency_symbol ?? '£');
+  $format=static fn(float $v)=>$symbol.number_format($v,2);
+  return [
+   'weekly'=>$format($min/52).' – '.$format($max/52),
+   'monthly'=>$format($min/12).' – '.$format($max/12),
+   'hourly'=>$format($min/(52*$hours)).' – '.$format($max/(52*$hours)),
+   'hours'=>$hours,
+  ];
+ }
+ public static function salaryNotes(Job $job): string {
+  return trim(preg_replace('/(?:^|\n)Weekly working hours:\s*\d{1,2}(?:\.\d{1,2})?\s*(?=\r?\n|$)/i','',(string)$job->additional_salary_info));
+ }
  public static function salarySummary(Job $job): string {
   $min=$job->minimum_salary;
   $max=$job->maximum_salary;
@@ -110,6 +134,18 @@ class JobPresentation {
  }
  public static function fields(Request $request,array $data,?Job $job=null): array {
   unset($data['logo'],$data['remove_logo'],$data['faq_question'],$data['faq_answer']);
+  if($request->has('weekly_working_hours')){
+   $hours=$request->input('weekly_working_hours');
+   $info=preg_replace('/(?:^|\n)Weekly working hours:\s*\d{1,2}(?:\.\d{1,2})?\s*(?=\r?\n|$)/i','',(string)($data['additional_salary_info']??''));
+   $info=trim($info);
+   if($hours!==null && $hours!==''){
+    $hours=rtrim(rtrim(number_format((float)$hours,2,'.',''),'0'),'.');
+    $info=trim($info."\nWeekly working hours: ".$hours);
+   }
+   $data['additional_salary_info']=$info;
+  }
+  unset($data['weekly_working_hours']);
+
   if($request->boolean('remove_logo'))$data['logo_path']=null;
   if($request->hasFile('logo')){$file=$request->file('logo');$dir=public_path('assets/images/job-logos');if(!is_dir($dir))mkdir($dir,0755,true);$name=\Illuminate\Support\Str::random(40).'.'.$file->extension();$file->move($dir,$name);$data['logo_path']='job-logos/'.$name;}
   if($request->boolean('faq_editor') || $request->has('faq_question') || $request->has('faq_answer')){
