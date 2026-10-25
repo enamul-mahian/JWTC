@@ -88,7 +88,7 @@ $lists=function($name)use($job){$value=old($name,$job->{$name});if(is_array($val
   const max=root.querySelector('[name=maximum_salary]');
   const hours=root.querySelector('[name=weekly_working_hours]');
   const out=document.getElementById('jg-salary-preview-values');
-  const money=v=>'£'+v.toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const money=v=>(root.querySelector('[name=country_id] option:checked')?.textContent?.trim()==='Ireland'?'€':'£')+v.toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2});
   function refresh(){
     const a=Number(min.value),b=Number(max.value),h=Number(hours.value);
     if(!min.value||!max.value||!hours.value||!Number.isFinite(a)||!Number.isFinite(b)||!Number.isFinite(h)||a<0||b<a||h<1||h>80){
