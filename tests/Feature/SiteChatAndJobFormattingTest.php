@@ -94,4 +94,84 @@ class SiteChatAndJobFormattingTest extends TestCase
         $this->postJson('/site-chat/threads',['name'=>'Spam','email'=>'test@example.test','body'=>'Hi','website'=>'bot'])->assertUnprocessable();
         $this->assertSame(0,DB::table('site_chat_threads')->count());
     }
+
+    public function test_admin_can_close_days_with_zero_zero_or_checkbox_and_save_an_entirely_closed_week(): void
+    {
+        $admin=$this->actor('admin');
+        Permission::findOrCreate('manage-application-chat','web');
+        $admin->givePermissionTo('manage-application-chat');
+        $this->actingAs($admin);
+
+        $this->postJson('/admin/site-chat/settings', [
+            'enabled'=>true, 'available'=>true, 'schedule_enabled'=>true,
+            'timezone'=>'Europe/London',
+            'hours'=>[
+                1=>['closed'=>0,'start'=>'00:00','end'=>'00:00'],
+                2=>['closed'=>0,'start'=>'11:00','end'=>'16:00'],
+                3=>['closed'=>1,'start'=>'09:00','end'=>'18:00'],
+                4=>['closed'=>1],
+                5=>['closed'=>1],
+                6=>['closed'=>1],
+                7=>['closed'=>1],
+            ],
+        ])->assertOk()->assertJsonPath('saved',true);
+
+        $settings=DB::table('site_chat_settings')->where('id',1)->first();
+        $hours=json_decode($settings->weekly_hours,true);
+        $this->assertSame(['2'=>['start'=>'11:00','end'=>'16:00']],$hours);
+        $this->assertFalse(app(\App\Services\ChatHours::class)->open(
+            $settings,\Carbon\CarbonImmutable::parse('2026-10-26 11:30','Europe/London')));
+        $this->assertTrue(app(\App\Services\ChatHours::class)->open(
+            $settings,\Carbon\CarbonImmutable::parse('2026-10-27 11:30','Europe/London')));
+
+        $allClosed=[];
+        foreach(range(1,7) as $day) $allClosed[$day]=['closed'=>1,'start'=>'00:00','end'=>'00:00'];
+        $this->postJson('/admin/site-chat/settings', [
+            'enabled'=>true, 'available'=>true, 'schedule_enabled'=>true,
+            'timezone'=>'Europe/London', 'hours'=>$allClosed,
+        ])->assertOk();
+        $closed=DB::table('site_chat_settings')->where('id',1)->first();
+        $this->assertSame([], json_decode($closed->weekly_hours,true));
+        $this->assertFalse(app(\App\Services\ChatHours::class)->open($closed));
+        $this->getJson('/site-chat/state')->assertJsonPath('online',false)
+            ->assertJsonPath('within_hours',false);
+    }
+
+    public function test_partial_and_equal_non_midnight_hours_fail_without_overwriting_schedule(): void
+    {
+        $admin=$this->actor('admin');
+        Permission::findOrCreate('manage-application-chat','web');
+        $admin->givePermissionTo('manage-application-chat');
+        $this->actingAs($admin);
+        $before=DB::table('site_chat_settings')->where('id',1)->value('weekly_hours');
+        foreach ([
+            [1=>['closed'=>0,'start'=>'11:00','end'=>'']],
+            [1=>['closed'=>0,'start'=>'11:00','end'=>'11:00']],
+        ] as $invalid) {
+            $this->postJson('/admin/site-chat/settings', [
+                'enabled'=>true,'available'=>true,'schedule_enabled'=>true,
+                'timezone'=>'Europe/London','hours'=>$invalid,
+            ])->assertUnprocessable();
+            $this->assertSame($before,DB::table('site_chat_settings')->where('id',1)->value('weekly_hours'));
+        }
+    }
+
+    public function test_support_inbox_marks_closed_days_and_uses_a_scoped_responsive_stylesheet(): void
+    {
+        $admin=$this->actor('admin');
+        Permission::findOrCreate('manage-application-chat','web');
+        $admin->givePermissionTo('manage-application-chat');
+        $this->actingAs($admin)->get('/admin/site-chat')
+            ->assertOk()
+            ->assertSee('Weekly schedule')
+            ->assertSee('Closed on Monday')
+            ->assertSee('No conversation selected')
+            ->assertSee('site-chat/admin.css');
+
+        $layout=file_get_contents(resource_path('views/dashboard/layout/dasboardMaster.blade.php'));
+        $this->assertStringContainsString("@stack('dashboard-page-style')",$layout);
+        $css=file_get_contents(public_path('site-chat/admin.css'));
+        $this->assertStringContainsString('@media(max-width:740px)',$css);
+    }
+
 }
