@@ -1,0 +1,64 @@
+name: Verify Stage2 database without writes
+
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/cpanel-stage2-preflight.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cpanel-staging-operations
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment: production
+    env:
+      SSH_HOST: ${{ secrets.CPANEL_SSH_HOST }}
+      SSH_PORT: ${{ secrets.CPANEL_SSH_PORT }}
+      SSH_USER: ${{ secrets.CPANEL_SSH_USER }}
+      SSH_KEY: ${{ secrets.CPANEL_SSH_PRIVATE_KEY }}
+      KNOWN_HOSTS: ${{ secrets.CPANEL_SSH_KNOWN_HOSTS }}
+      APP_PATH: ${{ secrets.CPANEL_APP_PATH }}
+      DB_DATABASE: ${{ secrets.STAGING2_DB_DATABASE }}
+      DB_USERNAME: ${{ secrets.STAGING2_DB_USERNAME }}
+      DB_PASSWORD: ${{ secrets.STAGING2_DB_PASSWORD }}
+    steps:
+      - name: Validate configuration without exposing secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" == refs/heads/main ]]
+          [[ "$GITHUB_REPOSITORY" == enamul-mahian/JWTC ]]
+          for name in SSH_HOST SSH_PORT SSH_USER SSH_KEY KNOWN_HOSTS APP_PATH DB_DATABASE DB_USERNAME DB_PASSWORD; do
+            [[ -n "${!name}" ]] || { echo "::error::Missing $name"; exit 1; }
+          done
+          [[ "$DB_DATABASE" == dropoqux_jwtc_stage2 ]]
+          [[ "$DB_USERNAME" =~ ^dropoqux_[A-Za-z0-9_]+$ ]]
+          [[ "$SSH_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]]
+          [[ "$SSH_USER" =~ ^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$ ]]
+          [[ "$SSH_PORT" =~ ^[0-9]{1,5}$ ]]
+          (( 10#$SSH_PORT > 0 && 10#$SSH_PORT < 65536 ))
+          [[ "$APP_PATH" =~ ^/home/[a-zA-Z0-9_.-]+(/[a-zA-Z0-9_.-]+)+$ ]]
+      - name: Check independent empty Stage2 database over SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/stage2-ssh"
+          printf '%s\n' "$SSH_KEY" > "$RUNNER_TEMP/stage2-ssh/key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$RUNNER_TEMP/stage2-ssh/known_hosts"
+          ssh-keygen -y -P '' -f "$RUNNER_TEMP/stage2-ssh/key" >/dev/null
+          python3 -c 'import os,json;print(json.dumps({"database":os.environ["DB_DATABASE"],"username":os.environ["DB_USERNAME"],"password":os.environ["DB_PASSWORD"]}))' |
+            ssh -T -p "$SSH_PORT" -i "$RUNNER_TEMP/stage2-ssh/key" \
+              -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+              -o UserKnownHostsFile="$RUNNER_TEMP/stage2-ssh/known_hosts" -o ConnectTimeout=20 \
+              "$SSH_USER@$SSH_HOST" "cd '$APP_PATH' && php -r 'require \"vendor/autoload.php\"; \$i=json_decode(stream_get_contents(STDIN),true); \$e=Dotenv\\Dotenv::parse(file_get_contents(\".env\")); \$db=\$e[\"DB_DATABASE\"]??\"\"; if((\$i[\"database\"]??\"\")!==\"dropoqux_jwtc_stage2\"||\$db===\$i[\"database\"])exit(2); \$dsn=\"mysql:host=\".(\$e[\"DB_HOST\"]??\"127.0.0.1\").\";port=\".(\$e[\"DB_PORT\"]??\"3306\").\";dbname=\".\$i[\"database\"].\";charset=utf8mb4\"; \$p=new PDO(\$dsn,\$i[\"username\"],\$i[\"password\"],[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]); \$s=\$p->prepare(\"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=?\"); \$s->execute([\$i[\"database\"]]); if((int)\$s->fetchColumn()!==0){echo \"STOP: Stage2 not empty\\n\";exit(2);} echo \"PASS: independent empty Stage2 connection\\n\";'"
+      - name: Remove SSH identity
+        if: always()
+        run: rm -f "$RUNNER_TEMP/stage2-ssh/key" "$RUNNER_TEMP/stage2-ssh/known_hosts"
