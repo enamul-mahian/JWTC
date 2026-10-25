@@ -135,9 +135,10 @@ try {
     $css = file_get_contents($rollback.'/prepared/public/site-chat/admin.css');
     $script = file_get_contents($rollback.'/prepared/public/site-chat/admin.js');
     $master = file_get_contents($rollback.'/prepared/resources/views/dashboard/layout/dasboardMaster.blade.php');
-    if (!str_contains($controller, "start==='00:00' && \\$end==='00:00'")
-        || !str_contains($controller, "empty(\\$range['closed'])")
-        || !str_contains($view, "hours[{{ \\$day }}][closed]")
+    if (!str_contains($controller, "start==='00:00'")
+        || !str_contains($controller, "end==='00:00'")
+        || !str_contains($controller, "'closed'")
+        || !str_contains($view, "jg-chat-closed-input")
         || !str_contains($view, "No conversation selected")
         || !str_contains($view, "site-chat/admin.css")
         || !str_contains($css, "#jg-chat-admin")
