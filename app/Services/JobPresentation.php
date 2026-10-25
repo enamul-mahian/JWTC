@@ -25,7 +25,32 @@ class JobPresentation {
    return 'Pay period requires employer confirmation; contact the employer for an accurate rate';
   return $range.' per '.($period?:'unspecified period').' (verify with the employer)';
  }
+ /**
+  * Public and editor FAQs are ALWAYS the saved, user-controlled rows.
+  * No automatic suggestions are inserted at render time: an empty JSON
+  * list intentionally means the administrator removed every FAQ.
+  */
  public static function faqs(Job $job): array {
+  $saved=json_decode((string)$job->faqs,true);
+  if(!is_array($saved))return [];
+  $items=[];
+  foreach($saved as $faq){
+   if(!is_array($faq))continue;
+   $question=trim((string)($faq['question']??''));
+   $answer=trim((string)($faq['answer']??''));
+   if($question===''||$answer==='')continue;
+   $items[]=['question'=>$question,'answer'=>$answer];
+   if(count($items)>=12)break;
+  }
+  return $items;
+ }
+
+ /**
+  * Optional *suggestions* derived from a job, never rendered or stored
+  * without a separate, explicit user action. This is kept as a helper for
+  * possible preview tools, not a fallback for deleted FAQs.
+  */
+ public static function suggestedFaqs(Job $job): array {
   $saved=json_decode((string)$job->faqs,true);
   $items=is_array($saved) ? array_values(array_filter($saved,static fn($f)=>is_array($f)&&!empty($f['question'])&&!empty($f['answer']))) : [];
   if(str_contains((string)$job->additional_salary_info,'2026 indicative salary benchmark')) {
@@ -82,10 +107,20 @@ class JobPresentation {
   unset($data['logo'],$data['remove_logo'],$data['faq_question'],$data['faq_answer']);
   if($request->boolean('remove_logo'))$data['logo_path']=null;
   if($request->hasFile('logo')){$file=$request->file('logo');$dir=public_path('assets/images/job-logos');if(!is_dir($dir))mkdir($dir,0755,true);$name=\Illuminate\Support\Str::random(40).'.'.$file->extension();$file->move($dir,$name);$data['logo_path']='job-logos/'.$name;}
-  if($request->boolean('faq_editor') || $request->has('faq_question')){
-   $items=[];foreach($request->input('faq_question',[]) as $i=>$question){$answer=$request->input('faq_answer.'.$i);if(trim((string)$question)!=='' && trim((string)$answer)!=='')$items[]=['question'=>trim($question),'answer'=>trim($answer)];}
-   $data['faqs']=json_encode($items,JSON_THROW_ON_ERROR);
-  }else{$draft=$job?clone $job:new Job();$draft->fill($data);$draft->unsetRelation('country');$data['faqs']=json_encode(self::faqs($draft),JSON_THROW_ON_ERROR);}
+  if($request->boolean('faq_editor') || $request->has('faq_question') || $request->has('faq_answer')){
+   // Empty submitted editor with no rows is an explicit request to clear FAQs.
+   $items=[];
+   foreach($request->input('faq_question',[]) as $i=>$question){
+    $answer=$request->input('faq_answer.'.$i);
+    if(trim((string)$question)!=='' && trim((string)$answer)!=='')
+     $items[]=['question'=>trim((string)$question),'answer'=>trim((string)$answer)];
+   }
+   $data['faqs']=json_encode(array_slice($items,0,12),JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE);
+  } elseif(!$job) {
+   // No editor was submitted during creation: do not invent FAQs.
+   $data['faqs']='[]';
+  }
+  // On unrelated edits without the FAQ editor, preserve the saved value.
   // Optional source/application metadata is validated by the shared job request.
   return $data;
  }
