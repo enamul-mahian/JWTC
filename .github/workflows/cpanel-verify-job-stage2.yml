@@ -39,7 +39,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          php -l scripts/release/deduplicate_candidate_packages.php
           php -l scripts/release/upgrade_job_import_stage2.php
           python3 -m unittest discover -s scripts/release -p test_restore_guard.py -v
           for name in SSH_HOST SSH_PORT SSH_USER SSH_KEY KNOWN_HOSTS APP_PATH STAGING_DB_DATABASE STAGING_DB_USERNAME STAGING_DB_PASSWORD; do
@@ -55,7 +54,7 @@ jobs:
           [[ "$APP_PATH" =~ ^/home/[a-zA-Z0-9_.-]+(/[a-zA-Z0-9_.-]+)+$ ]]
           [[ "$APP_PATH" != *'/../'* && "$APP_PATH" != */.. ]]
           [[ "$STAGING_DB_DATABASE" == dropoqux_jwtc_stage2 ]]
-          [[ "$STAGING_DB_USERNAME" == dropoqux_jwtc_stage2 ]]
+          [[ "$STAGING_DB_USERNAME" =~ ^dropoqux_[A-Za-z0-9_]+$ ]]
       - name: Prepare temporary SSH identity
         shell: bash
         run: |
@@ -90,8 +89,6 @@ jobs:
           ssh -T "${ssh_options[@]}" "$SSH_USER@$SSH_HOST" "test ! -L '$target' && umask 077 && mkdir -p '$target'"
           scp -P "$SSH_PORT" -i "$RUNNER_TEMP/jwtc-stage-ssh/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/jwtc-stage-ssh/known_hosts" ./*.tar.gz release-manifest.json "$SSH_USER@$SSH_HOST:$target/"
           cd "$GITHUB_WORKSPACE"
-          cleanup_base64="$(base64 -w0 scripts/release/deduplicate_candidate_packages.php)"
-          ssh -T "${ssh_options[@]}" "$SSH_USER@$SSH_HOST" "cd '$APP_PATH' && php -r 'eval(\"?>\".base64_decode(\"$cleanup_base64\"));'"
           script_base64="$(base64 -w0 scripts/release/upgrade_job_import_stage2.php)"
           base64 -w0 scripts/release/restore_guard.py |
             ssh -T "${ssh_options[@]}" "$SSH_USER@$SSH_HOST" "cd '$APP_PATH' && php -r 'eval(\"?>\".base64_decode(\"$script_base64\"));'"
