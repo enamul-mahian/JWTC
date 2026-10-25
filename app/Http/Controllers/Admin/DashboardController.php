@@ -114,11 +114,23 @@ class DashboardController extends Controller
                 ->withInput();
         }
 
-        $users = $user->update($request->all());
-        $role = Role::where('name', $request->role)->first();
-        $user->roles()->detach();
-        $user->roles()->attach($role->id);
+        // Persist only validated profile fields, not arbitrary submitted
+        // attributes such as passwords, account flags, or model columns.
+        $data = $validator->validated();
+        $role = Role::where('name', $data['role'])->first();
+        if (!$role) {
+            return back()->withErrors(['role' => 'Select a valid role.'])->withInput();
+        }
 
-        return redirect()->route('user-management.index')->withSuccess('user role updated success');
+        \Illuminate\Support\Facades\DB::transaction(function () use ($user, $data, $role) {
+            $user->update([
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'phone' => $data['phone'] ?? null,
+            ]);
+            $user->syncRoles([$role]);
+        });
+
+        return redirect()->route('user-management.index')->withSuccess('User updated successfully');
     }
 }
