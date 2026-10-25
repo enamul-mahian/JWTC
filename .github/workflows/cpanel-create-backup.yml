@@ -36,6 +36,12 @@ jobs:
         with:
           php-version: '8.3'
           coverage: none
+      - name: Require exact main branch for fresh production backup
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" == refs/heads/main ]]
+          [[ "$GITHUB_REPOSITORY" == enamul-mahian/JWTC ]]
       - name: Validate script syntax and required configuration
         shell: bash
         run: |
