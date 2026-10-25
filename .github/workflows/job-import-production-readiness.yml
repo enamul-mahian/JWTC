@@ -1,0 +1,52 @@
+name: Job Import Production Readiness Read Only
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/job-import-production-readiness.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: cpanel-staging-operations
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 12
+    env:
+      SSH_HOST: ${{ secrets.CPANEL_SSH_HOST }}
+      SSH_PORT: ${{ secrets.CPANEL_SSH_PORT }}
+      SSH_USER: ${{ secrets.CPANEL_SSH_USER }}
+      SSH_KEY: ${{ secrets.CPANEL_SSH_PRIVATE_KEY }}
+      KNOWN_HOSTS: ${{ secrets.CPANEL_SSH_KNOWN_HOSTS }}
+      APP_PATH: ${{ secrets.CPANEL_APP_PATH }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate production readiness checker
+        run: php -l scripts/release/job_import_production_readiness.php
+      - name: Read-only production readiness over SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" == refs/heads/main ]]
+          [[ "$GITHUB_REPOSITORY" == enamul-mahian/JWTC ]]
+          for key in SSH_HOST SSH_PORT SSH_USER SSH_KEY KNOWN_HOSTS APP_PATH; do
+            [[ -n "${!key}" ]] || { echo "::error::Missing $key"; exit 1; }
+          done
+          [[ "$APP_PATH" == /home/dropoqux/joingallagher.uk ]]
+          umask 077
+          mkdir -p "$RUNNER_TEMP/jwtc-ssh"
+          printf '%s\n' "$SSH_KEY" > "$RUNNER_TEMP/jwtc-ssh/key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$RUNNER_TEMP/jwtc-ssh/known_hosts"
+          chmod 600 "$RUNNER_TEMP/jwtc-ssh/key"
+          ssh-keygen -y -P '' -f "$RUNNER_TEMP/jwtc-ssh/key" >/dev/null
+          encoded="$(base64 -w0 scripts/release/job_import_production_readiness.php)"
+          ssh -T -p "$SSH_PORT" -i "$RUNNER_TEMP/jwtc-ssh/key" \
+            -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$RUNNER_TEMP/jwtc-ssh/known_hosts" -o ConnectTimeout=20 \
+            "$SSH_USER@$SSH_HOST" "cd '$APP_PATH' && php -r 'eval(\"?>\".base64_decode(\"$encoded\"));'"
+      - name: Remove temporary identity
+        if: always()
+        run: rm -f "$RUNNER_TEMP/jwtc-ssh/key" "$RUNNER_TEMP/jwtc-ssh/known_hosts"
