@@ -178,4 +178,69 @@ class PortalOperationsTest extends TestCase
         config(['mail.mailers.studio_smtp'=>null]);
         $status=app(\App\Services\SupportNotifications::class)->notify($applicant,$ticket,'Still retained in the inbox.','failed:'.$ticket->id);$this->assertSame('failed',$status);$this->assertDatabaseHas('support_tickets',['id'=>$ticket->id]);
     }
+    public function test_admin_creates_custom_job_with_company_owner_and_audit(): void
+    {
+        $this->actingAs($this->admin)->get('/admin/jobs/create')
+            ->assertOk()->assertSee('Create custom job')->assertSee('Fixture company');
+        $payload=$this->payload();
+        $payload['is_publish']=1;
+        $payload['posting_permission']=1;
+        $payload['user_id']=$this->admin->id; // Never trust request-supplied ownership.
+        $this->post('/admin/jobs',$payload)->assertRedirect()->assertSessionHasNoErrors();
+        $created=Job::where('title','New fixture vacancy')->firstOrFail();
+        $this->assertSame($this->company->id,(int)$created->company_id);
+        $this->assertSame($this->employer->id,(int)$created->user_id);
+        $this->assertSame(1,(int)$created->is_publish);
+        $this->assertDatabaseHas('job_edit_events',['job_id'=>$created->id,'actor_id'=>$this->admin->id]);
+        $this->actingAs($this->employer)->get('/admin/jobs/create')->assertForbidden();
+    }
+
+    public function test_unapproved_employer_cannot_be_selected_for_admin_custom_post(): void
+    {
+        $this->employer->forceFill(['employer_approved_at'=>null])->save();
+        $payload=$this->payload();
+        $payload['posting_permission']=1;
+        $payload['is_publish']=0;
+        $this->actingAs($this->admin)->post('/admin/jobs',$payload)
+            ->assertSessionHasErrors('company_id');
+        $this->assertDatabaseMissing('jobs',['title'=>'New fixture vacancy']);
+    }
+
+    public function test_external_vacancy_requires_approval_and_explicit_publication_without_changing_jobs(): void
+    {
+        $id=DB::table('external_job_imports')->insertGetId([
+            'source'=>'uk_government_jobs',
+            'source_url'=>'https://www.jobs.service.gov.uk/jobs/6ad61edeb0af0cb429b49a30',
+            'source_hash'=>hash('sha256','https://www.jobs.service.gov.uk/jobs/6ad61edeb0af0cb429b49a30'),
+            'title'=>'External fixture vacancy', 'company_name'=>'Original employer',
+            'location'=>'London', 'salary'=>'£30,000 a year',
+            'posted_on'=>today()->subDays(1)->toDateString(),
+            'application_deadline'=>today()->addDays(8)->toDateString(),
+            'workplace'=>'onsite','employment_type'=>'permanent','schedule'=>'full_time',
+            'status'=>'approved','imported_by'=>$this->admin->id,
+            'created_at'=>now(),'updated_at'=>now(),
+        ]);
+        $this->get('/government-jobs/'.$id)->assertNotFound();
+        $jobs=DB::table('jobs')->count();
+        $this->actingAs($this->admin)->post('/admin/external-jobs/'.$id.'/publication',
+            ['action'=>'publish'])->assertSessionHasErrors();
+        $this->post('/admin/external-jobs/'.$id.'/publication',
+            ['action'=>'publish','publishing_rights'=>1])->assertRedirect();
+        $this->assertDatabaseHas('external_job_imports',['id'=>$id,'status'=>'published']);
+        $this->get('/government-jobs/'.$id)->assertOk()
+            ->assertSee('External fixture vacancy')->assertSee('Original employer')
+            ->assertSee('View original vacancy and apply');
+        $this->get('/search-jobs')->assertOk()->assertSee('External fixture vacancy');
+        $this->assertSame($jobs,DB::table('jobs')->count());
+        $this->post('/admin/external-jobs/'.$id.'/publication',['action'=>'publish','publishing_rights'=>1])
+            ->assertSessionHasErrors();
+        $this->actingAs($this->employer)->post('/admin/external-jobs/'.$id.'/publication',
+            ['action'=>'unpublish'])->assertForbidden();
+        $this->actingAs($this->admin)->post('/admin/external-jobs/'.$id.'/publication',
+            ['action'=>'unpublish'])->assertRedirect();
+        $this->get('/government-jobs/'.$id)->assertNotFound();
+        $this->assertDatabaseHas('external_job_imports',['id'=>$id,'status'=>'approved']);
+    }
+
+
 }
