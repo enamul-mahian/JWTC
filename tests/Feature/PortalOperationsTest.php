@@ -446,4 +446,48 @@ class PortalOperationsTest extends TestCase
     }
 
 
+    public function test_public_job_search_prioritizes_open_vacancies_and_preserves_closed_history(): void
+    {
+        $live=$this->job();
+        $live->update([
+            'title'=>'Open Fixture Vacancy',
+            'application_deadline'=>today()->addDays(5)->toDateString(),
+            'created_at'=>today()->subMonth(),
+        ]);
+        $closed=Job::create([
+            'user_id'=>$this->employer->id,'company_id'=>$this->company->id,
+            'job_category_id'=>806,'country_id'=>806,
+            'title'=>'Closed Fixture Vacancy',
+            'slug'=>'closed-fixture-post-'.uniqid(),
+            'job_status'=>'Approved','salary_type'=>'hourly',
+            'resume_receiving_email'=>'jobs@example.test',
+            'minimum_salary'=>14,'maximum_salary'=>17,
+            'job_responsibilities'=>'Historic role information',
+            'application_deadline'=>today()->subDay()->toDateString(),
+            'is_publish'=>1,'created_at'=>today(),'updated_at'=>today(),
+        ]);
+        $originalIds=Job::orderBy('id')->pluck('id')->all();
+        $response=$this->get('/search-jobs');
+        $response->assertOk()
+            ->assertSee('1 applications open')
+            ->assertSee('1 with passed deadlines')
+            ->assertSeeInOrder(['Open Fixture Vacancy','Closed Fixture Vacancy'])
+            ->assertSee('Applications closed')
+            ->assertSee('Applications open');
+        $this->get('/search-jobs?status=open')->assertOk()
+            ->assertSee('Open Fixture Vacancy')->assertDontSee('Closed Fixture Vacancy');
+        $this->get('/search-jobs?status=closed')->assertOk()
+            ->assertSee('Closed Fixture Vacancy')->assertDontSee('Open Fixture Vacancy');
+        $this->get('/vacancies/'.$closed->id)->assertOk()
+            ->assertSee('The application deadline for this listing has passed.');
+        $this->get('/')->assertOk()->assertSee('1</strong>Open applications',false);
+        $this->assertSame($originalIds,Job::orderBy('id')->pluck('id')->all());
+    }
+
+    public function test_job_search_application_status_validation_does_not_accept_unknown_values(): void
+    {
+        $this->getJson('/search-jobs?status=deleted')->assertUnprocessable();
+    }
+
+
 }
