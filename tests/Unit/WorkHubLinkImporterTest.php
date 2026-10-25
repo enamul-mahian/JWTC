@@ -106,4 +106,37 @@ class WorkHubLinkImporterTest extends TestCase
             (new WorkHubLinkImporter())->searchListingUrls($html)
         );
     }
+    public function test_pasted_work_hub_text_is_validated_and_parsed_into_a_draft(): void
+    {
+        Carbon::setTestNow('2026-10-25 10:00:00');
+        $pasted = "Multi Skilled Kitchen Fitter\n".
+            "Company: | Reading Borough Council\n".
+            "Salary: £32,293 to £38,262 a year\n".
+            "Hours: Full-time\n".
+            "Location: Reading, RG2 0QX\n".
+            "Working pattern: On-site\n".
+            "Job type: Permanent\n".
+            "Posting date: 15 Oct 2026\n".
+            "Closing date: 25 Oct 2026\n".
+            "Summary\n".
+            "Installing and refurbishing kitchens for council homes.\n";
+        $record = (new WorkHubLinkImporter())->parsePastedListing(
+            $pasted, 'https://www.jobs.service.gov.uk/jobs/6ad095af813f93ba4140e36e'
+        );
+        $this->assertNotNull($record);
+        $this->assertSame('Multi Skilled Kitchen Fitter', $record['title']);
+        $this->assertSame('Reading Borough Council', $record['company_name']);
+        $this->assertSame('2026-10-25', $record['application_deadline']);
+        $this->assertSame('draft', $record['status']);
+        $this->assertSame('https://www.jobs.service.gov.uk/jobs/6ad095af813f93ba4140e36e', $record['source_url']);
+        $this->assertNull((new WorkHubLinkImporter())->parsePastedListing(
+            str_replace('On-site', 'Hybrid', $pasted),
+            'https://www.jobs.service.gov.uk/jobs/6ad095af813f93ba4140e36e'
+        ));
+        $this->assertNull((new WorkHubLinkImporter())->parsePastedListing(
+            $pasted, 'https://www.jobs.service.gov.uk/jobs/search?pageNumber=1'
+        ));
+    }
+
+
 }
