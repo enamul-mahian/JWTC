@@ -188,3 +188,19 @@
     .jg-site .jg-job-details .jg-detail-main .content-area {padding:0!important}
     .jg-site .jg-job-details .jg-detail-main .card>.card-body {padding:16px!important}
 }
+
+/* Job details: isolated panels, legible summary and no ornamental overlays. */
+.jg-site .jg-job-details, .jg-site .jg-job-details::before, .jg-site .jg-job-details::after {background-image:none!important}
+.jg-site .jg-job-details .jg-detail-main .content-area {padding:0!important;background:none!important;box-shadow:none!important}
+.jg-site .jg-job-details .jg-detail-main .jg-job-hero {margin:0!important;padding:24px!important;border:1px solid #dce5f2!important;border-radius:16px!important;background:#fff!important;box-shadow:0 5px 20px rgba(14,38,80,.05)!important;gap:12px}
+.jg-site .jg-job-details .jg-detail-main .jg-job-hero h4 {font-size:clamp(22px,2.4vw,30px)!important;line-height:1.3!important;color:#0d2549!important;font-weight:750!important}
+.jg-site .jg-job-details .jg-detail-main .jg-job-hero img {width:110px!important;height:92px!important;object-fit:contain!important}
+.jg-site .jg-job-details .jg-detail-main .card {overflow:hidden!important;box-shadow:0 5px 20px rgba(14,38,80,.04)!important}
+.jg-site .jg-job-details .jg-detail-main .jobDetails_header {font-size:21px!important;color:#0d2549!important;font-weight:750!important;line-height:1.4!important;margin:0 0 18px!important}
+.jg-site .jg-job-details .jg-detail-main .jg-summary-card .row {display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:18px!important;margin:0!important}
+.jg-site .jg-job-details .jg-detail-main .jg-summary-card .row>[class*="col-"] {flex:none!important;max-width:none!important;width:auto!important;min-width:0!important;padding:0!important}
+.jg-site .jg-job-details .jg-detail-main .card p,.jg-site .jg-job-details .jg-detail-main .card li {font-size:15px!important;line-height:1.75!important;color:#263b57!important}
+.jg-site .jg-job-details .jg-detail-main .card ul {padding-left:20px!important;margin-bottom:12px!important}
+.jg-site .jg-job-details .jg-detail-main .jg-content-card .jobDetails_header:not(:first-child) {padding-top:18px!important;border-top:1px solid #e6ebf3!important}
+@media(max-width:1000px) {.jg-site .jg-job-details .jg-detail-main .jg-summary-card .row {grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:600px) {.jg-site .jg-job-details .jg-detail-main .jg-summary-card .row {grid-template-columns:minmax(0,1fr)!important}.jg-site .jg-job-details .jg-detail-main .jg-job-hero {padding:18px!important}.jg-site .jg-job-details .jg-detail-main .jg-job-hero img {width:85px!important;height:75px!important}}
