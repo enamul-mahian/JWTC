@@ -8,8 +8,16 @@ class JobPresentation {
   $max=$job->maximum_salary;
   if($min===null && $max===null)return 'Pay not stated; verify with the employer';
   $period=strtolower(trim((string)$job->salary_type));
-  $symbol=(string)(gs()?->currency_symbol ?? '£');
+  $estimated=str_contains((string)$job->additional_salary_info,'2026 indicative salary benchmark');
+  $symbol=$job->country?->name==='Ireland' ? '€' : (string)(gs()?->currency_symbol ?? '£');
   $range=$symbol.number_format((float)($min??$max),2).' – '.$symbol.number_format((float)($max??$min),2);
+  if($estimated) {
+   $scope=$job->country?->name==='Antigua and Barbuda'
+     ? 'UK comparison only; NOT a local wage rate or an employer pay offer'
+     : 'indicative 2026 market benchmark, NOT employer-confirmed pay';
+   return $range.' per '.($period==='yearly'?'year':$period==='hourly'?'hour':$period).
+     ' ('.$scope.'; gross; verify with the employer)';
+  }
   if($period==='hourly')return $range.' per hour (gross, advertised rate; employer confirmation required)';
   // Old records frequently have very small numbers marked monthly/weekly.
   // A falsely labelled period would mislead applicants. Fail closed in public UI.
@@ -22,9 +30,17 @@ class JobPresentation {
   $items=is_array($saved) ? array_values(array_filter($saved,static fn($f)=>is_array($f)&&!empty($f['question'])&&!empty($f['answer']))) : [];
   $country=(string)($job->country?->name??'');
   $period=strtolower(trim((string)$job->salary_type));
+  $estimated=str_contains((string)$job->additional_salary_info,'2026 indicative salary benchmark');
+  $symbol=$job->country?->name==='Ireland' ? '€' : (string)(gs()?->currency_symbol??'£');
   $monthly='Not calculated: the advertised pay period or hours need confirmation from the employer.';
+  if($estimated && $period==='yearly' && $job->minimum_salary!==null && $job->maximum_salary!==null){
+   $monthly='Indicative gross monthly equivalent of the benchmark: '.
+    $symbol.number_format((float)$job->minimum_salary/12,2).' – '.
+    $symbol.number_format((float)$job->maximum_salary/12,2).
+    ' (annual benchmark ÷ 12). This is not an employer pay offer.';
+  }
   if($period==='hourly' && $job->minimum_salary!==null && $job->maximum_salary!==null){
-   $symbol=(string)(gs()?->currency_symbol??'£');
+   $symbol=$job->country?->name==='Ireland' ? '€' : (string)(gs()?->currency_symbol??'£');
    $weeklyHours=37.5;
    $a=$symbol.number_format((float)$job->minimum_salary*$weeklyHours*52/12,2);
    $b=$symbol.number_format((float)$job->maximum_salary*$weeklyHours*52/12,2);
@@ -41,7 +57,8 @@ class JobPresentation {
       'Confirm EUR versus GBP currency and the employer-approved pay before relying on this advertisement. ';
   }
   $facts=[
-   ['question'=>'What pay is advertised and what does it mean?','answer'=>self::salarySummary($job).'. '.$regulatory.'Confirm the pay period, currency and contracted hours with the employer.'],
+   ['question'=>$estimated?'What is the indicative 2026 salary benchmark?':'What pay is advertised and what does it mean?',
+    'answer'=>self::salarySummary($job).'. '.$regulatory.'This is a market reference, not a confirmed vacancy offer. Confirm actual pay, currency and contracted hours with the employer.'],
    ['question'=>'How much is that per month before tax?','answer'=>$monthly],
    ['question'=>'Where is the job based?','answer'=>$country!=='' ? 'Recorded location: '.$country.($job->location_detail?' — '.$job->location_detail:'').'. Confirm the exact worksite and employment jurisdiction with the employer.' : 'The exact worksite must be confirmed with the employer.'],
    ['question'=>'How many positions and when does this job close?','answer'=>'Recorded vacancies: '.($job->vacancies ?: 'not specified').
