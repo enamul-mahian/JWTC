@@ -6,7 +6,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/cpanel-create-backup.yml'
-      - 'scripts/release/create_private_backup.php'
+      - 'scripts/release/create_approved_backup.php'
 
 permissions:
   contents: read
@@ -46,7 +46,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          php -l scripts/release/create_private_backup.php
+          php -l scripts/release/create_approved_backup.php
           for name in SSH_HOST SSH_PORT SSH_USER SSH_KEY KNOWN_HOSTS APP_PATH STAGING_DB_DATABASE STAGING_DB_USERNAME STAGING_DB_PASSWORD; do
             if [[ -z "${!name}" ]]; then
               echo "::error::Missing configuration: $name"
@@ -70,11 +70,11 @@ jobs:
           printf '%s\n' "$SSH_KEY" > "$RUNNER_TEMP/jwtc-stage-ssh/key"
           printf '%s\n' "$KNOWN_HOSTS" > "$RUNNER_TEMP/jwtc-stage-ssh/known_hosts"
           ssh-keygen -y -P '' -f "$RUNNER_TEMP/jwtc-stage-ssh/key" >/dev/null
-      - name: Create verified private backups without changing live application data
+      - name: Create verified mixed-engine-safe encrypted private backups
         shell: bash
         run: |
           set -euo pipefail
-          script_base64="$(base64 -w0 scripts/release/create_private_backup.php)"
+          script_base64="$(base64 -w0 scripts/release/create_approved_backup.php)"
           # Credentials travel over encrypted SSH stdin, never remote command
           # arguments, repository files, uploaded artifacts or printed output.
           python3 -c 'import os,json; print(json.dumps({"database":os.environ["STAGING_DB_DATABASE"],"username":os.environ["STAGING_DB_USERNAME"],"password":os.environ["STAGING_DB_PASSWORD"]}))' |
