@@ -133,4 +133,54 @@ class ExternalJobImportController extends Controller
             ->with('import_result', 'Import draft '. $id .' marked '. $data['decision'] .'. Not published.');
     }
 
+    public function publication(Request $request, int $id)
+    {
+        $this->authorizeAdmin($request);
+        $action = $request->validate([
+            'action' => ['required', 'in:publish,unpublish'],
+            'publishing_rights' => ['required_if:action,publish', 'accepted'],
+        ])['action'];
+        $result = DB::transaction(function () use ($id, $action, $request) {
+            $record = DB::table('external_job_imports')->where('id', $id)->lockForUpdate()->first();
+            if (!$record || !in_array($record->status, $action === 'publish' ? ['approved'] : ['published'], true)) {
+                return false;
+            }
+            if ($action === 'publish') {
+                $parsed = parse_url($record->source_url);
+                if (!is_array($parsed) || strtolower((string) ($parsed['scheme'] ?? '')) !== 'https'
+                    || !in_array(strtolower((string) ($parsed['host'] ?? '')), [
+                        'jobs.service.gov.uk', 'www.jobs.service.gov.uk'
+                    ], true)
+                    || $record->source !== 'uk_government_jobs'
+                    || !$record->application_deadline || !$record->posted_on
+                    || $record->application_deadline < today()->toDateString()
+                    || $record->posted_on < today()->subDays(14)->toDateString()
+                    || $record->posted_on > today()->toDateString()
+                    || $record->workplace !== 'onsite' || $record->employment_type !== 'permanent'
+                    || $record->schedule !== 'full_time') {
+                    return false;
+                }
+            }
+            $updated = DB::table('external_job_imports')
+                ->where('id', $id)->where('status', $record->status)
+                ->update(['status' => $action === 'publish' ? 'published' : 'approved',
+                    'updated_at' => now()]);
+            if ($updated) {
+                \Illuminate\Support\Facades\Log::info('External job publication status changed', [
+                    'external_import_id' => $id, 'actor_id' => $request->user()->id, 'action' => $action
+                ]);
+            }
+            return $updated > 0;
+        });
+        if (!$result) {
+            return redirect()->route('admin.external-jobs.index')
+                ->withErrors(['publication' => 'Job is not in the required review state or its source/eligibility is invalid.']);
+        }
+        return redirect()->route('admin.external-jobs.index')
+            ->with('import_result', 'External job #'.$id.' publication action completed: '.$action.'. '.(
+                $action === 'publish' ? 'Public link: '.route('government-jobs.show', $id)
+                    : 'Removed from public listings.'
+            ));
+    }
+
 }
