@@ -22,6 +22,11 @@ class Company extends Model
         return $values;
     }
 
+    public function user()
+    {
+        return $this->belongsTo(\App\Models\User::class, 'user_id');
+    }
+
     public function jobs()
     {
         return $this->hasMany(Job::class);
