@@ -354,6 +354,7 @@ class PortalOperationsTest extends TestCase
     public function test_hourly_job_faq_calculates_illustrative_monthly_amount_without_changing_original_salary(): void
     {
         $job=$this->job();
+        DB::table('countries')->where('id', 806)->update(['name' => 'United Kingdom']);
         $job->update([
             'salary_type'=>'hourly','minimum_salary'=>13,'maximum_salary'=>16,
             'faqs'=>json_encode([['question'=>'Is accommodation included?','answer'=>'Ask the employer about housing.']]),
