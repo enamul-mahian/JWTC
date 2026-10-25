@@ -138,7 +138,7 @@
                                     <div class="col-lg-4 col-md-4 col-sm-6">
                                         <p class="mb-1">{{ __('messages.Vacancy') }}: {{ $jobDetails?->vacancies }}</p>
                                         <p class="mb-1">{{ __('messages.Salary') }}:
-                                            {{ $jobDetails?->minimum_salary . ' - ' . $jobDetails?->maximum_salary }} {{ $jobDetails?->salary_type ? '(' . ucfirst($jobDetails->salary_type) . ')' : '' }}</p>
+                                            {{ \App\Services\JobPresentation::salarySummary($jobDetails) }}</p>
                                     </div>
                                     <div class="col-lg-4 col-md-4 col-sm-6">
                                         <p class="mb-1">{{ __('messages.Age') }}:

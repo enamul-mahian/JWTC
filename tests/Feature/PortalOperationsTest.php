@@ -351,4 +351,47 @@ class PortalOperationsTest extends TestCase
     }
 
 
+    public function test_hourly_job_faq_calculates_illustrative_monthly_amount_without_changing_original_salary(): void
+    {
+        $job=$this->job();
+        DB::table('countries')->where('id', 806)->update(['name' => 'United Kingdom']);
+        $job->update([
+            'salary_type'=>'hourly','minimum_salary'=>13,'maximum_salary'=>16,
+            'faqs'=>json_encode([['question'=>'Is accommodation included?','answer'=>'Ask the employer about housing.']]),
+        ]);
+        $faqs=\App\Services\JobPresentation::faqs($job->fresh());
+        $this->assertStringContainsString('37.5', $faqs[1]['answer']);
+        $this->assertStringContainsString('2,112.50', $faqs[1]['answer']);
+        $this->assertStringContainsString('not a confirmed monthly salary', $faqs[1]['answer']);
+        $this->assertStringContainsString('£12.71', $faqs[0]['answer']);
+        $this->assertTrue(collect($faqs)->contains(
+            fn ($f) => $f['question']==='Is accommodation included?'
+        ));
+        $this->assertSame(13, $job->fresh()->minimum_salary);
+        $this->assertSame('hourly', $job->fresh()->salary_type);
+    }
+
+    public function test_implausible_legacy_monthly_and_weekly_pay_does_not_appear_as_confirmed_salary(): void
+    {
+        $job=$this->job();
+        $job->update(['minimum_salary'=>11,'maximum_salary'=>16,'salary_type'=>'monthly']);
+        $this->assertStringContainsString('requires employer confirmation',
+            \App\Services\JobPresentation::salarySummary($job->fresh()));
+        $faqs=\App\Services\JobPresentation::faqs($job->fresh());
+        $this->assertStringContainsString('Not calculated', $faqs[1]['answer']);
+        $this->get('/vacancies/'.$job->id)->assertOk()
+            ->assertSee('Pay period requires employer confirmation');
+    }
+
+    public function test_ireland_job_faq_uses_euro_statutory_reference_without_fabricating_converted_pay(): void
+    {
+        $job=$this->job();
+        $countryId=DB::table('countries')->insertGetId(['name'=>'Ireland','code'=>'IE']);
+        $job->update(['country_id'=>$countryId,'salary_type'=>'hourly','minimum_salary'=>15,'maximum_salary'=>18]);
+        $faq=\App\Services\JobPresentation::faqs($job->fresh()->load('country'));
+        $this->assertStringContainsString('€14.15', $faq[0]['answer']);
+        $this->assertStringContainsString('EUR versus GBP', $faq[0]['answer']);
+        $this->assertDatabaseHas('jobs',['id'=>$job->id,'minimum_salary'=>15]);
+    }
+
 }
