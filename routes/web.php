@@ -1236,5 +1236,6 @@ Route::post('/support-center/notifications/{id}/retry',[\App\Http\Controllers\Su
 Route::prefix('admin/external-jobs')->middleware(['auth', 'admin_user'])->group(function () {
     Route::get('/', [\App\Http\Controllers\Admin\ExternalJobImportController::class, 'index'])->name('admin.external-jobs.index');
     Route::post('/upload', [\App\Http\Controllers\Admin\ExternalJobImportController::class, 'upload'])->middleware('throttle:10,1')->name('admin.external-jobs.upload');
+    Route::post('/from-link', [\App\Http\Controllers\Admin\ExternalJobImportController::class, 'importLink'])->middleware('throttle:3,1')->name('admin.external-jobs.import-link');
     Route::post('/{id}/review', [\App\Http\Controllers\Admin\ExternalJobImportController::class, 'review'])->whereNumber('id')->middleware('throttle:30,1')->name('admin.external-jobs.review');
 });
