@@ -81,7 +81,7 @@ class PortalOperationsTest extends TestCase
         $before=DB::table('site_chat_settings')->value('weekly_hours');
         $this->postJson('/admin/site-chat/presence',['available'=>1,'hours'=>[1=>['start'=>'01:00','end'=>'02:00']]])->assertOk();
         $this->assertSame($before,DB::table('site_chat_settings')->value('weekly_hours'));
-        $data['hours'][1]['end']='';$this->post('/admin/site-chat/settings',$data)->assertSessionHasErrors('hours');
+        $data['hours'][1]['end']='';$this->post('/admin/site-chat/settings',$data)->assertSessionHasErrors('hours.1.start');
         $this->actingAs($this->employer)->get('/admin/site-chat')->assertForbidden();
     }
     public function test_native_legacy_forms_escape_values_and_emit_csrf_and_method_fields(): void
