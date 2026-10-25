@@ -95,18 +95,52 @@ class SiteChatController extends Controller
     public function configure(Request $request)
     {
         $this->reviewer($request); abort_unless($this->settings(),503);
-        $data=$request->validate(['enabled'=>'required|boolean','available'=>'required|boolean','schedule_enabled'=>'sometimes|boolean','timezone'=>'sometimes|timezone','hours'=>'sometimes|array|max:7','hours.*.start'=>'nullable|date_format:H:i','hours.*.end'=>'nullable|date_format:H:i']);
-        $update=['enabled'=>(bool)$data['enabled'],'online_until'=>$data['enabled']&&$data['available'] ? now()->addSeconds(90):null,'updated_at'=>now()];
-        if($request->has('schedule_enabled')){
+        $data=$request->validate([
+            'enabled'=>'required|boolean',
+            'available'=>'required|boolean',
+            'schedule_enabled'=>'sometimes|boolean',
+            'timezone'=>'sometimes|timezone',
+            'hours'=>'sometimes|array|max:7',
+            'hours.*'=>'array',
+            'hours.*.closed'=>'sometimes|boolean',
+            'hours.*.start'=>'nullable|date_format:H:i',
+            'hours.*.end'=>'nullable|date_format:H:i',
+        ]);
+        $update=[
+            'enabled'=>(bool)$data['enabled'],
+            'online_until'=>$data['enabled'] && $data['available'] ? now()->addSeconds(90) : null,
+            'updated_at'=>now(),
+        ];
+        if ($request->has('schedule_enabled')) {
             $hours=[];
-            foreach($data['hours']??[] as $day=>$range){
-                if(!in_array((int)$day,range(1,7),true))throw \Illuminate\Validation\ValidationException::withMessages(['hours'=>'Use days Monday through Sunday.']);
-                $start=$range['start']??null;$end=$range['end']??null;
-                if((bool)$start!==(bool)$end || ($start && $start===$end))throw \Illuminate\Validation\ValidationException::withMessages(['hours'=>'Set both a start and an end time; use blank times for closed days.']);
-                if($start)$hours[$day]=['start'=>$start,'end'=>$end];
+            foreach ($data['hours']??[] as $day=>$range) {
+                if (!in_array((string)$day, ['1','2','3','4','5','6','7'], true)) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'hours'=>'Use Monday through Sunday only.',
+                    ]);
+                }
+                $start=$range['start']??null;
+                $end=$range['end']??null;
+                // Explicit Closed days, empty hours and 00:00–00:00 all
+                // represent closure. Never treat equal times as 24-hour open.
+                if (!empty($range['closed']) || (!$start && !$end)
+                    || ($start==='00:00' && $end==='00:00')) {
+                    continue;
+                }
+                if (!$start || !$end || $start===$end) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'hours.'.$day.'.start'=>'Choose distinct opening and closing times, or mark the day Closed.',
+                    ]);
+                }
+                $hours[$day]=['start'=>$start,'end'=>$end];
             }
-            if($data['schedule_enabled'] && !$hours)throw \Illuminate\Validation\ValidationException::withMessages(['hours'=>'Add at least one opening period.']);
-            $update+=['schedule_enabled'=>(bool)$data['schedule_enabled'],'timezone'=>$data['timezone']??'UTC','weekly_hours'=>json_encode($hours,JSON_THROW_ON_ERROR)];
+            // An entirely closed week is valid. The widget remains offline
+            // when schedule limits apply, while visitor messages still work.
+            $update += [
+                'schedule_enabled'=>(bool)$data['schedule_enabled'],
+                'timezone'=>$data['timezone']??'UTC',
+                'weekly_hours'=>json_encode($hours,JSON_THROW_ON_ERROR),
+            ];
         }
         DB::table('site_chat_settings')->where('id',1)->update($update);
         return $request->expectsJson()?response()->json(['saved'=>true]):back()->with('success','Chat settings saved.');
