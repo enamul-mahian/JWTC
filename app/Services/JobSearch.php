@@ -4,7 +4,7 @@ use App\Models\Job;
 use Illuminate\Http\Request;
 class JobSearch {
  public function data(Request $r): array {
-  $r->validate(['title'=>'nullable|string|max:120','country_id'=>'nullable|integer','location'=>'nullable|integer','category_id'=>'nullable|integer','salary_type'=>'nullable|string|in:hourly,daily,weekly,monthly,yearly','page'=>'nullable|integer|min:1']);
+  $r->validate(['title'=>'nullable|string|max:120','country_id'=>'nullable|integer','location'=>'nullable|integer','category_id'=>'nullable|integer','salary_type'=>'nullable|string|in:hourly,daily,weekly,monthly,yearly','page'=>'nullable|integer|min:1','status'=>'nullable|in:all,open,closed,unspecified']);
   $title=trim((string)$r->input('title',''));$country_id=$r->input('country_id')?:$r->input('location');$category_id=$r->input('category_id');
   $q=Job::with(['company','country','job_category'])->where('is_publish',1);
   if($title!=='')$q->where(function($q)use($title){$needle='%'.mb_strtolower($title).'%';$q->whereRaw('LOWER(title) LIKE ?',[$needle])->orWhereRaw('LOWER(job_context) LIKE ?',[$needle])->orWhereRaw('LOWER(job_responsibilities) LIKE ?',[$needle])->orWhereHas('company',fn($c)=>$c->whereRaw('LOWER(company_name) LIKE ?',[$needle]));});
