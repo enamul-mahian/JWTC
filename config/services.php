@@ -50,4 +50,8 @@ return [
         'secret' => env('HCAPTCHA_SECRET'),
     ],
 
+    'government_jobs' => [
+        'import_user_id' => env('GOVERNMENT_JOBS_IMPORT_USER_ID'),
+    ],
+
 ];
