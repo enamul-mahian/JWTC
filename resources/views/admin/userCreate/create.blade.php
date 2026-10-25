@@ -25,8 +25,8 @@
                             </div>
 
                             <div class=" mb-3">
-                                <label for="email"> Phone  <span class="text-danger">*</span></label>
-                                <input type="number" id="numberInput" name="phone" class="form-control" value="{{ old('phone') }}" placeholder="enter phone">
+                                <label for="email"> Phone (optional)</label>
+                                <input type="tel" id="numberInput" name="phone" class="form-control" value="{{ old('phone') }}" placeholder="enter phone">
                             </div>
 
                             <div class=" mb-3">
@@ -54,12 +54,3 @@
         </div>
     </section>
 @endsection
-@push('script')
-<script>
-document.getElementById("numberInput").addEventListener("input", function() {
-    if (this.value < 0) {
-        this.value = 0;
-    }
-});
-</script>
-@endpush

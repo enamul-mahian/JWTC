@@ -59,7 +59,7 @@ class DashboardController extends Controller
         $request->validate([
             'name' => 'required|max:255|string',
             'email' => 'required|string|email|max:255|unique:users,email',
-            'phone' => 'required|max:255',
+            'phone' => 'nullable|string|max:20',
             'password' => 'required|max:255|string',
             'role' => 'required|max:255|string',
         ]);
@@ -69,7 +69,7 @@ class DashboardController extends Controller
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
-            'phone' => $request->phone,
+            'phone' => $request->input('phone') ?: null,
             'password' => Hash::make($request->password),
             'user_type' => $request->role,
         ]);
@@ -104,7 +104,7 @@ class DashboardController extends Controller
                 'max:255',
                 Rule::unique('users')->ignore($user->id),
             ],
-            'phone' => 'required|max:255',
+            'phone' => 'nullable|string|max:20',
             'role' => 'required|max:255|string',
         ]);
 
