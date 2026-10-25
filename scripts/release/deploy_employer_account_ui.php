@@ -57,7 +57,7 @@ try {
     if (array_diff(array_keys($hashes), $allowed)) {
         throw new RuntimeException('Unexpected release file');
     }
-    $archive = $home.'/jwtc-private-workhub-incoming/'.$sha.'/employer-ui-release.tar.gz';
+    $archive = $home.'/jwtc-private-workhub-incoming/'.$sha.'/employer-account-release.tar.gz';
     if (!is_file($archive) || is_link($archive)
         || !hash_equals((string) ($payload['archive_sha256'] ?? ''), hash_file('sha256', $archive))) {
         throw new RuntimeException('Signed release archive unavailable or corrupted');
