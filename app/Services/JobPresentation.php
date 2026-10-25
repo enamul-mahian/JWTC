@@ -15,7 +15,7 @@ class JobPresentation {
    $scope=$job->country?->name==='Antigua and Barbuda'
      ? 'UK comparison only; NOT a local wage rate or an employer pay offer'
      : 'indicative 2026 market benchmark, NOT employer-confirmed pay';
-   return $range.' per '.($period==='yearly'?'year':$period==='hourly'?'hour':$period).
+   return $range.' per '.($period==='yearly' ? 'year' : ($period==='hourly' ? 'hour' : $period)).
      ' ('.$scope.'; gross; verify with the employer)';
   }
   if($period==='hourly')return $range.' per hour (gross, advertised rate; employer confirmation required)';
