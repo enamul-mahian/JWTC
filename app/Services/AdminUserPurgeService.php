@@ -187,6 +187,25 @@ final class AdminUserPurgeService
             throw new RuntimeException('Shared account photo; deletion stopped.');
         }
 
+        // A photo may appear in multiple models, not merely this column.
+        // Fail closed if another account references that physical basename.
+        if ($folder === 'assets/images/profilephoto') {
+            foreach ([
+                ['companies', 'photo'],
+                ['employer_information', 'photo'],
+            ] as [$related, $photoColumn]) {
+                if (Schema::hasTable($related)
+                    && DB::table($related)->where($photoColumn, $filename)
+                        ->where('user_id', '!=', $owner)->exists()) {
+                    throw new RuntimeException('Photo is shared; deletion stopped.');
+                }
+            }
+            if (DB::table('users')->where('photo', $filename)
+                ->where('id', '!=', $owner)->exists()) {
+                throw new RuntimeException('Photo is shared; deletion stopped.');
+            }
+        }
+
         // Older releases wrote relative to Laravel's project root; newer
         // deployments may place the same file in public/. Check both.
         foreach ([base_path($folder), public_path($folder)] as $directory) {
