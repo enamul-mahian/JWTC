@@ -69,13 +69,13 @@
                                 <div class="contact-icon">
                                     <i class="lni-map-marker"></i>
                                 </div>
-                                <p>{{ __('messages.MainOffice') }}: {{ $setting->business_address }}<br> {{ __('messages.CustomerCenter') }}: {{ $setting->address_line }}</p>
+                                <p>{{ __('messages.MainOffice') }}: {{ $setting?->business_address }}<br> {{ __('messages.CustomerCenter') }}: {{ $setting?->address_line }}</p>
                             </div>
                             <div class="single-contact">
                                 <div class="contact-icon">
                                     <i class="lni-envelope"></i>
                                 </div>
-                                <p><a href="mailto:{{ $setting->business_email }}">{{ __('messages.CustomerSupport') }}: {{ $setting->business_email }}
+                                <p><a href="mailto:{{ $setting?->business_email }}">{{ __('messages.CustomerSupport') }}: {{ $setting?->business_email }}
                                 </a></p>
                             </div>
                             <div class="single-contact">
@@ -83,10 +83,10 @@
                                     <i class="lni-phone-handset"></i>
                                 </div>
                                 @if(!empty($setting?->phone_1))
-                                <p><a href="tel:{{ preg_replace('/[^+0-9]/', '', (string) $setting->phone_1) }}">{{ __('messages.MainOffice') }}: {{ $setting->phone_1 }}</a></p>
+                                <p><a href="tel:{{ preg_replace('/[^+0-9]/', '', (string) $setting?->phone_1) }}">{{ __('messages.MainOffice') }}: {{ $setting?->phone_1 }}</a></p>
                                 @endif
                                 @if(!empty($setting?->phone_2))
-                                <p><a href="tel:{{ preg_replace('/[^+0-9]/', '', (string) $setting->phone_2) }}">{{ __('messages.CustomerSupport') }}: {{ $setting->phone_2 }}</a></p>
+                                <p><a href="tel:{{ preg_replace('/[^+0-9]/', '', (string) $setting?->phone_2) }}">{{ __('messages.CustomerSupport') }}: {{ $setting?->phone_2 }}</a></p>
                                 @endif
                             </div>
                         </div>
