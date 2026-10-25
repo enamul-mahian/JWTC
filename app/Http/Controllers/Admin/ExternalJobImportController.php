@@ -23,7 +23,7 @@ class ExternalJobImportController extends Controller
     {
         $this->authorizeAdmin($request);
         $jobs = DB::table('external_job_imports')->orderByDesc('id')->paginate(25);
-        return response()->view('admin.job.external-import', compact('jobs'))->header('Cache-Control', 'private, no-store');
+        return response()->view('admin.job.external-import', ['jobs' => $jobs, 'setting' => gs()])->header('Cache-Control', 'private, no-store');
     }
 
     public function importLink(Request $request, WorkHubLinkImporter $importer)
@@ -41,6 +41,28 @@ class ExternalJobImportController extends Controller
 
         return redirect()->route('admin.external-jobs.index')->with('import_result',
             "Checked {$result['checked']} vacancies, saved {$result['added']} new drafts; skipped {$result['skipped']}. Nothing published.");
+    }
+
+    public function importPasted(Request $request, WorkHubLinkImporter $importer)
+    {
+        $this->authorizeAdmin($request);
+        $data = $request->validate([
+            'source_url' => ['required', 'string', 'max:2048'],
+            'vacancy_text' => ['required', 'string', 'min:90', 'max:50000'],
+        ]);
+        try {
+            $result = $importer->importPastedText(
+                $data['source_url'], $data['vacancy_text'], (int) $request->user()->id
+            );
+        } catch (InvalidArgumentException $error) {
+            return back()->withInput()->withErrors(['vacancy_text' => $error->getMessage()]);
+        } catch (\Throwable $error) {
+            report($error);
+            return back()->withInput()->withErrors(['vacancy_text' => 'Cannot save the draft right now. Please try again later.']);
+        }
+        return redirect()->route('admin.external-jobs.index')->with('import_result',
+            $result['added'] ? 'Vacancy text imported as a new draft. Nothing published.'
+                : 'This vacancy is already in the drafts list. Nothing published.');
     }
 
     public function upload(Request $request)

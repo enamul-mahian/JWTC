@@ -120,6 +120,33 @@
         </div>
     </div>
 
+    <div class="card jw-import-card mb-4" id="manual-workhub-import">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-center flex-wrap gap-2 mb-2">
+                <h2 class="fs-5 fw-bold mb-0">Work Hub blocked? Paste the vacancy text</h2>
+                <span class="badge bg-warning-subtle text-warning-emphasis">HTTP 403 fallback</span>
+            </div>
+            <p class="jw-import-muted mb-3">Work Hub sometimes rejects automated requests from the hosting server. When a link import reports <strong>HTTP 403</strong>, open the original vacancy in your own browser, select and copy the page text, then paste it here. No CSV file is needed.</p>
+            <form method="POST" action="{{ route('admin.external-jobs.import-text') }}">
+                @csrf
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label fw-semibold" for="manual_source_url">Original vacancy URL</label>
+                        <input type="url" class="form-control" id="manual_source_url" name="source_url" maxlength="2048" required
+                            value="{{ old('source_url') }}" placeholder="https://www.jobs.service.gov.uk/jobs/..." autocomplete="off">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold" for="vacancy_text">Full vacancy page text</label>
+                        <textarea id="vacancy_text" name="vacancy_text" class="form-control" rows="7" minlength="90" maxlength="50000"
+                            placeholder="Multi Skilled Kitchen Fitter&#10;Company: Reading Borough Council&#10;Salary: £32,293 to £38,262 a year&#10;Hours: Full-time&#10;Location: Reading, RG2 0QX&#10;Working pattern: On-site&#10;Job type: Permanent&#10;Posting date: 15 Oct 2026&#10;Closing date: 25 Oct 2026&#10;Summary&#10;..." required>{{ old('vacancy_text') }}</textarea>
+                        <div class="form-text">Include the job title, Company, Hours, Working pattern, Job type, Posting date and Closing date. We validate eligibility and duplicates before saving a draft.</div>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-outline-primary mt-3">Import copied vacancy as draft</button>
+            </form>
+        </div>
+    </div>
+
     <div class="card jw-import-card">
         <div class="card-body p-0">
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 p-4 border-bottom">

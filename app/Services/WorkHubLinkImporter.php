@@ -17,6 +17,7 @@ final class WorkHubLinkImporter
 {
     private const ORIGIN = 'https://www.jobs.service.gov.uk';
     private const MAX_SEARCH_LISTINGS = 10;
+    private ?int $lastFetchStatus = null;
 
     /**
      * Only allow HTTPS Work Hub search URLs and 24-character job IDs.
@@ -54,6 +55,7 @@ final class WorkHubLinkImporter
         $response = Http::withoutRedirecting()->connectTimeout(5)->timeout(8)
             ->withHeaders(['Accept' => 'text/html', 'User-Agent' => 'JWTC-AdminJobImport/1.0'])
             ->get($url);
+        $this->lastFetchStatus = $response->status();
         if ($response->status() !== 200 || strlen($response->body()) > 2000000) {
             return null;
         }
@@ -165,12 +167,84 @@ final class WorkHubLinkImporter
         ];
     }
 
+
+    /**
+     * Manual fallback for publishers that refuse server-side HTTP requests.
+     * Admin copies publicly visible vacancy text from their own browser.
+     * Does not fetch URLs, execute user HTML, or bypass remote access controls.
+     * Eligibility and deduplication reuse the same strict validated listing parser.
+     */
+    public function parsePastedListing(string $pasted, string $sourceUrl): ?array
+    {
+        $normalized = $this->normalizeUrl($sourceUrl);
+        if ($normalized['type'] !== 'job' || strlen($pasted) < 90 || strlen($pasted) > 50000) {
+            return null;
+        }
+        $pasted = str_replace(["\r\n", "\r", "\xc2\xa0"], ["\n", "\n", " "], $pasted);
+        $lines = array_values(array_filter(array_map('trim', explode("\n", $pasted)), static fn ($line) => $line !== ''));
+        $companyIndex = null;
+        $fields = [];
+        $labels = ['company','salary','hours','location','working pattern','job type','posting date','closing date'];
+        foreach ($lines as $index => $line) {
+            if (!preg_match('/^(Company|Salary|Hours|Location|Working pattern|Job type|Posting date|Closing date)\s*:\s*(.*)$/iu', $line, $parts)) {
+                continue;
+            }
+            $key = strtolower($parts[1]);
+            if (!in_array($key, $labels, true)) continue;
+            $value = trim(ltrim(trim($parts[2]), '| '));
+            if ($value === '' && isset($lines[$index + 1])) {
+                $value = trim(ltrim($lines[$index + 1], '| '));
+            }
+            if ($value !== '') $fields[$key] = mb_substr($value, 0, 1000);
+            if ($key === 'company' && $companyIndex === null) $companyIndex = $index;
+        }
+        if ($companyIndex === null || $companyIndex < 1) return null;
+        $title = trim($lines[$companyIndex - 1]);
+        if ($title === '' || mb_strlen($title) > 255 || str_contains($title, ':')) return null;
+
+        $summary = '';
+        foreach ($lines as $index => $line) {
+            if (preg_match('/^(?:Summary|Job summary)\s*:?$/iu', $line)) {
+                $summary = $lines[$index + 1] ?? '';
+                break;
+            }
+        }
+        $escape = static fn ($value) => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $html = '<main><h1>'.$escape($title).'</h1><table>';
+        foreach ($labels as $label) {
+            if (isset($fields[$label])) {
+                $html .= '<tr><th>'.$escape(ucfirst($label)).':</th><td>'.$escape($fields[$label]).'</td></tr>';
+            }
+        }
+        $html .= '</table><h2>Summary</h2><p>'.$escape($summary).'</p></main>';
+        return $this->parseListing($html, $normalized['url']);
+    }
+
+    public function importPastedText(string $sourceUrl, string $pasted, int $adminId): array
+    {
+        $record = $this->parsePastedListing($pasted, $sourceUrl);
+        if ($record === null) {
+            throw new InvalidArgumentException('Pasted details are incomplete, expired, older than 14 days, or not Permanent / Full-time / On-site. Copy the full vacancy page including its title and dates.');
+        }
+        $record['imported_by'] = $adminId;
+        $record['created_at'] = now();
+        $record['updated_at'] = now();
+        $added = DB::table('external_job_imports')->insertOrIgnore($record);
+        return ['added' => (int) ($added > 0), 'duplicate' => $added === 0];
+    }
+
     public function import(string $sourceUrl, int $adminId): array
     {
         $source = $this->normalizeUrl($sourceUrl);
         $html = $this->fetch($source['url']);
         if ($html === null) {
-            throw new InvalidArgumentException('Work Hub did not return a usable page. Please try again.');
+            if ($this->lastFetchStatus === 403) {
+                throw new InvalidArgumentException('Work Hub returned HTTP 403 (Forbidden) to our server. Use the Paste vacancy text option below; repeating the same URL cannot resolve this block.');
+            }
+            if ($this->lastFetchStatus === 404) {
+                throw new InvalidArgumentException('The source vacancy was not found (HTTP 404). Check the link.');
+            }
+            throw new InvalidArgumentException('Work Hub did not return a usable page. Use the Paste vacancy text option below.');
         }
         $links = $source['type'] === 'job'
             ? [$source['url']]
