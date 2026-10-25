@@ -43,6 +43,28 @@ class ExternalJobImportController extends Controller
             "Checked {$result['checked']} vacancies, saved {$result['added']} new drafts; skipped {$result['skipped']}. Nothing published.");
     }
 
+    public function importPasted(Request $request, WorkHubLinkImporter $importer)
+    {
+        $this->authorizeAdmin($request);
+        $data = $request->validate([
+            'source_url' => ['required', 'string', 'max:2048'],
+            'vacancy_text' => ['required', 'string', 'min:90', 'max:50000'],
+        ]);
+        try {
+            $result = $importer->importPastedText(
+                $data['source_url'], $data['vacancy_text'], (int) $request->user()->id
+            );
+        } catch (InvalidArgumentException $error) {
+            return back()->withInput()->withErrors(['vacancy_text' => $error->getMessage()]);
+        } catch (\Throwable $error) {
+            report($error);
+            return back()->withInput()->withErrors(['vacancy_text' => 'Cannot save the draft right now. Please try again later.']);
+        }
+        return redirect()->route('admin.external-jobs.index')->with('import_result',
+            $result['added'] ? 'Vacancy text imported as a new draft. Nothing published.'
+                : 'This vacancy is already in the drafts list. Nothing published.');
+    }
+
     public function upload(Request $request)
     {
         $this->authorizeAdmin($request);
