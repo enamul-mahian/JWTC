@@ -66,7 +66,8 @@ class JobPresentation {
    ['question'=>'Where is the job based?','answer'=>$country!=='' ? 'Recorded location: '.$country.($job->location_detail?' — '.$job->location_detail:'').'. Confirm the exact worksite and employment jurisdiction with the employer.' : 'The exact worksite must be confirmed with the employer.'],
    ['question'=>'How many positions and when does this job close?','answer'=>'Recorded vacancies: '.($job->vacancies ?: 'not specified').
       '. Listed application deadline: '.($job->application_deadline ? substr((string)$job->application_deadline,0,10) : 'not specified').
-      '. Check directly with the employer that these vacancies are still recruiting before you apply.'],
+      '. '.(\App\Services\JobDateRevision::note($job)
+         ?? 'Check directly with the employer that these vacancies are still recruiting before you apply.')],
   ];
   $normalized=[];
   foreach(array_merge($facts,$items) as $faq){
