@@ -1,4 +1,4 @@
-name: Deploy Work Hub Admin Dashboard UI
+name: Deploy Work Hub Import and Copy-Paste Fallback
 
 on:
   push:
@@ -60,7 +60,7 @@ jobs:
           set -euo pipefail
           mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs
           composer install --no-interaction --prefer-dist --no-progress
-          php artisan test --filter=WorkHubLinkImporterTest --no-ansi
+          php artisan test --filter='WorkHubLinkImporterTest|PortalOperationsTest' --no-ansi
 
       - name: Prepare verified private package and SSH identity
         shell: bash
