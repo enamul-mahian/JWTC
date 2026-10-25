@@ -66,9 +66,9 @@ $lists=function($name)use($job){$value=old($name,$job->{$name});if(is_array($val
 </div></fieldset>
 
 <fieldset class="jg-editor-panel"><legend>4. Brand and frequently asked questions</legend><div class="jg-form-grid"><label>Job / company logo<input name="logo" type="file" accept="image/png,image/jpeg,image/webp"><small>PNG, JPG or WebP, up to 2 MB.</small></label><div>@if(\App\Services\JobPresentation::logo($job))<img class="jg-job-logo" src="{{ \App\Services\JobPresentation::logo($job) }}" alt="Current job logo"><label><input type="checkbox" name="remove_logo" value="1"> Remove current logo</label>@endif</div></div>
-<p>FAQs are prepared from the job details. Edit or remove any answer before saving.</p>
-<input type="hidden" name="faq_editor" value="1"><div data-faq-rows @if(!$job->exists) data-faq-auto @endif>@php($faqRows=old('faq_question')!==null ? collect(old('faq_question'))->map(fn($q,$i)=>['question'=>$q,'answer'=>old('faq_answer.'.$i,'')])->all() : \App\Services\JobPresentation::faqs($job))
+<p>Only FAQs saved below will appear on this job. Remove any row (or remove all rows) and click Save to delete it permanently. Use <strong>Generate from current details</strong> only when you want suggested answers; review them before saving.</p>
+<input type="hidden" name="faq_editor" value="1"><div data-faq-rows>@php($faqRows=old('faq_editor')!==null ? collect(old('faq_question',[]))->map(fn($q,$i)=>['question'=>$q,'answer'=>old('faq_answer.'.$i,'')])->all() : \App\Services\JobPresentation::faqs($job))
 @foreach($faqRows as $faq)<div class="jg-faq-row"><label>Question<input name="faq_question[]" maxlength="250" value="{{ $faq['question'] }}"></label><label>Answer<textarea name="faq_answer[]" maxlength="2000" rows="2">{{ $faq['answer'] }}</textarea></label><button type="button" data-remove-faq>Remove FAQ</button></div>@endforeach</div>
 <button type="button" class="jg-button-secondary" data-add-faq>Add FAQ</button> <button type="button" class="jg-button-secondary" data-generate-faq>Generate from current details</button><small data-faq-feedback role="status"></small>
 </fieldset>
-@once @push('script')<script defer src="{{ asset('theme/job-editor.js') }}?v=20261023-1"></script>@endpush @endonce
+@once @push('script')<script defer src="{{ asset('theme/job-editor.js') }}?v=20261026-faq-persist-1"></script>@endpush @endonce

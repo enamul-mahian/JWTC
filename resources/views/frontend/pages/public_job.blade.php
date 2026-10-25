@@ -4,14 +4,6 @@
 <section class="jg-wrap jg-job-detail"><a href="{{ route('search-jobs') }}" class="jg-text-link">← Back to jobs</a><div class="jg-detail-card"><h1>{{ $job->title }}</h1><div class="jg-detail-company">@if(\App\Services\JobPresentation::logo($job))<img class="jg-job-logo" src="{{ \App\Services\JobPresentation::logo($job) }}" alt="{{ $job->company?->company_name }} logo">@else<span class="jg-company-monogram" role="img" aria-label="Generated company initials; not an official employer logo">{{ mb_substr($job->company?->company_name ?? 'J', 0, 1) }}</span>@endif<div><h2>{{ $job->company?->company_name ?? 'Hiring employer' }}</h2><div class="jg-job-meta"><span>⌖ {{ $job->country?->name ?? 'See description' }}</span><span>◉ {{ \App\Services\JobPresentation::salarySummary($job) }}</span></div>
 @if($job->publicPosterEmail())<a href="mailto:{{ $job->publicPosterEmail() }}">{{ $job->publicPosterEmail() }}</a>@endif
 </div></div>
-@if(\App\Services\JobDateRevision::note($job))
-<div class="jg-notice" role="note">
-<strong>Website administrator's date revision:</strong>
-Administrative listing reference date: {{ \Illuminate\Support\Carbon::parse(\App\Services\JobDateRevision::referenceForId((int)$job->id))->format('d M Y') }}
-(not this vacancy's original publication date).
-{{ \App\Services\JobDateRevision::note($job) }}
-</div>
-@endif
 @if($job->application_deadline && \Illuminate\Support\Carbon::parse($job->application_deadline)->endOfDay()->isPast())<p class="jg-notice">The application deadline for this listing has passed.</p>
 @elseif(auth()->check() && auth()->user()->user_type === \App\Enum\UserType::JOB_SEEKER)<a class="jg-button" href="{{ route('job-details', $job->id) }}">Continue to application →</a>
 @else<a class="jg-button" href="{{ route('jobseeker.login') }}">Sign in to apply for this job</a><p class="jg-helper">You need a job seeker account and the required application code to apply.</p>@endif
@@ -26,6 +18,6 @@ Administrative listing reference date: {{ \Illuminate\Support\Carbon::parse(\App
 @foreach(['Job Description'  => $job->job_context, 'Key Responsibilities' => $job->job_responsibilities, 'Requirements' => $job->additional_requirements, 'Workplace' => $job->work_place, 'Employment Type' => $job->publicEmploymentLabels(), 'Job Level' => $job->job_level, 'Benefits' => $job->other_benefits, 'Additional Salary Information' => $job->additional_salary_info, 'How to Apply' => $job->apply_procedure] as $heading => $text)
 @if($text)<section class="jg-job-copy"><h2>{{ $heading }}</h2><div class="jg-rich-copy">{!! $job->publicDescriptionHtml($text) !!}</div></section>@endif
 @endforeach
-@if($job->application_deadline)<p class="jg-helper">{{ \App\Services\JobDateRevision::applies($job) ? 'Administrator-revised closing date (not employer-confirmed)' : 'Application deadline' }}: {{ \Illuminate\Support\Carbon::parse($job->application_deadline)->format('d M Y') }}</p>@endif
+@if($job->application_deadline)<p class="jg-helper">Application deadline: {{ \Illuminate\Support\Carbon::parse($job->application_deadline)->format('d M Y') }}@if(\App\Services\JobDateRevision::applies($job)) <span title="Closing date updated by the website; confirm current availability with the employer">(website-updated; confirm with employer)</span>@endif</p>@endif
 @php($jgFaqs=\App\Services\JobPresentation::faqs($job)) @if($jgFaqs)<section class="jg-job-copy"><h2>Frequently asked questions</h2>@foreach($jgFaqs as $faq)<details class="jg-faq-public"><summary>{{ $job->publicDescription($faq['question']??'') }}</summary><p>{{ $job->publicDescription($faq['answer']??'') }}</p></details>@endforeach</section>@endif</div></section>
 @endsection
