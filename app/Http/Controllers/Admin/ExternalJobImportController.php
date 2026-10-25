@@ -138,8 +138,10 @@ class ExternalJobImportController extends Controller
         $this->authorizeAdmin($request);
         $action = $request->validate([
             'action' => ['required', 'in:publish,unpublish'],
-            'publishing_rights' => ['required_if:action,publish', 'accepted'],
         ])['action'];
+        if ($action === 'publish') {
+            $request->validate(['publishing_rights' => ['required', 'accepted']]);
+        }
         $result = DB::transaction(function () use ($id, $action, $request) {
             $record = DB::table('external_job_imports')->where('id', $id)->lockForUpdate()->first();
             if (!$record || !in_array($record->status, $action === 'publish' ? ['approved'] : ['published'], true)) {
