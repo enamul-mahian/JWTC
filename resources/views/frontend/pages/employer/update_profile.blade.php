@@ -9,7 +9,11 @@
         }
     </style>
 @endpush
+@push('page-style')
+    <link rel="stylesheet" href="{{ asset('theme/employer-account.css') }}?v=20261025-1">
+@endpush
 @section('content')
+    <div class="jg-employer-account">
     <!-- Page Header Start -->
     <div class="page-header">
         <div class="container">
@@ -25,15 +29,13 @@
     <!-- Page Header End -->
 
     <!-- Content section Start -->
-    <section id="content" class="section-padding">
+    <section id="content" class="section-padding jg-employer-account-content">
         <div class="container">
-            <div class="row">
-                <div class="col-lg-3 col-md-12 col-xs-12">
-                    <div class="right-sideabr">
-                        @include('frontend.pages.employer.sideMenu')
-                    </div>
-                </div>
-                <div class="col-lg-9 col-md-6 col-xs-12 ">
+            <div class="row jg-employer-account-grid">
+                <aside class="col-lg-3 col-md-12 col-xs-12 jg-account-side" aria-label="Employer account menu">
+                    @include('frontend.pages.employer.sideMenu')
+                </aside>
+                <div class="col-lg-9 col-md-12 col-xs-12 jg-account-main">
                     <div class="page-login-form box">
                         <h3>{{ __('messages.UpdateProfile') }}</h3>
                         <form action="{{ route('employer-profile.update', \Auth::user()->id) }}" method="POST"
@@ -173,6 +175,7 @@
         </div>
     </section>
     <!-- Content section End -->
+    </div>
 @endsection
 
 @push('script')
