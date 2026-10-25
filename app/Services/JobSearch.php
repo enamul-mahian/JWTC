@@ -11,7 +11,16 @@ class JobSearch {
   if($country_id)$q->where('country_id',$country_id);
   if($category_id)$q->where('job_category_id',$category_id);
   if($r->filled('salary_type'))$q->whereRaw('LOWER(TRIM(salary_type)) = ?',[$r->input('salary_type')]);
-  $jobs=$q->orderByDesc('created_at')->orderByDesc('id')->paginate(10)->withQueryString();
+  // Status is based on the actual closing date, not publication alone.
+  $today=now()->toDateString();
+  $openJobCount=(clone $q)->whereDate('application_deadline','>=',$today)->count();
+  $closedJobCount=(clone $q)->whereDate('application_deadline','<',$today)->count();
+  $status=(string)$r->input('status','all');
+  if($status==='open')$q->whereDate('application_deadline','>=',$today);
+  if($status==='closed')$q->whereDate('application_deadline','<',$today);
+  if($status==='unspecified')$q->whereNull('application_deadline');
+  $jobs=$q->orderByRaw('CASE WHEN application_deadline >= ? THEN 0 WHEN application_deadline IS NULL THEN 1 ELSE 2 END',[$today])
+   ->orderByDesc('created_at')->orderByDesc('id')->paginate(10)->withQueryString();
   $locations=\App\Models\Country::whereIn('id',\Illuminate\Support\Facades\DB::table('job_location_options')->where('enabled',true)->select('country_id'))->orderBy('name')->get(['id','name']);
   $job_categories=\App\Models\Dashboard\JobCategory::whereStatus(1)->orderBy('name')->get();
   // External government jobs are not employer-owned vacancies. Show them
@@ -28,6 +37,6 @@ class JobSearch {
    });
    $governmentJobs=$external->orderByDesc('posted_on')->orderByDesc('id')->limit(6)->get();
   }
-  return compact('jobs','locations','job_categories','title','country_id','category_id','governmentJobs');
+  return compact('jobs','locations','job_categories','title','country_id','category_id','governmentJobs','status','openJobCount','closedJobCount');
  }
 }
