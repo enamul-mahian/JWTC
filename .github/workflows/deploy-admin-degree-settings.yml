@@ -1,0 +1,125 @@
+name: Deploy Admin Degree and Education Settings
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-admin-degree-settings.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cpanel-staging-operations
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: production
+    env:
+      SSH_HOST: ${{ secrets.CPANEL_SSH_HOST }}
+      SSH_PORT: ${{ secrets.CPANEL_SSH_PORT }}
+      SSH_USER: ${{ secrets.CPANEL_SSH_USER }}
+      SSH_KEY: ${{ secrets.CPANEL_SSH_PRIVATE_KEY }}
+      KNOWN_HOSTS: ${{ secrets.CPANEL_SSH_KNOWN_HOSTS }}
+      APP_PATH: ${{ secrets.CPANEL_APP_PATH }}
+      STAGING_DB_DATABASE: ${{ secrets.STAGING_DB_DATABASE }}
+      STAGING_DB_USERNAME: ${{ secrets.STAGING_DB_USERNAME }}
+      STAGING_DB_PASSWORD: ${{ secrets.STAGING_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: Verify exact release source and PHP syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" == refs/heads/main ]]
+          [[ "$GITHUB_REPOSITORY" == enamul-mahian/JWTC ]]
+          [[ "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$APP_PATH" == /home/dropoqux/joingallagher.uk ]]
+          [[ "$STAGING_DB_DATABASE" == dropoqux_jwtc_stage ]]
+          [[ "$STAGING_DB_USERNAME" == dropoqux_jwtc_stage ]]
+          for k in SSH_HOST SSH_PORT SSH_USER SSH_KEY KNOWN_HOSTS APP_PATH STAGING_DB_PASSWORD; do
+            [[ -n "${!k}" ]] || { echo "::error::Missing $k"; exit 1; }
+          done
+          php -l app/Http/Controllers/Admin/JobDegreeOptionsController.php
+          php -l resources/views/admin/job/degrees.blade.php
+          php -l app/Services/JobEditorData.php
+          php -l resources/views/frontend/pages/job/form.blade.php
+          php -l resources/views/dashboard/includes/sidebar.blade.php
+          php -l routes/web.php
+          php -l scripts/release/deploy_admin_degree_settings.php
+
+      - name: Run degree-management and job editor tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs
+          composer install --no-interaction --prefer-dist --no-progress
+          php artisan test --filter=PortalOperationsTest --no-ansi
+
+      - name: Prepare verified private package and SSH identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/workhub-ssh"
+          printf '%s\n' "$SSH_KEY" > "$RUNNER_TEMP/workhub-ssh/key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$RUNNER_TEMP/workhub-ssh/known_hosts"
+          ssh-keygen -y -P '' -f "$RUNNER_TEMP/workhub-ssh/key" >/dev/null
+          tar -czf "$RUNNER_TEMP/release.tar.gz" \
+            app/Http/Controllers/Admin/JobDegreeOptionsController.php \
+            resources/views/admin/job/degrees.blade.php \
+            app/Services/JobEditorData.php \
+            resources/views/frontend/pages/job/form.blade.php \
+            resources/views/dashboard/includes/sidebar.blade.php \
+            routes/web.php
+          target="/home/dropoqux/jwtc-private-workhub-incoming/$GITHUB_SHA"
+          ssh -T -p "$SSH_PORT" -i "$RUNNER_TEMP/workhub-ssh/key" \
+            -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$RUNNER_TEMP/workhub-ssh/known_hosts" -o ConnectTimeout=20 \
+            "$SSH_USER@$SSH_HOST" "umask 077; test ! -L '$target' && mkdir -p '$target'"
+          scp -P "$SSH_PORT" -i "$RUNNER_TEMP/workhub-ssh/key" \
+            -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$RUNNER_TEMP/workhub-ssh/known_hosts" \
+            "$RUNNER_TEMP/release.tar.gz" "$SSH_USER@$SSH_HOST:$target/release.tar.gz"
+
+      - name: Create fresh encrypted database and website backup
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(base64 -w0 scripts/release/create_approved_backup.php)"
+          python3 -c 'import os,json; print(json.dumps({"database":os.environ["STAGING_DB_DATABASE"],"username":os.environ["STAGING_DB_USERNAME"],"password":os.environ["STAGING_DB_PASSWORD"]}))' |
+            ssh -T -p "$SSH_PORT" -i "$RUNNER_TEMP/workhub-ssh/key" \
+              -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+              -o UserKnownHostsFile="$RUNNER_TEMP/workhub-ssh/known_hosts" -o ConnectTimeout=20 \
+              -o ServerAliveInterval=15 -o ServerAliveCountMax=2 \
+              "$SSH_USER@$SSH_HOST" "cd '$APP_PATH' && php -r 'eval(\"?>\".base64_decode(\"$code\"));'"
+
+      - name: Promote four code files with immediate rollback on failed checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(base64 -w0 scripts/release/deploy_admin_degree_settings.php)"
+          export ARCHIVE_SHA256="$(sha256sum "$RUNNER_TEMP/release.tar.gz" | cut -d' ' -f1)"
+          python3 -c 'import os,json,hashlib
+          files=["app/Http/Controllers/Admin/JobDegreeOptionsController.php","resources/views/admin/job/degrees.blade.php","app/Services/JobEditorData.php","resources/views/frontend/pages/job/form.blade.php","resources/views/dashboard/includes/sidebar.blade.php","routes/web.php"]
+          hashes={p:hashlib.sha256(open(p,"rb").read()).hexdigest() for p in files}
+          print(json.dumps({"release_sha":os.environ["GITHUB_SHA"],"archive_sha256":os.environ["ARCHIVE_SHA256"],"hashes":hashes}))' |
+            ssh -T -p "$SSH_PORT" -i "$RUNNER_TEMP/workhub-ssh/key" \
+              -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+              -o UserKnownHostsFile="$RUNNER_TEMP/workhub-ssh/known_hosts" -o ConnectTimeout=20 \
+              -o ServerAliveInterval=15 -o ServerAliveCountMax=2 \
+              "$SSH_USER@$SSH_HOST" "cd '$APP_PATH' && php -r 'eval(\"?>\".base64_decode(\"$code\"));'"
+
+      - name: Remove temporary SSH key
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/workhub-ssh/key" "$RUNNER_TEMP/workhub-ssh/known_hosts"
