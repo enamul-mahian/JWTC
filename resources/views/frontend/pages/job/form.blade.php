@@ -43,7 +43,21 @@ $lists=function($name)use($job){$value=old($name,$job->{$name});if(is_array($val
 <label>Minimum age<input name="mini_age" type="number" min="16" max="100" value="{{ old('mini_age',$job->mini_age??18) }}" required></label>
 <label>Maximum age<input name="max_age" type="number" min="16" max="100" value="{{ old('max_age',$job->max_age) }}"></label>
 <label>Education level<select name="degree_level_id"><option value="">Not specified</option>@foreach($degreeLevel as $degree)<option value="{{ $degree->id }}" @selected(old('degree_level_id',$job->degree_level_id)==$degree->id)>{{ $degree->name }}</option>@endforeach</select></label>
-<label>Degree<select name="degree_name_id"><option value="">Not specified</option>@foreach($degreeNames as $degree)<option value="{{ $degree->id }}" @selected(old('degree_name_id',$job->degree_name_id)==$degree->id)>{{ $degree->name }}</option>@endforeach</select></label>
+<label>Degree
+<select name="degree_name_id">
+<option value="">Not specified</option>
+@foreach($degreeNames->groupBy('degree_lavel_id') as $levelId => $levelDegrees)
+<optgroup label="{{ $degreeLevel->firstWhere('id', $levelId)?->name ?? 'Other education level' }}">
+@foreach($levelDegrees as $degree)
+<option value="{{ $degree->id }}" @selected(old('degree_name_id',$job->degree_name_id)==$degree->id)>{{ $degree->name }}</option>
+@endforeach
+</optgroup>
+@endforeach
+</select>
+@if(!empty($adminEdit) || !empty($adminCreate))
+<small><a href="{{ route('admin.job-degrees.index') }}" target="_blank" rel="noopener noreferrer">Add, rename or disable Degree options</a> (opens a new tab; reload this form after changes).</small>
+@endif
+</label>
 <label>Minimum experience (years)<input name="minimum_year" type="number" min="0" value="{{ old('minimum_year',$job->minimum_year) }}"></label>
 <label>Maximum experience (years)<input name="maximum_year" type="number" min="0" value="{{ old('maximum_year',$job->maximum_year) }}"></label>
 <label>Freshers<input name="fresher" maxlength="255" value="{{ old('fresher',$job->fresher) }}" placeholder="For example: welcome to apply"></label>

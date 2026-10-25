@@ -277,4 +277,78 @@ class PortalOperationsTest extends TestCase
     }
 
 
+    public function test_admin_manages_degree_options_without_deleting_historic_job_references(): void
+    {
+        $this->actingAs($this->admin)->get('/admin/job-degrees')
+            ->assertOk()->assertSee('Manage Education &amp; Degrees', false)
+            ->assertSee('Add degree');
+
+        $this->post('/admin/job-degrees/levels', ['name' => 'Undergraduate'])
+            ->assertRedirect()->assertSessionHasNoErrors();
+        $levelId = (int) DB::table('degree_lavels')->where('name', 'Undergraduate')->value('id');
+        $this->assertGreaterThan(0, $levelId);
+
+        $this->post('/admin/job-degrees/degrees', [
+            'name' => 'Bachelor of Arts', 'degree_lavel_id' => $levelId,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $degreeId = (int) DB::table('degree_names')->where('name', 'Bachelor of Arts')->value('id');
+        $this->assertGreaterThan(0, $degreeId);
+
+        $this->post('/admin/job-degrees/degrees', [
+            'name' => ' bachelor of arts ', 'degree_lavel_id' => $levelId,
+        ])->assertSessionHasErrors('name');
+        $this->assertSame(1, DB::table('degree_names')->where('degree_lavel_id', $levelId)->count());
+
+        $job = $this->job();
+        $job->update(['degree_level_id' => $levelId, 'degree_name_id' => $degreeId]);
+        $jobId = $job->id;
+
+        $this->patch('/admin/job-degrees/degrees/'.$degreeId, [
+            'name' => 'Bachelor of Fine Arts', 'degree_lavel_id' => $levelId,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->patch('/admin/job-degrees/degrees/'.$degreeId.'/status', [
+            'enabled' => 0,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('degree_names', [
+            'id' => $degreeId, 'name' => 'Bachelor of Fine Arts', 'status' => 0,
+        ]);
+        $this->assertDatabaseHas('jobs', ['id' => $jobId, 'degree_name_id' => $degreeId]);
+
+        $this->get('/admin/jobs/'.$jobId.'/edit')
+            ->assertOk()->assertSee('Bachelor of Fine Arts')
+            ->assertSee('Add, rename or disable Degree options');
+        $this->actingAs($this->employer)->get('/jobs/create')
+            ->assertOk()->assertDontSee('Bachelor of Fine Arts');
+        $this->post('/admin/job-degrees/degrees', [
+            'name' => 'Employer injected', 'degree_lavel_id' => $levelId,
+        ])->assertForbidden();
+        $this->assertDatabaseMissing('degree_names', ['name' => 'Employer injected']);
+    }
+
+    public function test_education_level_disable_is_reversible_and_preserves_job_selected_degree(): void
+    {
+        $levelId = DB::table('degree_lavels')->insertGetId([
+            'name' => 'Academic Level', 'status' => 1, 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $degreeId = DB::table('degree_names')->insertGetId([
+            'name' => 'Associate Degree', 'degree_lavel_id' => $levelId, 'status' => 1,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $job = $this->job();
+        $job->update(['degree_level_id' => $levelId, 'degree_name_id' => $degreeId]);
+        $this->actingAs($this->admin)
+            ->patch('/admin/job-degrees/levels/'.$levelId.'/status', ['enabled' => 0])
+            ->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('degree_lavels', ['id' => $levelId, 'status' => 0]);
+        $this->get('/admin/jobs/'.$job->id.'/edit')->assertOk()->assertSee('Associate Degree');
+        $this->actingAs($this->employer)->get('/jobs/create')->assertOk()->assertDontSee('Associate Degree');
+        $this->actingAs($this->admin)
+            ->patch('/admin/job-degrees/levels/'.$levelId.'/status', ['enabled' => 1])
+            ->assertRedirect();
+        $this->actingAs($this->employer)->get('/jobs/create')->assertOk()->assertSee('Associate Degree');
+        $this->assertDatabaseHas('jobs', ['id' => $job->id, 'degree_name_id' => $degreeId]);
+    }
+
+
 }
