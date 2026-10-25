@@ -70,7 +70,11 @@ final class AdminUserPurgeService
                             str_contains($version->path, '..')) {
                             throw new RuntimeException('Unsupported private document path; deletion stopped.');
                         }
+                        $root = realpath(storage_path('app/private-documents/'.$target->id));
                         $path = storage_path('app/'.$version->path);
+                        if (!$root || !str_starts_with((string) realpath(dirname($path)), $root)) {
+                            throw new RuntimeException('Private document path escaped account folder.');
+                        }
                         $files[$path] = true;
                     }
                 }
@@ -89,8 +93,13 @@ final class AdminUserPurgeService
 
                 // Delete only upload metadata; retain applications, jobs, and
                 // support/financial records tied to the soft-deleted user ID.
-                foreach (self::FILE_ROWS as [$table]) {
-                    if (Schema::hasTable($table)) {
+                foreach (self::FILE_ROWS as [$table, $column]) {
+                    if (!Schema::hasTable($table)) continue;
+                    if (in_array($table, ['companies', 'employer_information'], true)) {
+                        // Preserve job/company records for existing applicants.
+                        DB::table($table)->where('user_id', $target->id)
+                            ->update([$column => null]);
+                    } else {
                         DB::table($table)->where('user_id', $target->id)->delete();
                     }
                 }
@@ -167,9 +176,9 @@ final class AdminUserPurgeService
             || str_contains($filename, '..')) {
             throw new RuntimeException('Unrecognized upload filename; deletion stopped.');
         }
-        if (DB::table($table)->where($column, $filename)
-            ->where('user_id', '!=', $owner)->exists()
-            && $table !== 'users') {
+        if ($table !== 'users' &&
+            DB::table($table)->where($column, $filename)
+                ->where('user_id', '!=', $owner)->exists()) {
             throw new RuntimeException('File is shared with another account; deletion stopped.');
         }
         if ($table === 'users' &&
