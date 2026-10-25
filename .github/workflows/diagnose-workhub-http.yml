@@ -1,0 +1,47 @@
+name: Diagnose Work Hub URL Fetch Read Only
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/diagnose-workhub-http.yml'
+      - 'scripts/release/diagnose_workhub_http.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: cpanel-staging-operations
+  cancel-in-progress: false
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    env:
+      SSH_HOST: ${{ secrets.CPANEL_SSH_HOST }}
+      SSH_PORT: ${{ secrets.CPANEL_SSH_PORT }}
+      SSH_USER: ${{ secrets.CPANEL_SSH_USER }}
+      SSH_KEY: ${{ secrets.CPANEL_SSH_PRIVATE_KEY }}
+      KNOWN_HOSTS: ${{ secrets.CPANEL_SSH_KNOWN_HOSTS }}
+      APP_PATH: ${{ secrets.CPANEL_APP_PATH }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Examine Work Hub HTTP status from cPanel without writes
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" == refs/heads/main ]]
+          [[ "$GITHUB_REPOSITORY" == enamul-mahian/JWTC ]]
+          [[ "$APP_PATH" == /home/dropoqux/joingallagher.uk ]]
+          umask 077
+          mkdir -p "$RUNNER_TEMP/workhub-ssh"
+          printf '%s\n' "$SSH_KEY" > "$RUNNER_TEMP/workhub-ssh/key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$RUNNER_TEMP/workhub-ssh/hosts"
+          chmod 600 "$RUNNER_TEMP/workhub-ssh/key"
+          ssh-keygen -y -P '' -f "$RUNNER_TEMP/workhub-ssh/key" >/dev/null
+          ssh -T -p "$SSH_PORT" -i "$RUNNER_TEMP/workhub-ssh/key" \
+            -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$RUNNER_TEMP/workhub-ssh/hosts" -o ConnectTimeout=20 \
+            "$SSH_USER@$SSH_HOST" 'python3 -' < scripts/release/diagnose_workhub_http.py
+      - name: Remove temporary SSH credentials
+        if: always()
+        run: rm -f "$RUNNER_TEMP/workhub-ssh/key" "$RUNNER_TEMP/workhub-ssh/hosts"
