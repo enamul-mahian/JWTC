@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 class ContactController extends Controller
 {
     public function contact(){
-        return view('frontend.pages.contact');
+        return view('frontend.pages.contact', ['setting' => gs()]);
     }
 
     public function contactStore(Request $request){
