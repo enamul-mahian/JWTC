@@ -9,6 +9,7 @@
 @stack('style')
 <link rel="stylesheet" href="{{ asset('theme/portal-motion.css') }}?v=20261023-1">
 <link rel="stylesheet" href="{{ asset('theme/workspace.css') }}?v=20261024-3">
+@stack('page-style')
 </head><body class="jg-site"><a href="#jg-main" class="jg-skip">Skip to main content</a>
 @include('frontend.includes.approved_nav')
 @include('frontend.includes.news_ticker')
