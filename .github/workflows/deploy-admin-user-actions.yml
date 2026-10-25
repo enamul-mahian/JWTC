@@ -1,0 +1,139 @@
+name: Deploy Admin User Management (backup + rollback)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-admin-user-actions.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: cpanel-staging-operations
+  cancel-in-progress: false
+
+jobs:
+  admin-user-actions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production
+    env:
+      SSH_HOST: ${{ secrets.CPANEL_SSH_HOST }}
+      SSH_PORT: ${{ secrets.CPANEL_SSH_PORT }}
+      SSH_USER: ${{ secrets.CPANEL_SSH_USER }}
+      SSH_KEY: ${{ secrets.CPANEL_SSH_PRIVATE_KEY }}
+      KNOWN_HOSTS: ${{ secrets.CPANEL_SSH_KNOWN_HOSTS }}
+      APP_PATH: ${{ secrets.CPANEL_APP_PATH }}
+      STAGING_DB_DATABASE: ${{ secrets.STAGING_DB_DATABASE }}
+      STAGING_DB_USERNAME: ${{ secrets.STAGING_DB_USERNAME }}
+      STAGING_DB_PASSWORD: ${{ secrets.STAGING_DB_PASSWORD }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: Validate application root and deployment script
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" == refs/heads/main ]]
+          [[ "$GITHUB_REPOSITORY" == enamul-mahian/JWTC ]]
+          [[ "$APP_PATH" == /home/dropoqux/joingallagher.uk ]]
+          [[ "$STAGING_DB_DATABASE" == dropoqux_jwtc_stage ]]
+          [[ "$STAGING_DB_USERNAME" == dropoqux_jwtc_stage ]]
+          for k in SSH_HOST SSH_PORT SSH_USER SSH_KEY KNOWN_HOSTS APP_PATH STAGING_DB_PASSWORD; do
+            [[ -n "${!k}" ]] || { echo "::error::Missing $k"; exit 1; }
+          done
+          php -l scripts/release/deploy_admin_user_actions.php
+          grep -F "admin-user-actions-release.tar.gz" scripts/release/deploy_admin_user_actions.php >/dev/null
+          git diff --exit-code
+
+      - name: Run focused regression test and compile every Blade template
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs
+          composer install --no-interaction --prefer-dist --no-progress
+          php artisan test --filter='AdminUserActionsTest|SafeLogoutRecoveryTest' --no-ansi
+          php artisan view:cache
+
+      - name: Prepare exact ten-file package and secure SSH key
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/admin-user-actions-ssh"
+          printf '%s\n' "$SSH_KEY" > "$RUNNER_TEMP/admin-user-actions-ssh/key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$RUNNER_TEMP/admin-user-actions-ssh/known_hosts"
+          ssh-keygen -y -P '' -f "$RUNNER_TEMP/admin-user-actions-ssh/key" >/dev/null
+          tar -czf "$RUNNER_TEMP/admin-user-actions-release.tar.gz" \
+            app/Http/Controllers/Admin/DashboardController.php \
+            app/Http/Controllers/Admin/AdminUserActionsController.php \
+            app/Services/AdminUserPurgeService.php \
+            app/Exceptions/Handler.php \
+            routes/web.php \
+            resources/views/auth/logout-confirm.blade.php \
+            resources/views/admin/userManagement/index.blade.php \
+            resources/views/admin/userManagement/account_actions.blade.php \
+            resources/views/admin/userCreate/create.blade.php \
+            resources/views/admin/userCreate/edit.blade.php
+          target="/home/dropoqux/jwtc-private-workhub-incoming/$GITHUB_SHA"
+          ssh -T -p "$SSH_PORT" -i "$RUNNER_TEMP/admin-user-actions-ssh/key" \
+            -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$RUNNER_TEMP/admin-user-actions-ssh/known_hosts" -o ConnectTimeout=20 \
+            "$SSH_USER@$SSH_HOST" "umask 077; test ! -L '$target' && mkdir -p '$target'"
+          scp -P "$SSH_PORT" -i "$RUNNER_TEMP/admin-user-actions-ssh/key" \
+            -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$RUNNER_TEMP/admin-user-actions-ssh/known_hosts" \
+            "$RUNNER_TEMP/admin-user-actions-release.tar.gz" "$SSH_USER@$SSH_HOST:$target/admin-user-actions-release.tar.gz"
+
+      - name: Create immediate independently encrypted production backup
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(base64 -w0 scripts/release/create_approved_backup.php)"
+          python3 -c 'import os,json; print(json.dumps({"database":os.environ["STAGING_DB_DATABASE"],"username":os.environ["STAGING_DB_USERNAME"],"password":os.environ["STAGING_DB_PASSWORD"]}))' |
+            ssh -T -p "$SSH_PORT" -i "$RUNNER_TEMP/admin-user-actions-ssh/key" \
+              -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+              -o UserKnownHostsFile="$RUNNER_TEMP/admin-user-actions-ssh/known_hosts" -o ConnectTimeout=20 \
+              -o ServerAliveInterval=15 -o ServerAliveCountMax=2 \
+              "$SSH_USER@$SSH_HOST" "cd '$APP_PATH' && php -r 'eval(\"?>\".base64_decode(\"$code\"));'"
+
+      - name: Deploy secure account management and verify live routes
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(base64 -w0 scripts/release/deploy_admin_user_actions.php)"
+          export ARCHIVE_SHA256="$(sha256sum "$RUNNER_TEMP/admin-user-actions-release.tar.gz" | cut -d' ' -f1)"
+          python3 -c 'import os,json,hashlib
+          files=[
+            "app/Http/Controllers/Admin/DashboardController.php",
+            "app/Http/Controllers/Admin/AdminUserActionsController.php",
+            "app/Services/AdminUserPurgeService.php",
+            "app/Exceptions/Handler.php",
+            "routes/web.php",
+            "resources/views/auth/logout-confirm.blade.php",
+            "resources/views/admin/userManagement/index.blade.php",
+            "resources/views/admin/userManagement/account_actions.blade.php",
+            "resources/views/admin/userCreate/create.blade.php",
+            "resources/views/admin/userCreate/edit.blade.php"]
+          hashes={p:hashlib.sha256(open(p,"rb").read()).hexdigest() for p in files}
+          print(json.dumps({"release_sha":os.environ["GITHUB_SHA"],"archive_sha256":os.environ["ARCHIVE_SHA256"],"hashes":hashes}))' |
+            ssh -T -p "$SSH_PORT" -i "$RUNNER_TEMP/admin-user-actions-ssh/key" \
+              -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+              -o UserKnownHostsFile="$RUNNER_TEMP/admin-user-actions-ssh/known_hosts" -o ConnectTimeout=20 \
+              -o ServerAliveInterval=15 -o ServerAliveCountMax=2 \
+              "$SSH_USER@$SSH_HOST" "cd '$APP_PATH' && php -r 'eval(\"?>\".base64_decode(\"$code\"));'"
+
+      - name: Delete temporary identity
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/admin-user-actions-ssh/key" "$RUNNER_TEMP/admin-user-actions-ssh/known_hosts" "$RUNNER_TEMP/admin-user-actions-release.tar.gz"
