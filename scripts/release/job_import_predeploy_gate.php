@@ -51,7 +51,7 @@ try {
     if ($background) throw new RuntimeException('Background process needs quiescing');
     $phase = 'http-smoke';
     $env = Dotenv\Dotenv::parse(file_get_contents($stage.'/.env'));
-    if (($env['DB_DATABASE'] ?? '') !== 'dropoqux_jwtc_stage' || ($env['MAIL_MAILER'] ?? '') !== 'array') throw new RuntimeException('Unsafe staging environment');
+    if (($env['DB_DATABASE'] ?? '') !== 'dropoqux_jwtc_stage2' || ($env['MAIL_MAILER'] ?? '') !== 'array') throw new RuntimeException('Unsafe staging environment');
     $socket = stream_socket_server('tcp://127.0.0.1:0', $errno, $error);
     $address = stream_socket_get_name($socket, false);
     fclose($socket);
