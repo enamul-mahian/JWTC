@@ -5,9 +5,12 @@
         integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
         crossorigin="anonymous" referrerpolicy="no-referrer" />
 @endpush
+@push('page-style')
+    <link rel="stylesheet" href="{{ asset('theme/employer-jobs.css') }}?v=20261025-1">
+@endpush
 @section('content')
     @if(config('jwtc_design.enabled') && Route::is('employer.dashboard'))
-        <section class="jw-workspace-intro container" aria-labelledby="jw-employer-title">
+        <section class="jw-workspace-intro jg-employer-intro container" aria-labelledby="jw-employer-title">
             <p class="jw-eyebrow">Employer workspace</p>
             <h1 id="jw-employer-title">Manage your opportunities</h1>
             <p>Your current job listings are securely tied to your employer account.</p>
@@ -24,7 +27,7 @@
             </nav>
         </section>
     @endif
-    <section id="latest-jobs" class="section bg-gray mt-4">
+    <section id="latest-jobs" class="section bg-gray jg-employer-jobs">
         <div class="page-header">
             <div class="container">
                 <div class="row">
@@ -40,9 +43,7 @@
             <div class="container">
                 <div class="row">
                     <div class="col-lg-4 col-md-12 col-xs-12">
-                        <div class="right-sideabr">
-                            @include('frontend.pages.employer.sideMenu')
-                        </div>
+                        @include('frontend.pages.employer.sideMenu')
                     </div>
                     <div class="col-lg-8 col-md-12 col-xs-12">
 
@@ -72,7 +73,7 @@
                                     @php
                                         $employeStatus = json_decode($job->employment_status);
                                     @endphp
-                                    <div class="card mb-4">
+                                    <div class="card mb-4 jg-employer-job-card">
                                         <div class="card-body">
                                             <div class="row">
                                                 <div class="col-md-6">
@@ -89,7 +90,7 @@
                                                 </div>
 
                                                 <div class="col-md-6 text-right">
-                                                    <img class="img-thumbnail"
+                                                    <img class="img-thumbnail jg-employer-logo" loading="lazy"
                                                         src="{{ asset('assets/images/profilephoto/' . $job?->company?->photo) }}"
                                                         alt="{{ $job?->title }}">
                                                 </div>
@@ -113,30 +114,23 @@
                                                     @endif
                                                 </div>
                                             </div>
-                                            <div class="d-inline-flex">
-                                                <a href="{{ route('jobs.edit', $job) }}" class=" mr-3">
-                                                    <button
-                                                        class="mt-3 btn btn-success btn-sm">{{ __('messages.UpdateJobs') }}
-                                                    </button>
-                                                </a>
-                                                <a href="{{ route('view.application', $job) }}" title="view application" class=" mr-3">
-                                                    <button class="btn btn-primary mt-3 "> <i
-                                                            class="fa-solid fa-eye"></i></button>
-                                                </a>
+                                            <div class="jg-employer-card-actions">
+                                                <a href="{{ route('jobs.edit', $job) }}" class="btn btn-success btn-sm">{{ __('messages.UpdateJobs') }}</a>
+                                                <a href="{{ route('view.application', $job) }}" class="btn btn-primary btn-sm" title="View applications" aria-label="View applications for {{ $job->title }}"><i class="fa-solid fa-eye" aria-hidden="true"></i></a>
                                                 @if (Route::currentRouteName() != 'archive-jobs.index')
                                                     <form action="{{ route('jobs.destroy', $job) }}" method="POST">
                                                         @csrf
                                                         @method('DELETE')
-                                                        <button type="submit" class="mt-3 btn btn-danger btn-sm">
-                                                            <i class="fa-solid fa-trash"></i>
+                                                        <button type="submit" class="btn btn-danger btn-sm" aria-label="Delete {{ $job->title }}">
+                                                            <i class="fa-solid fa-trash" aria-hidden="true"></i>
                                                         </button>
                                                     </form>
                                                 @else
                                                     <form action="{{ route('archive-jobs.restore', $job) }}"
                                                         method="POST">
                                                         @csrf
-                                                        <button type="submit" class="mt-3 btn btn-danger btn-sm">
-                                                            <i class="fa-solid fa-trash-can-arrow-up"></i>
+                                                        <button type="submit" class="btn btn-danger btn-sm" aria-label="Restore {{ $job->title }}">
+                                                            <i class="fa-solid fa-trash-can-arrow-up" aria-hidden="true"></i>
                                                         </button>
                                                     </form>
                                                 @endif
