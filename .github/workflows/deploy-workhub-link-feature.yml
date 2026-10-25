@@ -58,6 +58,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs
           composer install --no-interaction --prefer-dist --no-progress
           php artisan test --filter=WorkHubLinkImporterTest --no-ansi
 
