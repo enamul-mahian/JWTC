@@ -19,6 +19,11 @@ class DiscoverGovernmentJobDrafts extends Command
             $this->error('Pages must be between 1 and 5.');
             return self::FAILURE;
         }
+        $importerId = (int) config('services.government_jobs.import_user_id');
+        if ($importerId < 1 || !DB::table('users')->where('id', $importerId)->exists()) {
+            $this->error('Set GOVERNMENT_JOBS_IMPORT_USER_ID to an existing admin user ID before running.');
+            return self::FAILURE;
+        }
         $host = 'www.jobs.service.gov.uk';
         $discovered = [];
         for ($page = 1; $page <= $pages; $page++) {
@@ -90,7 +95,7 @@ class DiscoverGovernmentJobDrafts extends Command
                             'posted_on' => $posted, 'workplace' => 'onsite',
                             'employment_type' => 'permanent', 'schedule' => 'full_time',
                             'summary' => mb_substr($description, 0, 5000), 'status' => 'draft',
-                            'imported_by' => config('services.government_jobs.import_user_id'),
+                            'imported_by' => $importerId,
                             'created_at' => now(), 'updated_at' => now(),
                         ]);
                     }
