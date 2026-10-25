@@ -6,7 +6,7 @@
         crossorigin="anonymous" referrerpolicy="no-referrer" />
 @endpush
 @push('page-style')
-    <link rel="stylesheet" href="{{ asset('theme/employer-jobs.css') }}?v=20261025-1">
+    <link rel="stylesheet" href="{{ asset('theme/employer-jobs.css') }}?v=20261025-2">
 @endpush
 @section('content')
     <section id="latest-jobs" class="section bg-gray jg-employer-jobs">
