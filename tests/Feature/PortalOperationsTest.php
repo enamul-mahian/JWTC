@@ -522,4 +522,48 @@ class PortalOperationsTest extends TestCase
     }
 
 
+    public function test_administrator_deadline_plan_covers_all_27_jobs_without_backdating_original_post(): void
+    {
+        $ids=[11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,28,29,30,31,32,33,34,35,36,37,38];
+        $found=[];
+        foreach($ids as $id) {
+            $deadline=\App\Services\JobDateRevision::deadlineForId($id);
+            $reference=\App\Services\JobDateRevision::referenceForId($id);
+            $this->assertNotNull($deadline);
+            $this->assertContains($deadline,[
+                '2026-11-27','2026-11-28','2026-11-29',
+                '2026-11-30','2026-12-01','2026-12-02',
+            ]);
+            $this->assertContains($reference,['2026-10-14','2026-10-15','2026-10-16']);
+            $found[]=$deadline;
+        }
+        $this->assertCount(27,$found);
+        $this->assertNull(\App\Services\JobDateRevision::deadlineForId(9999));
+        $this->assertNull(\App\Services\JobDateRevision::referenceForId(9999));
+    }
+
+    public function test_administrator_revised_deadline_is_clearly_labeled_and_original_job_date_preserved(): void
+    {
+        $job=$this->job();
+        $originalCreated=$job->created_at->format('Y-m-d H:i:s');
+        DB::table('jobs')->where('id',$job->id)->update([
+            'id'=>11,'application_deadline'=>'2026-11-27',
+        ]);
+        $record=Job::findOrFail(11);
+        $this->assertTrue(\App\Services\JobDateRevision::applies($record));
+        $this->assertStringContainsString('not been independently confirmed',
+            \App\Services\JobDateRevision::note($record));
+        $this->get('/vacancies/11')->assertOk()
+            ->assertSee('Website administrator')
+            ->assertSee("not this vacancy's original publication date", false)
+            ->assertSee('27 Nov 2026');
+        $this->get('/search-jobs')->assertOk()
+            ->assertSee('Site-listed closing date (unverified)')
+            ->assertSee('not original post');
+        $this->assertSame($originalCreated,$record->fresh()->created_at->format('Y-m-d H:i:s'));
+        $record->update(['application_deadline'=>'2026-12-20']);
+        $this->assertFalse(\App\Services\JobDateRevision::applies($record->fresh()));
+    }
+
+
 }
