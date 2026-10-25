@@ -23,7 +23,7 @@ class ExternalJobImportController extends Controller
     {
         $this->authorizeAdmin($request);
         $jobs = DB::table('external_job_imports')->orderByDesc('id')->paginate(25);
-        return response()->view('admin.job.external-import', compact('jobs'))->header('Cache-Control', 'private, no-store');
+        return response()->view('admin.job.external-import', ['jobs' => $jobs, 'setting' => gs()])->header('Cache-Control', 'private, no-store');
     }
 
     public function importLink(Request $request, WorkHubLinkImporter $importer)
