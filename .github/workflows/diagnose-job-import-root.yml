@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - .github/workflows/diagnose-job-import-root.yml
+      - scripts/release/diagnose_job_import_root.php
   workflow_dispatch:
 permissions:
   contents: read
