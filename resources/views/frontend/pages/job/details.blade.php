@@ -86,7 +86,7 @@
 @endpush
 
 @push('page-style')
-    <link rel="stylesheet" href="{{ asset('theme/job-details-layout.css') }}?v=20261026-1">
+    <link rel="stylesheet" href="{{ asset('theme/job-details-layout.css') }}?v=20261026-2">
 @endpush
 
 @section('content')
@@ -100,7 +100,7 @@
 
                 <div class="col-lg-9 col-md-12 col-xs-12 jg-detail-main">
                     <div class="content-area">
-                        <div class="row">
+                        <div class="row jg-job-hero">
                             <div class="col-md-12 col-sm-12 col-lg-6">
                                 <h4 class="text-info mb-2">{{ $jobDetails?->title }}</h4>
                                 <h6>{{ $jobDetails?->company?->company_name }}</h6>
@@ -133,7 +133,7 @@
                             </div> --}}
 
                         </div>
-                        <div class="card mt-4">
+                        <div class="card mt-4 jg-summary-card">
                             <div class="card-body">
                                 <h5 class=" jobDetails_header mb-1 text-danger">{{ __('messages.Summary') }}</h5>
                                 <div class="row">
@@ -178,11 +178,14 @@
                             </div>
                         </div>
 
-                        <div class="card mt-4">
+                        <div class="card mt-4 jg-content-card">
                             <div class="card-body">
                                 <h5 class=" jobDetails_header text-danger"> {{ __('messages.JobResponsibilities') }}</h5>
                                 <p>{!! $jobDetails?->job_responsibilities . ' ' . $jobDetails?->job_context !!} </p>
-                                <hr>
+                            </div>
+                        </div>
+                        <div class="card mt-4 jg-content-card">
+                            <div class="card-body">
                                 <h5 class=" jobDetails_header text-danger">{{ __('messages.ExperienceRequirements') }}</h5>
                                 <ul class="list-group ml-3">
                                     <li class="mb-0">
@@ -197,6 +200,10 @@
                                     @endif
                                 </ul>
 
+                            </div>
+                        </div>
+                        <div class="card mt-4 jg-content-card">
+                            <div class="card-body">
                                 <h5 class=" jobDetails_header text-danger">{{ __('messages.EducationalRequirements') }}</h5>
                                 <ul>
                                     <li class="mb-2">
@@ -226,11 +233,18 @@
                                     </li>
                                 </ul>
 
+                            </div>
+                        </div>
+                        <div class="card mt-4 jg-content-card">
+                            <div class="card-body">
                                 <h5 class=" jobDetails_header text-danger">{{ __('messages.AdditionalRequirements') }} </h5>
                                 <ul>
                                     <li class="mb-0">{!! $jobDetails->additional_requirements !!}</li>
                                 </ul>
-                                <hr>
+                            </div>
+                        </div>
+                        <div class="card mt-4 jg-content-card">
+                            <div class="card-body">
                                 <h5 class=" jobDetails_header text-danger">{{ __('messages.Compensation') }}</h5>
                                 <ul>
                                     <li class="mb-0">
@@ -300,7 +314,7 @@
                             </div>
                         </div>
 
-                        <div class="card mt-4">
+                        <div class="card mt-4 jg-company-card">
                             <div class="card-body py-1">
                                 <h5 class="apply_procedure">{{ __('messages.CompanyInformation') }}</h5>
                                 <p class="mb-0">{{ $jobDetails?->company?->company_name }}</p>
