@@ -53,7 +53,10 @@ class AdminUserActionsTest extends TestCase
 
     public function test_regular_user_cannot_set_or_delete_another_account(): void
     {
-        $employer = $this->employer();
+        $employer = User::create([
+            'name' => 'Applicant', 'email' => 'applicant@example.invalid',
+            'user_type' => 'job_seeker', 'password' => Hash::make('OldEmployer!123'),
+        ]);
         $other = User::create([
             'name' => 'Other', 'email' => 'other@example.invalid',
             'user_type' => 'job_seeker', 'password' => Hash::make('Other!Password123'),
