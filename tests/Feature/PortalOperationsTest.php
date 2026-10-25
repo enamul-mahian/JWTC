@@ -637,7 +637,7 @@ class PortalOperationsTest extends TestCase
     }
 
 
-    public function test_stale_legacy_generated_faq_answers_derive_from_current_job_fields_without_database_mutation(): void
+    public function test_saved_legacy_faq_answers_are_not_silently_rewritten(): void
     {
         $job=$this->job();
         $job->update([
@@ -655,21 +655,18 @@ class PortalOperationsTest extends TestCase
         $raw=$job->fresh()->faqs;
         $faqs=\App\Services\JobPresentation::faqs($job->fresh()->load('country'));
         $this->assertCount(5,$faqs);
-        $this->assertSame('The listed location is Fixture country. Confirm the exact workplace with the employer.',$faqs[0]['answer']);
-        $this->assertStringContainsString('£14.00',$faqs[1]['answer']);
-        $this->assertStringContainsString('£16.00',$faqs[1]['answer']);
-        $this->assertSame('The listing currently shows 2026-12-02 as the closing date. Confirm that the employer is still accepting applications.',$faqs[2]['answer']);
-        $this->assertStringNotContainsString('job catagory',$faqs[3]['answer']);
+        $this->assertSame('This role is based in England.',$faqs[0]['answer']);
+        $this->assertSame('£13 – £14 Hourly.',$faqs[1]['answer']);
+        $this->assertSame('2026-11-22.',$faqs[2]['answer']);
+        $this->assertStringContainsString('job catagory',$faqs[3]['answer']);
         $this->assertSame('Yes, induction is provided.',$faqs[4]['answer']);
         $this->assertSame($raw,$job->fresh()->faqs);
         $this->get('/vacancies/'.$job->id)->assertOk()
-            ->assertSee('The listing currently shows 2026-12-02')
-            ->assertDontSee('2026-11-22.')
-            ->assertDontSee('job catagory must be others')
-            ->assertDontSee('£13 – £14 Hourly.');
+            ->assertSee('2026-11-22.')
+            ->assertSee('job catagory must be others')
+            ->assertSee('£13 – £14 Hourly.');
         $this->actingAs($this->admin)->get('/admin/jobs/'.$job->id.'/edit')->assertOk()
-            ->assertSee('2026-12-02')
-            ->assertDontSee('2026-11-22.');
+            ->assertSee('2026-11-22.');
     }
 
     public function test_manually_written_faq_answer_is_not_overridden_and_delete_all_stays_empty(): void

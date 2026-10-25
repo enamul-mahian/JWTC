@@ -43,31 +43,7 @@ class JobPresentation {
    $key=mb_strtolower($question);
    if(isset($seen[$key]))continue;
    $seen[$key]=true;
-   // Only the precise legacy auto-generated answer patterns are refreshed.
-   // Human-written/custom answers remain exactly as the editor saved them.
-   if($question==='When is the application deadline?'
-      && preg_match('/^\\d{4}-\\d{2}-\\d{2}\\.?$/D',$answer)
-      && $job->application_deadline){
-    $answer='The listing currently shows '.substr((string)$job->application_deadline,0,10).
-      ' as the closing date. Confirm that the employer is still accepting applications.';
-   }
-   if($question==='What is the advertised salary?'
-      && preg_match('/^[£€]?\\s*[0-9][0-9,.]*\\s*[–-]\\s*[£€]?\\s*[0-9][0-9,.]*\\s*(?:Hourly|Daily|Weekly|Monthly|Yearly)\\.$/iuD',$answer)){
-    $answer=self::salarySummary($job);
-   }
-   if($question==='Where is this job based?'
-      && preg_match('/^This role is based in [^.]+\\.$/uD',$answer)
-      && $job->country?->name){
-    $answer='The listed location is '.$job->country->name.
-      ($job->location_detail?' — '.$job->location_detail:'').
-      '. Confirm the exact workplace with the employer.';
-   }
-   if($question==='How do I apply?'
-      && str_starts_with($answer,'Sign in to your JoinGallagher job seeker account')
-      && str_contains($answer,'follow the application instructions.')){
-    $answer='Read the How to Apply section on this listing and follow the application instructions. '.
-      'A job seeker account and application code may be required for applications on JoinGallagher.';
-   }
+   // The saved FAQ is the source of truth. Never rewrite answers while rendering.
    $items[]=['question'=>$question,'answer'=>$answer];
    if(count($items)>=12)break;
   }

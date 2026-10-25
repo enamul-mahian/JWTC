@@ -71,15 +71,18 @@
     :minYears!==''?'at least '+minYears:'up to '+maxYears;
    proposed.push(['What experience is listed?',range+' year(s) of experience, according to the job form.']);
   }
-  const existing=new Set(Array.from(rows.querySelectorAll('input[name="faq_question[]"]')).map(n=>clean(n.value).toLowerCase()));
+  // Generate a fresh preview from the current fields instead of appending to
+  // outdated generated rows. Nothing changes in the database until Save.
+  if(!proposed.length){
+   feedback.textContent='No FAQ suggestions could be generated from the current fields.';
+   return;
+  }
+  rows.replaceChildren();
   let count=0;
   for(const [question,answer] of proposed){
-   if(existing.has(question.toLowerCase()))continue;
    if(!add(question,answer))break;
-   existing.add(question.toLowerCase());count++;
+   count++;
   }
-  feedback.textContent=count
-   ?count+' FAQ suggestion(s) added from the current job fields. Review and save to publish them.'
-   :'No new FAQ suggestions. Fill job details or remove/edit an existing FAQ first.';
+  feedback.textContent=count+' FAQ suggestion(s) generated from the current fields. Review and Save to keep them.';
  });
 })();
