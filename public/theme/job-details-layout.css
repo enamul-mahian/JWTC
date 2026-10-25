@@ -1,0 +1,190 @@
+/* Only the legacy Job Details view. The employer menu partial owns
+   the .right-sideabr container; never wrap it in a second one. */
+.jg-site .jg-job-details {
+    margin:0!important;
+    padding:30px 0 56px!important;
+    min-height:0!important;
+    background:#f5f8fc!important;
+}
+.jg-site .jg-job-details>.container {
+    width:100%!important;
+    max-width:1200px!important;
+    margin:0 auto!important;
+    padding:0 28px!important;
+}
+.jg-site .jg-job-details .jg-job-detail-grid {
+    display:grid!important;
+    grid-template-columns:230px minmax(0,1fr)!important;
+    gap:24px!important;
+    align-items:start!important;
+    margin:0!important;
+    width:100%;
+}
+.jg-site .jg-job-details .jg-job-detail-grid>.jg-detail-sidebar,
+.jg-site .jg-job-details .jg-job-detail-grid>.jg-detail-main {
+    min-width:0!important;
+    max-width:100%!important;
+    width:auto!important;
+    flex:none!important;
+    padding:0!important;
+    margin:0!important;
+}
+.jg-site .jg-job-details .jg-detail-sidebar>.right-sideabr {
+    position:static!important;
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    height:auto!important;
+    background:#0d2549!important;
+    border:0!important;
+    border-radius:15px!important;
+    padding:20px!important;
+    margin:0!important;
+    box-shadow:none!important;
+    color:#fff!important;
+}
+.jg-site .jg-job-details .jg-detail-sidebar .right-sideabr h4 {
+    display:block!important;
+    position:static!important;
+    float:none!important;
+    width:auto!important;
+    max-width:100%!important;
+    height:auto!important;
+    min-height:0!important;
+    margin:0 0 12px!important;
+    padding:0 4px 14px!important;
+    background:transparent!important;
+    background-image:none!important;
+    border:0!important;
+    border-bottom:1px solid rgba(255,255,255,.20)!important;
+    box-shadow:none!important;
+    color:#fff!important;
+    font-size:18px!important;
+    line-height:1.35!important;
+    font-weight:750!important;
+    text-align:left!important;
+    text-indent:0!important;
+    white-space:normal!important;
+    overflow-wrap:normal!important;
+}
+.jg-site .jg-job-details .jg-detail-sidebar .right-sideabr h4::before,
+.jg-site .jg-job-details .jg-detail-sidebar .right-sideabr h4::after {
+    content:none!important;
+    display:none!important;
+}
+.jg-site .jg-job-details .jg-detail-sidebar .right-sideabr .list-item {
+    display:block!important;
+    margin:0!important;
+    padding:0!important;
+    list-style:none!important;
+    width:100%;
+}
+.jg-site .jg-job-details .jg-detail-sidebar .right-sideabr .list-item>li {
+    float:none!important;
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+    padding:0!important;
+    list-style:none!important;
+    border:0!important;
+}
+.jg-site .jg-job-details .jg-detail-sidebar .right-sideabr .list-item>li>a {
+    display:block!important;
+    min-height:39px;
+    padding:10px 12px!important;
+    margin:2px 0!important;
+    width:100%!important;
+    max-width:100%!important;
+    border:0!important;
+    border-radius:8px!important;
+    background:transparent!important;
+    color:#e2ecff!important;
+    font-size:14px!important;
+    font-weight:500!important;
+    line-height:1.5!important;
+    text-decoration:none!important;
+    overflow-wrap:break-word;
+    white-space:normal!important;
+}
+.jg-site .jg-job-details .jg-detail-sidebar .right-sideabr .list-item>li>a.active,
+.jg-site .jg-job-details .jg-detail-sidebar .right-sideabr .list-item>li>a:hover,
+.jg-site .jg-job-details .jg-detail-sidebar .right-sideabr .list-item>li>a:focus-visible {
+    background:#1d4380!important;
+    color:#fff!important;
+}
+.jg-site .jg-job-details .jg-detail-sidebar .right-sideabr form {
+    margin:14px 0 0!important;
+    padding:0!important;
+}
+.jg-site .jg-job-details .jg-detail-sidebar .right-sideabr form button {
+    display:inline-flex!important;
+    justify-content:center;
+    align-items:center;
+    min-height:40px;
+    margin:0!important;
+    padding:10px 14px!important;
+    color:#fff!important;
+    background:#0758df!important;
+    border:0!important;
+    border-radius:8px!important;
+    font-size:13px!important;
+    font-weight:650!important;
+}
+.jg-site .jg-job-details .jg-detail-main .content-area {
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+    padding:16px!important;
+    background:transparent!important;
+}
+.jg-site .jg-job-details .jg-detail-main .content-area>.row {
+    align-items:start;
+}
+.jg-site .jg-job-details .jg-detail-main .card {
+    border:1px solid #dce5f2!important;
+    border-radius:14px!important;
+    box-shadow:none!important;
+    background:#fff!important;
+    margin-top:18px!important;
+}
+.jg-site .jg-job-details .jg-detail-main .card>.card-body {
+    padding:20px!important;
+}
+.jg-site .jg-job-details .jg-detail-main img {
+    max-width:100%;
+    object-fit:contain;
+}
+.jg-site .jg-job-details .jg-detail-main .card p,
+.jg-site .jg-job-details .jg-detail-main .card li {
+    overflow-wrap:anywhere;
+}
+.jg-site .jg-job-details .jg-detail-sidebar a:focus-visible,
+.jg-site .jg-job-details .jg-detail-sidebar button:focus-visible {
+    outline:3px solid #f3bb4b!important;
+    outline-offset:2px;
+}
+@media(max-width:850px) {
+    .jg-site .jg-job-details .jg-job-detail-grid {
+        grid-template-columns:minmax(0,1fr)!important;
+        gap:18px!important;
+    }
+    .jg-site .jg-job-details .jg-detail-sidebar>.right-sideabr {padding:16px!important}
+    .jg-site .jg-job-details .jg-detail-sidebar .right-sideabr .list-item {
+        display:flex!important;
+        flex-wrap:wrap;
+        gap:4px;
+    }
+    .jg-site .jg-job-details .jg-detail-sidebar .right-sideabr .list-item>li {width:auto!important}
+    .jg-site .jg-job-details .jg-detail-sidebar .right-sideabr .list-item>li:last-child {width:100%!important}
+    .jg-site .jg-job-details .jg-detail-sidebar .right-sideabr form {margin:6px 0 0!important}
+    .jg-site .jg-job-details .jg-detail-main .content-area {padding:8px!important}
+}
+@media(max-width:600px) {
+    .jg-site .jg-job-details {padding:15px 0 36px!important}
+    .jg-site .jg-job-details>.container {padding:0 16px!important}
+    .jg-site .jg-job-details .jg-detail-main .content-area {padding:0!important}
+    .jg-site .jg-job-details .jg-detail-main .card>.card-body {padding:16px!important}
+}
