@@ -359,7 +359,7 @@ class PortalOperationsTest extends TestCase
             'salary_type'=>'hourly','minimum_salary'=>13,'maximum_salary'=>16,
             'faqs'=>json_encode([['question'=>'Is accommodation included?','answer'=>'Ask the employer about housing.']]),
         ]);
-        $faqs=\App\Services\JobPresentation::faqs($job->fresh());
+        $faqs=\App\Services\JobPresentation::suggestedFaqs($job->fresh());
         $this->assertStringContainsString('37.5', $faqs[1]['answer']);
         $this->assertStringContainsString('2,112.50', $faqs[1]['answer']);
         $this->assertStringContainsString('not a confirmed monthly salary', $faqs[1]['answer']);
@@ -377,7 +377,7 @@ class PortalOperationsTest extends TestCase
         $job->update(['minimum_salary'=>11,'maximum_salary'=>16,'salary_type'=>'monthly']);
         $this->assertStringContainsString('requires employer confirmation',
             \App\Services\JobPresentation::salarySummary($job->fresh()));
-        $faqs=\App\Services\JobPresentation::faqs($job->fresh());
+        $faqs=\App\Services\JobPresentation::suggestedFaqs($job->fresh());
         $this->assertStringContainsString('Not calculated', $faqs[1]['answer']);
         $this->get('/vacancies/'.$job->id)->assertOk()
             ->assertSee('Pay period requires employer confirmation');
@@ -388,7 +388,7 @@ class PortalOperationsTest extends TestCase
         $job=$this->job();
         $countryId=DB::table('countries')->insertGetId(['name'=>'Ireland','code'=>'IE']);
         $job->update(['country_id'=>$countryId,'salary_type'=>'hourly','minimum_salary'=>15,'maximum_salary'=>18]);
-        $faq=\App\Services\JobPresentation::faqs($job->fresh()->load('country'));
+        $faq=\App\Services\JobPresentation::suggestedFaqs($job->fresh()->load('country'));
         $this->assertStringContainsString('€14.15', $faq[0]['answer']);
         $this->assertStringContainsString('EUR versus GBP', $faq[0]['answer']);
         $this->assertDatabaseHas('jobs',['id'=>$job->id,'minimum_salary'=>15]);
@@ -409,7 +409,7 @@ class PortalOperationsTest extends TestCase
         $current=$job->fresh()->load('country');
         $this->assertStringContainsString('indicative 2026 market benchmark',\App\Services\JobPresentation::salarySummary($current));
         $this->assertStringContainsString('NOT employer-confirmed',\App\Services\JobPresentation::salarySummary($current));
-        $faqs=\App\Services\JobPresentation::faqs($current);
+        $faqs=\App\Services\JobPresentation::suggestedFaqs($current);
         $this->assertStringContainsString('£12.71', $faqs[0]['answer']);
         $this->assertStringContainsString('£2,112.50', $faqs[1]['answer']);
         $this->assertTrue(collect($faqs)->contains(fn($f)=>$f['question']==='Is accommodation provided?'));
@@ -428,7 +428,7 @@ class PortalOperationsTest extends TestCase
         $display=\App\Services\JobPresentation::salarySummary($current);
         $this->assertStringContainsString('€16.00', $display);
         $this->assertStringNotContainsString('£16.00', $display);
-        $this->assertStringContainsString('€14.15',\App\Services\JobPresentation::faqs($current)[0]['answer']);
+        $this->assertStringContainsString('€14.15',\App\Services\JobPresentation::suggestedFaqs($current)[0]['answer']);
         $this->assertSame($id,(int)$job->fresh()->country_id);
     }
 
@@ -441,8 +441,8 @@ class PortalOperationsTest extends TestCase
         ]);
         $current=$job->fresh();
         $this->assertStringContainsString('30,000.00',\App\Services\JobPresentation::salarySummary($current));
-        $this->assertStringContainsString('2,500.00',\App\Services\JobPresentation::faqs($current)[1]['answer']);
-        $this->assertStringContainsString('3,500.00',\App\Services\JobPresentation::faqs($current)[1]['answer']);
+        $this->assertStringContainsString('2,500.00',\App\Services\JobPresentation::suggestedFaqs($current)[1]['answer']);
+        $this->assertStringContainsString('3,500.00',\App\Services\JobPresentation::suggestedFaqs($current)[1]['answer']);
     }
 
 
@@ -566,6 +566,74 @@ class PortalOperationsTest extends TestCase
         $this->assertSame($originalCreated,$record->fresh()->created_at->format('Y-m-d H:i:s'));
         $record->update(['application_deadline'=>'2026-12-20']);
         $this->assertFalse(\App\Services\JobDateRevision::applies($record->fresh()));
+    }
+
+
+    public function test_admin_removing_all_faqs_persists_empty_in_database_edit_form_and_public_job(): void
+    {
+        $job=$this->job();
+        $job->update(['faqs'=>json_encode([
+            ['question'=>'Old incorrect FAQ','answer'=>'This old answer must not return'],
+            ['question'=>'Old salary FAQ','answer'=>'Incorrect fixed monthly salary'],
+        ])]);
+        $this->actingAs($this->admin)->get('/admin/jobs/'.$job->id.'/edit')->assertOk()
+            ->assertSee('Old incorrect FAQ');
+        $form=$this->payload();
+        $form['is_publish']=1;
+        $form['faq_editor']=1; // Hidden editor marker submitted with no FAQ rows.
+        $this->patch('/admin/jobs/'.$job->id,$form)->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame('[]',(string)$job->fresh()->faqs);
+        $this->assertSame([],\App\Services\JobPresentation::faqs($job->fresh()));
+        $this->get('/admin/jobs/'.$job->id.'/edit')->assertOk()
+            ->assertDontSee('Old incorrect FAQ')
+            ->assertDontSee('What is the indicative 2026 salary benchmark?')
+            ->assertSee('remove all rows');
+        $this->get('/vacancies/'.$job->id)->assertOk()
+            ->assertDontSee('Frequently asked questions')
+            ->assertDontSee('Old incorrect FAQ')
+            ->assertDontSee('How much is that per month before tax?');
+        // Unrelated edits without the editor must not regenerate default FAQs.
+        $form=$this->payload(); $form['is_publish']=1;
+        unset($form['faq_editor'],$form['faq_question'],$form['faq_answer']);
+        $this->patch('/admin/jobs/'.$job->id,$form)->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame('[]',(string)$job->fresh()->faqs);
+    }
+
+    public function test_custom_faqs_match_saved_rows_and_removed_single_item_does_not_return(): void
+    {
+        $job=$this->job();
+        $job->update(['faqs'=>json_encode([
+            ['question'=>'First question','answer'=>'Old first answer'],
+            ['question'=>'Second question','answer'=>'Old second answer'],
+        ])]);
+        $form=$this->payload();
+        $form['is_publish']=1;
+        $form['faq_editor']=1;
+        $form['faq_question']=['Second question','Where can I apply?'];
+        $form['faq_answer']=['Updated second answer','Apply through the listed employer process.'];
+        $this->actingAs($this->admin)->patch('/admin/jobs/'.$job->id,$form)
+            ->assertRedirect()->assertSessionHasNoErrors();
+        $saved=\App\Services\JobPresentation::faqs($job->fresh());
+        $this->assertCount(2,$saved);
+        $this->assertSame('Second question',$saved[0]['question']);
+        $this->assertSame('Updated second answer',$saved[0]['answer']);
+        $this->get('/vacancies/'.$job->id)->assertOk()
+            ->assertSee('Updated second answer')
+            ->assertSee('Where can I apply?')
+            ->assertDontSee('First question')
+            ->assertDontSee('Old first answer')
+            ->assertDontSee('How many positions and when does this job close?');
+    }
+
+    public function test_employer_can_delete_all_faqs_when_editing_owned_job(): void
+    {
+        $job=$this->job();
+        $job->update(['faqs'=>json_encode([['question'=>'Remove me','answer'=>'No longer correct']])]);
+        $data=$this->payload();$data['faq_editor']=1;
+        $this->actingAs($this->employer)->patch('/jobs/'.$job->id,$data)
+            ->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame('[]',(string)$job->fresh()->faqs);
+        $this->get('/jobs/'.$job->id.'/edit')->assertOk()->assertDontSee('Remove me');
     }
 
 
