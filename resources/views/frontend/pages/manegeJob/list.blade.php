@@ -5,8 +5,11 @@
         integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
         crossorigin="anonymous" referrerpolicy="no-referrer" />
 @endpush
+@push('page-style')
+    <link rel="stylesheet" href="{{ asset('theme/employer-jobs.css') }}?v=20261025-1">
+@endpush
 @section('content')
-    <section id="latest-jobs" class="section bg-gray mt-4">
+    <section id="latest-jobs" class="section bg-gray jg-employer-jobs">
         <div class="page-header">
             <div class="container">
                 <div class="row">
@@ -22,9 +25,7 @@
             <div class="container">
                 <div class="row">
                     <div class="col-lg-4 col-md-12 col-xs-12">
-                        <div class="right-sideabr">
-                            @include('frontend.pages.employer.sideMenu')
-                        </div>
+                        @include('frontend.pages.employer.sideMenu')
                     </div>
                     <div class="col-lg-8 col-md-12 col-xs-12">
                         <div class="job-alerts-item">
@@ -33,7 +34,7 @@
                                 @php
                                     $employeStatus = json_decode($job->employment_status);
                                 @endphp
-                                <div class="card mb-4">
+                                <div class="card mb-4 jg-employer-job-card">
                                     <div class="card-body">
                                         <div class="row">
                                             <div class="col-md-6">
