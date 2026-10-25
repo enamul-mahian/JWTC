@@ -229,10 +229,21 @@ Route::middleware(['auth', 'admin_user'])->group(function () {
             ->name('user.store');
 
         Route::get('user/{id}/edit', [DashboardController::class, 'userEdit'])
-            ->name('user.edit');
+            ->whereNumber('id')->name('user.edit');
 
+        // Keep the user-edit display and form submission on the same
+        // non-destructive URL; DELETE uses /user/{user} separately.
+        Route::put('user/{id}/edit', [DashboardController::class, 'userRoleUpdate'])
+            ->whereNumber('id')->name('user.update');
+
+        // Existing bookmarks to the old save-only URL may be opened with
+        // GET. Redirect them to the actual edit form; GET changes no data.
+        Route::get('user/{id}', fn ($id) => redirect()->route('user.edit', $id))
+            ->whereNumber('id')->name('user.edit.legacy');
+
+        // Backward compatibility for already-open legacy edit forms.
         Route::put('user/{id}', [DashboardController::class, 'userRoleUpdate'])
-            ->name('user.update');
+            ->whereNumber('id')->name('user.update.legacy');
 
         // Destructive admin operations require admin identity, actor's
         // password, rate limiting and matching confirmation on the server.
