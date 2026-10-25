@@ -554,12 +554,15 @@ class PortalOperationsTest extends TestCase
         $this->assertStringContainsString('not been independently confirmed',
             \App\Services\JobDateRevision::note($record));
         $this->get('/vacancies/11')->assertOk()
-            ->assertSee('Website administrator')
-            ->assertSee("not this vacancy's original publication date", false)
-            ->assertSee('27 Nov 2026');
+            ->assertDontSee("Website administrator's date revision")
+            ->assertDontSee('Administrative listing reference date')
+            ->assertSee('Application deadline: 27 Nov 2026')
+            ->assertSee('website-updated; confirm with employer');
         $this->get('/search-jobs')->assertOk()
-            ->assertSee('Site-listed closing date (unverified)')
-            ->assertSee('not original post');
+            ->assertSee('Closing date (verify with employer)')
+            ->assertDontSee('Closing date revised by site administrator')
+            ->assertDontSee('Site reference:')
+            ->assertSee('Originally posted');
         $this->assertSame($originalCreated,$record->fresh()->created_at->format('Y-m-d H:i:s'));
         $record->update(['application_deadline'=>'2026-12-20']);
         $this->assertFalse(\App\Services\JobDateRevision::applies($record->fresh()));
