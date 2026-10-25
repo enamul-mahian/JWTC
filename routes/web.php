@@ -229,6 +229,15 @@ Route::middleware(['auth', 'admin_user'])->group(function () {
         Route::put('user/{id}', [DashboardController::class, 'userRoleUpdate'])
             ->name('user.update');
 
+        // Destructive admin operations require admin identity, actor's
+        // password, rate limiting and matching confirmation on the server.
+        Route::get('user/{user}/account', [\App\Http\Controllers\Admin\AdminUserActionsController::class, 'show'])
+            ->whereNumber('user')->name('admin.users.actions');
+        Route::post('user/{user}/password', [\App\Http\Controllers\Admin\AdminUserActionsController::class, 'setPassword'])
+            ->whereNumber('user')->middleware('throttle:5,1')->name('admin.users.password');
+        Route::delete('user/{user}', [\App\Http\Controllers\Admin\AdminUserActionsController::class, 'destroy'])
+            ->whereNumber('user')->middleware('throttle:3,1')->name('admin.users.destroy');
+
 
         Route::get('role/create', [RoleController::class, 'create'])
             ->name('role.create');
