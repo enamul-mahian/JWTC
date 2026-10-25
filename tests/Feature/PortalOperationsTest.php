@@ -637,4 +637,55 @@ class PortalOperationsTest extends TestCase
     }
 
 
+    public function test_stale_legacy_generated_faq_answers_derive_from_current_job_fields_without_database_mutation(): void
+    {
+        $job=$this->job();
+        $job->update([
+            'minimum_salary'=>14,'maximum_salary'=>16,'salary_type'=>'hourly',
+            'application_deadline'=>'2026-12-02',
+            'faqs'=>json_encode([
+                ['question'=>'Where is this job based?','answer'=>'This role is based in England.'],
+                ['question'=>'What is the advertised salary?','answer'=>'£13 – £14 Hourly.'],
+                ['question'=>'When is the application deadline?','answer'=>'2026-11-22.'],
+                ['question'=>'How do I apply?','answer'=>'Sign in to your JoinGallagher job seeker account job catagory must be others and follow the application instructions.'],
+                ['question'=>'Where is this job based?','answer'=>'This role is based in Scotland.'],
+                ['question'=>'Does this role include training?','answer'=>'Yes, induction is provided.'],
+            ]),
+        ]);
+        $raw=$job->fresh()->faqs;
+        $faqs=\App\Services\JobPresentation::faqs($job->fresh()->load('country'));
+        $this->assertCount(5,$faqs);
+        $this->assertSame('The listed location is Fixture country. Confirm the exact workplace with the employer.',$faqs[0]['answer']);
+        $this->assertStringContainsString('£14.00',$faqs[1]['answer']);
+        $this->assertStringContainsString('£16.00',$faqs[1]['answer']);
+        $this->assertSame('The listing currently shows 2026-12-02 as the closing date. Confirm that the employer is still accepting applications.',$faqs[2]['answer']);
+        $this->assertStringNotContainsString('job catagory',$faqs[3]['answer']);
+        $this->assertSame('Yes, induction is provided.',$faqs[4]['answer']);
+        $this->assertSame($raw,$job->fresh()->faqs);
+        $this->get('/vacancies/'.$job->id)->assertOk()
+            ->assertSee('The listing currently shows 2026-12-02')
+            ->assertDontSee('2026-11-22.')
+            ->assertDontSee('job catagory must be others')
+            ->assertDontSee('£13 – £14 Hourly.');
+        $this->actingAs($this->admin)->get('/admin/jobs/'.$job->id.'/edit')->assertOk()
+            ->assertSee('2026-12-02')
+            ->assertDontSee('2026-11-22.');
+    }
+
+    public function test_manually_written_faq_answer_is_not_overridden_and_delete_all_stays_empty(): void
+    {
+        $job=$this->job();
+        $job->update(['faqs'=>json_encode([
+            ['question'=>'When is the application deadline?','answer'=>'The employer will confirm the timeline directly.'],
+            ['question'=>'What is the advertised salary?','answer'=>'This is a negotiated contract.'],
+        ])]);
+        $faqs=\App\Services\JobPresentation::faqs($job->fresh());
+        $this->assertSame('The employer will confirm the timeline directly.',$faqs[0]['answer']);
+        $this->assertSame('This is a negotiated contract.',$faqs[1]['answer']);
+        $job->update(['faqs'=>'[]']);
+        $this->assertSame([], \App\Services\JobPresentation::faqs($job->fresh()));
+        $this->get('/vacancies/'.$job->id)->assertOk()->assertDontSee('Frequently asked questions');
+    }
+
+
 }
