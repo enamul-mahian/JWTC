@@ -74,7 +74,8 @@ class StoreJobRequest extends FormRequest
             'additional_requirements' =>'nullable|string',
             'mini_age' => 'required|integer|between:16,100',
             'max_age' => 'nullable|integer|between:16,100|gte:mini_age',
-            'salary_type' => 'required|string|max:50',
+            'salary_type' => 'required|in:yearly',
+            'weekly_working_hours' => 'nullable|numeric|min:1|max:80',
         ];
     }
 }
