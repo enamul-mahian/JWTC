@@ -1200,6 +1200,17 @@ Route::prefix('admin/hero-slides')->middleware(['auth','admin_user'])->group(fun
     Route::post('/', [\App\Http\Controllers\Admin\SiteHeroController::class,'update'])->middleware('throttle:12,1,hero-slide-settings:')->name('admin.hero-slides.update');
 });
 
+// Admin degree settings use the same authorization as job editing.
+Route::prefix('admin/job-degrees')->middleware(['auth','admin_user'])->group(function () {
+    Route::get('/', [\App\Http\Controllers\Admin\JobDegreeOptionsController::class, 'index'])->name('admin.job-degrees.index');
+    Route::post('/levels', [\App\Http\Controllers\Admin\JobDegreeOptionsController::class, 'addLevel'])->middleware('throttle:12,1')->name('admin.job-degrees.levels.store');
+    Route::patch('/levels/{id}', [\App\Http\Controllers\Admin\JobDegreeOptionsController::class, 'updateLevel'])->whereNumber('id')->middleware('throttle:20,1')->name('admin.job-degrees.levels.update');
+    Route::patch('/levels/{id}/status', [\App\Http\Controllers\Admin\JobDegreeOptionsController::class, 'toggleLevel'])->whereNumber('id')->middleware('throttle:20,1')->name('admin.job-degrees.levels.status');
+    Route::post('/degrees', [\App\Http\Controllers\Admin\JobDegreeOptionsController::class, 'addDegree'])->middleware('throttle:12,1')->name('admin.job-degrees.degrees.store');
+    Route::patch('/degrees/{id}', [\App\Http\Controllers\Admin\JobDegreeOptionsController::class, 'updateDegree'])->whereNumber('id')->middleware('throttle:20,1')->name('admin.job-degrees.degrees.update');
+    Route::patch('/degrees/{id}/status', [\App\Http\Controllers\Admin\JobDegreeOptionsController::class, 'toggleDegree'])->whereNumber('id')->middleware('throttle:20,1')->name('admin.job-degrees.degrees.status');
+});
+
 Route::prefix('admin/jobs')->middleware(['auth','admin_user'])->group(function(){
     Route::get('/',[\App\Http\Controllers\Admin\JobEditorController::class,'index'])->name('admin.jobs.index');
     Route::get('/create',[\App\Http\Controllers\Admin\JobEditorController::class,'create'])->name('admin.jobs.create');
