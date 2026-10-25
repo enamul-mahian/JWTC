@@ -50,6 +50,9 @@
                                                                 </button>
                                                             </a>
                                                         @endif
+                                                        @if(in_array(strtolower((string) $item->user_type), ['employer','job_seeker','staff'], true))
+                                                            <a class="btn btn-outline-secondary ms-1" href="{{ route('admin.users.actions', $item->id) }}" aria-label="Manage account for {{ $item->name }}">Password / Delete</a>
+                                                        @endif
                                                     </td>
                                                 @endcan
                                             </tr>
