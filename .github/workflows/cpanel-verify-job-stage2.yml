@@ -1,0 +1,99 @@
+name: Verify Job Importer Migrations on Stage2
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/cpanel-verify-job-stage2.yml']
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: cpanel-staging-operations
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production
+    env:
+      SSH_HOST: ${{ secrets.CPANEL_SSH_HOST }}
+      SSH_PORT: ${{ secrets.CPANEL_SSH_PORT }}
+      SSH_USER: ${{ secrets.CPANEL_SSH_USER }}
+      SSH_KEY: ${{ secrets.CPANEL_SSH_PRIVATE_KEY }}
+      KNOWN_HOSTS: ${{ secrets.CPANEL_SSH_KNOWN_HOSTS }}
+      APP_PATH: ${{ secrets.CPANEL_APP_PATH }}
+      STAGING_DB_DATABASE: ${{ secrets.STAGING2_DB_DATABASE }}
+      STAGING_DB_USERNAME: ${{ secrets.STAGING2_DB_USERNAME }}
+      STAGING_DB_PASSWORD: ${{ secrets.STAGING2_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - name: Validate script syntax and required configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l scripts/release/deduplicate_candidate_packages.php
+          php -l scripts/release/upgrade_job_import_stage2.php
+          python3 -m unittest discover -s scripts/release -p test_restore_guard.py -v
+          for name in SSH_HOST SSH_PORT SSH_USER SSH_KEY KNOWN_HOSTS APP_PATH STAGING_DB_DATABASE STAGING_DB_USERNAME STAGING_DB_PASSWORD; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing configuration: $name"
+              exit 1
+            fi
+          done
+          [[ "$SSH_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]]
+          [[ "$SSH_USER" =~ ^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$ ]]
+          [[ "$SSH_PORT" =~ ^[0-9]{1,5}$ ]]
+          (( 10#$SSH_PORT > 0 && 10#$SSH_PORT < 65536 ))
+          [[ "$APP_PATH" =~ ^/home/[a-zA-Z0-9_.-]+(/[a-zA-Z0-9_.-]+)+$ ]]
+          [[ "$APP_PATH" != *'/../'* && "$APP_PATH" != */.. ]]
+          [[ "$STAGING_DB_DATABASE" == dropoqux_jwtc_stage2 ]]
+          [[ "$STAGING_DB_USERNAME" == dropoqux_jwtc_stage2 ]]
+      - name: Prepare temporary SSH identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/jwtc-stage-ssh"
+          printf '%s\n' "$SSH_KEY" > "$RUNNER_TEMP/jwtc-stage-ssh/key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$RUNNER_TEMP/jwtc-stage-ssh/known_hosts"
+          ssh-keygen -y -P '' -f "$RUNNER_TEMP/jwtc-stage-ssh/key" >/dev/null
+      - name: Verify approved candidate run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api repos/enamul-mahian/JWTC/actions/runs/40162547727 > "$RUNNER_TEMP/candidate-run.json"
+          python3 -c 'import json,os; r=json.load(open(os.environ["RUNNER_TEMP"]+"/candidate-run.json")); assert r["conclusion"]=="success" and r["head_sha"]=="ffe1b9b1f27e236d07026df607b0ccc3d9d2b7f8"'
+      - uses: actions/download-artifact@v4
+        with:
+          name: jwtc-job-import-staging-candidate
+          run-id: 40162547727
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/approved-candidate
+      - name: Transfer candidate and verify isolated Stage2 migration upgrade
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/approved-candidate"
+          sha256sum -c SHA256SUMS
+          target='/home/dropoqux/jwtc-private-staging/20261025-033245-808519b6-stage2/candidate-input-job-import'
+          ssh_options=(-p "$SSH_PORT" -i "$RUNNER_TEMP/jwtc-stage-ssh/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/jwtc-stage-ssh/known_hosts" -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=2)
+          ssh -T "${ssh_options[@]}" "$SSH_USER@$SSH_HOST" "test ! -L '$target' && umask 077 && mkdir -p '$target'"
+          scp -P "$SSH_PORT" -i "$RUNNER_TEMP/jwtc-stage-ssh/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/jwtc-stage-ssh/known_hosts" ./*.tar.gz release-manifest.json "$SSH_USER@$SSH_HOST:$target/"
+          cd "$GITHUB_WORKSPACE"
+          cleanup_base64="$(base64 -w0 scripts/release/deduplicate_candidate_packages.php)"
+          ssh -T "${ssh_options[@]}" "$SSH_USER@$SSH_HOST" "cd '$APP_PATH' && php -r 'eval(\"?>\".base64_decode(\"$cleanup_base64\"));'"
+          script_base64="$(base64 -w0 scripts/release/upgrade_job_import_stage2.php)"
+          base64 -w0 scripts/release/restore_guard.py |
+            ssh -T "${ssh_options[@]}" "$SSH_USER@$SSH_HOST" "cd '$APP_PATH' && php -r 'eval(\"?>\".base64_decode(\"$script_base64\"));'"
+      - name: Report staging-only completion
+        run: echo "PASS Stage2 rehearsal attempted; no production deployment step exists in this workflow"
