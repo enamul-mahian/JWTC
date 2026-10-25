@@ -490,4 +490,36 @@ class PortalOperationsTest extends TestCase
     }
 
 
+    public function test_public_contact_form_saves_only_validated_fields_and_rejects_overlong_messages(): void
+    {
+        $this->get('/contact')->assertOk()
+            ->assertSee('maxlength="255"', false)
+            ->assertSee('type="email"', false);
+
+        $payload = [
+            'name' => 'Guest Reporter',
+            'email' => 'guest-reporter@example.test',
+            'subject' => 'Question about a listing',
+            'message' => str_repeat('A', 256),
+            'created_at' => '2000-01-01 00:00:00',
+            'id' => 12345,
+        ];
+
+        $this->post('/send-contact-data', $payload)->assertRedirect()
+            ->assertSessionHasErrors('message');
+        $this->assertDatabaseMissing('contacts', [
+            'email' => 'guest-reporter@example.test',
+        ]);
+
+        $payload['message'] = 'Please verify that the vacancy is open.';
+        $this->post('/send-contact-data', $payload)->assertRedirect('/contact')
+            ->assertSessionHasNoErrors();
+        $saved = DB::table('contacts')->where('email', 'guest-reporter@example.test')->first();
+        $this->assertNotNull($saved);
+        $this->assertSame('Please verify that the vacancy is open.', $saved->message);
+        $this->assertNotSame(12345, (int)$saved->id);
+        $this->assertNotSame('2000-01-01 00:00:00', $saved->created_at);
+    }
+
+
 }
