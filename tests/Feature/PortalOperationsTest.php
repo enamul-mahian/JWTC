@@ -394,4 +394,56 @@ class PortalOperationsTest extends TestCase
         $this->assertDatabaseHas('jobs',['id'=>$job->id,'minimum_salary'=>15]);
     }
 
+    public function test_2026_uk_salary_benchmark_is_visible_but_not_represented_as_employer_offer(): void
+    {
+        $job=$this->job();
+        DB::table('countries')->where('id',806)->update(['name'=>'United Kingdom']);
+        $job->update([
+            'minimum_salary'=>13, 'maximum_salary'=>16, 'salary_type'=>'hourly',
+            'additional_salary_info'=>'<p>2026 indicative salary benchmark (not employer-confirmed pay)</p>',
+            'faqs'=>json_encode([
+                ['question'=>'What is the salary?','answer'=>'Legacy £8 per week'],
+                ['question'=>'Is accommodation provided?','answer'=>'Ask the employer'],
+            ]),
+        ]);
+        $current=$job->fresh()->load('country');
+        $this->assertStringContainsString('indicative 2026 market benchmark',\App\Services\JobPresentation::salarySummary($current));
+        $this->assertStringContainsString('NOT employer-confirmed',\App\Services\JobPresentation::salarySummary($current));
+        $faqs=\App\Services\JobPresentation::faqs($current);
+        $this->assertStringContainsString('£12.71', $faqs[0]['answer']);
+        $this->assertStringContainsString('£2,112.50', $faqs[1]['answer']);
+        $this->assertTrue(collect($faqs)->contains(fn($f)=>$f['question']==='Is accommodation provided?'));
+        $this->assertFalse(collect($faqs)->contains(fn($f)=>str_contains($f['answer'],'Legacy £8')));
+    }
+
+    public function test_ireland_salary_benchmark_uses_euro_without_changing_job_jurisdiction(): void
+    {
+        $job=$this->job();
+        $id=DB::table('countries')->insertGetId(['name'=>'Ireland','code'=>'IE']);
+        $job->update([
+            'country_id'=>$id,'minimum_salary'=>16,'maximum_salary'=>19,'salary_type'=>'hourly',
+            'additional_salary_info'=>'2026 indicative salary benchmark (not employer-confirmed pay)',
+        ]);
+        $current=$job->fresh()->load('country');
+        $display=\App\Services\JobPresentation::salarySummary($current);
+        $this->assertStringContainsString('€16.00', $display);
+        $this->assertStringNotContainsString('£16.00', $display);
+        $this->assertStringContainsString('€14.15',\App\Services\JobPresentation::faqs($current)[0]['answer']);
+        $this->assertSame($id,(int)$job->fresh()->country_id);
+    }
+
+    public function test_annual_benchmark_uses_annual_to_monthly_division_in_faq(): void
+    {
+        $job=$this->job();
+        $job->update([
+            'minimum_salary'=>30000,'maximum_salary'=>42000,'salary_type'=>'yearly',
+            'additional_salary_info'=>'2026 indicative salary benchmark (not employer-confirmed pay)',
+        ]);
+        $current=$job->fresh();
+        $this->assertStringContainsString('30,000.00',\App\Services\JobPresentation::salarySummary($current));
+        $this->assertStringContainsString('2,500.00',\App\Services\JobPresentation::faqs($current)[1]['answer']);
+        $this->assertStringContainsString('3,500.00',\App\Services\JobPresentation::faqs($current)[1]['answer']);
+    }
+
+
 }
